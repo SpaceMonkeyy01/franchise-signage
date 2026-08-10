@@ -1,0 +1,364 @@
+[
+  {
+    "sign_type": "sign_type_halo_lit_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-halo-lit-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_face_lit_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-face-lit-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_face_and_halo_lit_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-face-&-hello-lit-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_lightbox",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated lightbox-single sided.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_lightbox",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated-blade-sign-illuminated-double-sided.png"
+  },
+  {
+    "sign_type": "sign_type_flat_cut_acrylic_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-flat-cutt-acrylic-letters.png"
+  },
+  {
+    "sign_type": "sign_type_flat_cut_aluminum_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-flat-cut -aluminum-letters.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_push_through",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated-push-through-single-sided.png"
+  },
+  {
+    "sign_type": "sign_type_fabricated_letters_non_lit",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated-channel Letters-non-Illuminated.png"
+  },
+  {
+    "sign_type": "sign_type_2d_blade_sign",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-flat-blade-sign.png"
+  },
+  {
+    "sign_type": "sign_type_3d_blade_sign",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated-blade-sign-non-illuminated.png"
+  },
+  {
+    "sign_type": "sign_type_neon_sign",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-neon-sign.png"
+  },
+  {
+    "sign_type": "sign_type_marquee_channel_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-marquee-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_open_face_neon_channel_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-0pen-face-neon-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_mirror_infinity_channel_letters",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-mirror-infinity-channel-letters.png"
+  },
+  {
+    "sign_type": "sign_type_metal_on_acrylic",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-flat-cut-acrylic-with-metal-pasting.png"
+  },
+  {
+    "sign_type": "sign_type_neon_acrylic_sign",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-neon-acrylic-sign.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_push_through_cabinet",
+    "mounting_type": "mounting_type_flush_stud_mounted",
+    "image": "/mockups/flush-stud/flush-stud-fabricated-push-through-cabinet-double-sided.png"
+  },
+
+  {
+    "sign_type": "sign_type_halo_lit_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/halo-lit-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_face_lit_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/front-lit-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_face_and_halo_lit_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/face-and-back-lit-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_lightbox",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/Lightbox-single-sided-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_lightbox",
+    "mounting_type": "",
+    "image": "z   "
+  },
+  {
+    "sign_type": "sign_type_flat_cut_acrylic_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/flat-cut-acrylic-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_flat_cut_aluminum_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/flat-cut-aluminum-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_push_through",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/fabricated-push-through-single-sided-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_fabricated_letters_non_lit",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/fabricated-channel-letters-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_2d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_3d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_neon_sign",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/neon-sign-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_marquee_channel_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/marquee-letters-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_open_face_neon_channel_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/open-face-neon-wih-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_mirror_infinity_channel_letters",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/mirror-infinity-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_metal_on_acrylic",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/flat-cut-acrylic-metal-pasting-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_neon_acrylic_sign",
+    "mounting_type": "mounting_type_standard_raceway_6x2",
+    "image": "/mockups/raceway/neon-acrylic-with-raceway.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_push_through_cabinet",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_halo_lit_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/halo-Lit-channel-letters-with-flat-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_face_lit_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/face-lit-channel-letters-with-flat-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_face_and_halo_lit_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/face-and-halo-lit-channel-letters-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_lightbox",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/lightbox-single-sided-with-flat-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_lightbox",
+    "mounting_type": "",
+    "image": "z   "
+  },
+  {
+    "sign_type": "sign_type_flat_cut_acrylic_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/flat-cut-acrylic-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_flat_cut_aluminum_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/flat-cut-aluminum-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_push_through",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/fabricated-push-thru-single-sided-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_fabricated_letters_non_lit",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/fabricated-channel-letters-non-illuminated-with-2d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_2d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_3d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_neon_sign",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/neon-sign-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_marquee_channel_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/marquee-letters-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_open_face_neon_channel_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/open-face-neon-with-2d-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_mirror_infinity_channel_letters",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/mirror-infininty-channel-letters-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_metal_on_acrylic",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/flat-cut-acrylic-metal-pasting-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_neon_acrylic_sign",
+    "mounting_type": "mounting_type_flat_backer_2_5_mm",
+    "image": "/mockups/flat-aluminum-backer/neon-acrylic-sign-with-flat-backer.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_push_through_cabinet",
+    "mounting_type": "",
+    "image": ""
+  },
+
+  {
+    "sign_type": "sign_type_halo_lit_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/halo-lit-channel-letters-with-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_face_lit_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/face-lit-channel-letters-with-aluminum-backer.png"
+  },
+  {
+    "sign_type": "sign_type_face_and_halo_lit_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/face-and-halo-lit-channel-letters-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_lightbox",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/light-box-single-sided-with-aluminum-backer-3d.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_lightbox",
+    "mounting_type": "",
+    "image": "   "
+  },
+  {
+    "sign_type": "sign_type_flat_cut_acrylic_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/flat-cut-acrylic-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_flat_cut_aluminum_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/flat-cut-aluminum with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_single_sided_push_through",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/fabricated-push-thru-single-sided-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_fabricated_letters_non_lit",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/fabricated-channel-letters-non-illuminated-with-backer.png"
+  },
+  {
+    "sign_type": "sign_type_2d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_3d_blade_sign",
+    "mounting_type": "",
+    "image": ""
+  },
+  {
+    "sign_type": "sign_type_neon_sign",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/neon-sign-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_marquee_channel_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/marquee-letters-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_open_face_neon_channel_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/open-face-neon-with-2-inch-backer.png"
+  },
+  {
+    "sign_type": "sign_type_mirror_infinity_channel_letters",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/mirror-infinity-channel-letters-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_metal_on_acrylic",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/flat-cut-acrylic-metal-pasting-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_neon_acrylic_sign",
+    "mounting_type": "mounting_type_backerboard_cabinet_2_inch",
+    "image": "/mockups/3d-aluminum-backer/neon-acrylic-sign-with-3d-backer.png"
+  },
+  {
+    "sign_type": "sign_type_double_sided_push_through_cabinet",
+    "mounting_type": "",
+    "image": ""
+  }
+]

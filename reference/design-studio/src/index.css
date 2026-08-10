@@ -1,0 +1,301 @@
+/* @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"); */
+
+* {
+  font-family: "Inter";
+}
+
+@import "tailwindcss";
+
+/* The franchise flow demo lives in the project's docs/, outside this app's
+   folder, so Tailwind's automatic content detection never sees it and would emit
+   none of the utilities it uses (bg-gray-50, its green palette, …) — the demo
+   would render unstyled on the studio's dark theme. Scan it explicitly. */
+@source "../../../docs/flow-demo.jsx";
+
+@plugin "daisyui" {
+  themes: false;
+}
+
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  /* LEGACY NAME, BRAND VALUE. ~46 call sites still say `mainthemeYello` from
+     when this app carried Signize's gold accent. Rather than churn every one,
+     the token now resolves to the active brand accent. Prefer `--color-brand`
+     in new code. */
+  --color-mainthemeYello: var(--brand);
+  --color-brand: var(--brand);
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-light: var(--brand-light);
+
+  --font-size-sm: 0.95rem;
+  --line-height-sm: 1.35rem;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.75rem; /* Slightly larger to match the 12px border-radius used throughout */
+
+  /* ---- Brand layer (co-branding) ----------------------------------------
+     Defaults are the Freshbites pilot; brandTheme.js overwrites these at boot
+     from the active brand (spec §3.1 brands.brand_colors), so a second brand
+     re-skins the studio without touching any component. */
+  --brand: #2e7d32;
+  --brand-dark: #1b5e20;
+  --brand-light: #e8f5e9;
+  --brand-foreground: #ffffff;
+
+  /* ---- Surfaces ---------------------------------------------------------
+     Light, clean white cards — matching the demo's visual language so the
+     studio is indistinguishable from the portal it is embedded in. */
+  --background: #f9fafb;
+  --foreground: #111827;
+
+  --card: #ffffff;
+  --card-foreground: #111827;
+
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+
+  /* Primary is the brand accent, not a vendor colour. */
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
+
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+
+  --accent: var(--brand-light);
+  --accent-foreground: var(--brand-dark);
+
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --ring: var(--brand);
+
+  --chart-1: var(--brand);
+  --chart-2: #60a5fa;
+  --chart-3: #f59e0b;
+  --chart-4: #a78bfa;
+  --chart-5: #f87171;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #111827;
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: var(--brand-light);
+  --sidebar-accent-foreground: var(--brand-dark);
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: var(--brand);
+}
+
+
+/* Native <select> option lists. On the old dark theme these needed a forced
+   dark background so the inherited white text stayed legible. The studio is
+   light now, so options take the normal card surface and dark text. */
+select option,
+.dropdown-select option,
+.select-field option {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+select option:checked {
+  background-color: var(--brand-light);
+  color: var(--brand-dark);
+}
+
+/* Additional utility classes for glass morphism effects */
+.glass {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  backdrop-filter: blur(20px);
+  border-radius: 12px;
+}
+
+.glass-strong {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  backdrop-filter: blur(25px);
+}
+
+/* Matrix-inspired accent colors */
+.matrix-green {
+  color: #00ff41;
+}
+
+.signize-yellow {
+  color: var(--brand);
+}
+
+.signize-gradient {
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Paint the root dark too, so scrolling past page content (e.g. below the
+   studio) never reveals a white strip where body/content doesn't reach. */
+html {
+  background-color: var(--background);
+}
+
+@font-face {
+  src: url("./assets/fonts/helvetica-neue/Helvetica.otf") format("opentype");
+  font-family: "Helvetica"; /* You can name it whatever you like */
+}
+
+@font-face {
+  src: url("./assets/fonts/helvetica/Helvetica-Bold.ttf") format("truetype");
+  font-family: "Helvetica Bold"; /* You can name it whatever you like */
+}
+
+@font-face {
+  src: url("./assets/fonts/Alexa.ttf") format("truetype");
+  font-family: "Alexa"; /* You can name it whatever you like */
+}
+
+@font-face {
+  src: url("./assets/fonts/Goudy-Extra-Bold/GoudyExtraBold.otf")
+    format("opentype");
+  font-family: "Goudy Extra Bold"; /* You can name it whatever you like */
+}
+
+@font-face {
+  src: url("./assets/fonts/Times-New-Roman/times\ new\ roman.ttf")
+    format("truetype");
+  font-family: "Times New Roman"; /* You can name it whatever you like */
+}
+@font-face {
+  src: url("./assets/fonts/Arial-Bold/FontsFree-Net-arial-bold.ttf")
+    format("truetype");
+  font-family: "Arial Bold"; /* You can name it whatever you like */
+  font-weight: bolder;
+}
+
+@font-face {
+  src: url("./assets/fonts/Times-bold/Times-Bold.ttf") format("truetype");
+  font-family: "Times Bold"; /* You can name it whatever you like */
+  font-weight: bolder;
+}
+@font-face {
+  src: url("./assets/fonts/Futura/Futura.ttf") format("truetype");
+  font-family: "Futura"; /* You can name it whatever you like */
+}
+@font-face {
+  src: url("./assets/fonts/Futura/FuturaPTBold.otf") format("truetype");
+  font-family: "Futura Bold"; /* You can name it whatever you like */
+}
+@font-face {
+  src: url("./assets/fonts/Architectural/ArchitectsDaughter.ttf")
+    format("truetype");
+  font-family: "Architectural"; /* You can name it whatever you like */
+}
+
+@font-face {
+  src: url("./assets/fonts/Bodoni/Bodoni.ttf") format("truetype");
+  font-family: "Bodoni";
+}
+
+@font-face {
+  src: url("./assets/fonts/Verdana/Verdana.ttf") format("truetype");
+  font-family: "Verdana";
+}
+@font-face {
+  src: url("./assets/fonts/Verdana/Verdana-Bold.ttf") format("truetype");
+  font-family: "Verdana Bold";
+}
+
+@font-face {
+  src: url("./assets/fonts/Garamond/Garamond.ttf") format("truetype");
+  font-family: "Garamond";
+}
+
+@font-face {
+  src: url("./assets/fonts/Franklin-Gothic/Franklin-Gothic.ttf")
+    format("truetype");
+  font-family: "Franklin Gothic";
+}
+
+/* ---------------------------------------------------------------------------
+   Accessibility polish
+   ------------------------------------------------------------------------- */
+
+/* Keyboard focus ring — only appears for keyboard navigation (:focus-visible),
+   never on mouse clicks, so it doesn't add visual noise for pointer users. */
+:focus-visible {
+  outline: 2px solid rgba(255, 212, 71, 0.85);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Fields already show a gold glow on focus — avoid doubling the indicator. */
+.input-field:focus-visible,
+.dropdown-select:focus-visible,
+.select-field:focus-visible,
+.search-bar:focus-visible {
+  outline: none;
+}
+
+/* Respect users who prefer reduced motion: drop the button shimmer/lift and
+   other transitions/animations down to near-instant. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

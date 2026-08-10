@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Franchise by Signage">
+  <!-- Product mark: a post-mounted sign panel. Replaces the engine vendor's
+       logo, which must never appear on a white-label surface. Brand green
+       (#2E7D32) matches the co-branded header. -->
+  <rect width="64" height="64" rx="14" fill="#2E7D32"/>
+  <rect x="13" y="15" width="38" height="23" rx="4" fill="#FFFFFF"/>
+  <rect x="30" y="38" width="4" height="11" fill="#FFFFFF"/>
+  <rect x="21" y="47" width="22" height="4" rx="2" fill="#FFFFFF"/>
+</svg>

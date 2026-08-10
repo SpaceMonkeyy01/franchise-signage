@@ -1,0 +1,1 @@
+if (import.meta.env.PROD) console.log = function () {};

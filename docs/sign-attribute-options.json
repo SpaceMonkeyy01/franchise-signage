@@ -1,0 +1,3313 @@
+{
+  "Fabricated Channel Letters - Non Illuminated": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "material": [
+      {
+        "var_name": "material_aluminium",
+        "name": "Aluminium",
+        "value": "Aluminium"
+      },
+      {
+        "var_name": "material_stainless_steel",
+        "name": "Stainless Steel",
+        "value": "Stainless Steel"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "fabricated_finish": [
+      {
+        "var_name": "fabricated_finish_original_colors_matt",
+        "name": "Original Colors Matt",
+        "value": "originalColorsMatt"
+      },
+      {
+        "var_name": "fabricated_finish_original_colors_gloss",
+        "name": "Original Colors Gloss",
+        "value": "originalColorsGloss"
+      },
+      {
+        "var_name": "fabricated_finish_silver_mirror",
+        "name": "Silver Mirror",
+        "value": "silverMirror"
+      },
+      {
+        "var_name": "fabricated_finish_silver_brushed",
+        "name": "Silver Brushed",
+        "value": "silverBrushed"
+      },
+      {
+        "var_name": "fabricated_finish_golden_mirror",
+        "name": "Golden Mirror",
+        "value": "goldenMirror"
+      },
+      {
+        "var_name": "fabricated_finish_golden_brushed",
+        "name": "Golden Brushed",
+        "value": "goldenBrushed"
+      },
+      {
+        "var_name": "fabricated_finish_bronze_mirror",
+        "name": "Bronze Mirror",
+        "value": "bronzeMirror"
+      },
+      {
+        "var_name": "fabricated_finish_bronze_brushed",
+        "name": "Bronze Brushed",
+        "value": "bronzeBrushed"
+      },
+      {
+        "var_name": "fabricated_finish_bronze_antique",
+        "name": "Bronze Antique",
+        "value": "bronzeAntique"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Flat Cut Acrylic Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Flat Cut Aluminum Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Halo Lit Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "material": [
+      {
+        "var_name": "material_aluminium",
+        "name": "Aluminium",
+        "value": "Aluminium"
+      },
+      {
+        "var_name": "material_stainless_steel",
+        "name": "Stainless Steel",
+        "value": "Stainless Steel"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Flat Cut Acrylic with Metal Pasting": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "material": [
+      {
+        "var_name": "material_aluminium",
+        "name": "Aluminium",
+        "value": "Aluminium"
+      },
+      {
+        "var_name": "material_stainless_steel",
+        "name": "Stainless Steel",
+        "value": "Stainless Steel"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Neon Acrylic Sign": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Premium Face Lit Channel Letters - Metallic Trim": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "trim_type": [
+      {
+        "var_name": "trim_type_trimless",
+        "name": "Trimless",
+        "value": "trimless"
+      },
+      {
+        "var_name": "trim_type_with_trim",
+        "name": "With Trim",
+        "value": "trim"
+      }
+    ],
+    "return_color": [
+      {
+        "var_name": "return_color_black",
+        "name": "Black",
+        "value": "Black"
+      },
+      {
+        "var_name": "return_color_white",
+        "name": "White",
+        "value": "White"
+      },
+      {
+        "var_name": "return_color_blue",
+        "name": "Blue",
+        "value": "Blue"
+      },
+      {
+        "var_name": "return_color_brown",
+        "name": "Brown",
+        "value": "Brown"
+      },
+      {
+        "var_name": "return_color_yellow",
+        "name": "Yellow",
+        "value": "Yellow"
+      },
+      {
+        "var_name": "return_color_teal",
+        "name": "Teal",
+        "value": "Teal"
+      },
+      {
+        "var_name": "return_color_orange",
+        "name": "Orange",
+        "value": "Orange"
+      },
+      {
+        "var_name": "return_color_golden_brushed",
+        "name": "Gold Brushed",
+        "value": "Gold Brushed"
+      },
+      {
+        "var_name": "return_color_match_logo",
+        "name": "Match Logo (Default)",
+        "value": "logo-match"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Standard Face Lit Letters - Plastic Trim": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Face & Halo Lit Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Face & Side Lit Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Vacuum Formed Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Fabricated Lightbox - Single Sided": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "lightbox_type": [
+      {
+        "var_name": "lightbox_type_light_box",
+        "name": "Lightbox",
+        "value": "light-box"
+      },
+      {
+        "var_name": "lightbox_type_cut_to_shape",
+        "name": "Cut to shape Lightbox",
+        "value": "cut-to-shape-light-box"
+      }
+    ],
+    "shape": [
+      {
+        "var_name": "shape_rectangular",
+        "name": "Rectangular",
+        "value": "rectangular"
+      },
+      {
+        "var_name": "shape_cut_to_shape",
+        "name": "Cut to shape",
+        "value": "cut_to_shape"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Fabricated Push Through - Single Sided": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "shape": [
+      {
+        "var_name": "shape_rectangular",
+        "name": "Rectangular",
+        "value": "rectangular"
+      },
+      {
+        "var_name": "shape_cut_to_shape",
+        "name": "Cut to shape",
+        "value": "cut_to_shape"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Neon Sign": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "neon_color": [
+      {
+        "var_name": "neon_color_simple",
+        "name": "Simple",
+        "value": "Simple"
+      },
+      {
+        "var_name": "neon_color_rgb",
+        "name": "RGB",
+        "value": "RGB"
+      }
+    ],
+    "uv_printing_needed": [
+      {
+        "var_name": "uv_printing_needed_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "uv_printing_needed_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Open Face Neon Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Marquee Channel Letters": {
+    "mounting_type": [
+      {
+        "var_name": "mounting_type_flush_stud_mounted",
+        "name": "Flush/Stud mounted",
+        "value": "Flush/Stud mounted"
+      },
+      {
+        "var_name": "mounting_type_standard_raceway_6x2",
+        "name": "Standard Raceway",
+        "value": "Standard Raceway"
+      },
+      {
+        "var_name": "mounting_type_flat_backer_2_5_mm",
+        "name": "Flat Backer",
+        "value": "Flat Backer"
+      },
+      {
+        "var_name": "mounting_type_backerboard_cabinet_2_inch",
+        "name": "Backerboard Cabinet",
+        "value": "Backerboard Cabinet"
+      }
+    ],
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "A - Frame Sign": {
+    "size": [
+      {
+        "var_name": "size_24inH_18inW",
+        "name": "Size 1 (24\" H X 18\" W)",
+        "value": "Size 1 (24\" H X 18\" W)"
+      },
+      {
+        "var_name": "size_36inH_24inW",
+        "name": "Size 2 (36\" H X 24\" W)",
+        "value": "Size 2 (36\" H X 24\" W)"
+      }
+    ]
+  },
+  "Flat Blade Sign": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Fabricated Blade Sign - Non Illuminated / Double Sided": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "shape": [
+      {
+        "var_name": "shape_rectangular",
+        "name": "Rectangular",
+        "value": "rectangular"
+      },
+      {
+        "var_name": "shape_round",
+        "name": "Round",
+        "value": "round"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Fabricated Blade Sign - Illuminated/Double Sided": {
+    "avg_char_height": [
+      {
+        "var_name": "avg_char_height_less_than_24_inches",
+        "name": "Less than 24 inches",
+        "value": "Less than 24 inches"
+      },
+      {
+        "var_name": "avg_char_height_greater_than_24_inches",
+        "name": "Greater than 24 inches",
+        "value": "Greater than 24 inches"
+      }
+    ],
+    "raceway_height": [
+      {
+        "var_name": "raceway_height_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_height_8",
+        "name": "8",
+        "value": "8"
+      },
+      {
+        "var_name": "raceway_height_10",
+        "name": "10",
+        "value": "10"
+      },
+      {
+        "var_name": "raceway_height_12",
+        "name": "12",
+        "value": "12"
+      }
+    ],
+    "raceway_depth": [
+      {
+        "var_name": "raceway_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "raceway_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "raceway_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "raceway_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "raceway_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "raceway_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "raceway_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "backboard_cabinet_depth": [
+      {
+        "var_name": "backboard_cabinet_depth_2",
+        "name": "2",
+        "value": "2"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_3",
+        "name": "3",
+        "value": "3"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_4",
+        "name": "4",
+        "value": "4"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_5",
+        "name": "5",
+        "value": "5"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_6",
+        "name": "6",
+        "value": "6"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_7",
+        "name": "7",
+        "value": "7"
+      },
+      {
+        "var_name": "backboard_cabinet_depth_8",
+        "name": "8",
+        "value": "8"
+      }
+    ],
+    "application": [
+      {
+        "var_name": "application_exterior",
+        "name": "Exterior",
+        "value": "Exterior"
+      },
+      {
+        "var_name": "application_interior",
+        "name": "Interior",
+        "value": "Interior"
+      }
+    ],
+    "ul_mandatory": [
+      {
+        "var_name": "ul_mandatory_yes",
+        "name": "Yes",
+        "value": "Yes"
+      },
+      {
+        "var_name": "ul_mandatory_no",
+        "name": "No",
+        "value": "No"
+      }
+    ],
+    "paint_finish": [
+      {
+        "var_name": "paint_finish_gloss_satin",
+        "name": "Gloss/Satin",
+        "value": "Gloss/Satin"
+      },
+      {
+        "var_name": "paint_finish_matte",
+        "name": "Matte",
+        "value": "Matte"
+      }
+    ],
+    "shape": [
+      {
+        "var_name": "shape_rectangular",
+        "name": "Rectangular",
+        "value": "rectangular"
+      },
+      {
+        "var_name": "shape_cut_to_shape",
+        "name": "Cut to shape",
+        "value": "cut_to_shape"
+      }
+    ],
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      },
+      {
+        "var_name": "basic_fields_sign_depth",
+        "name": "sign_depth",
+        "value": "sign_depth"
+      }
+    ]
+  },
+  "Vinyl Banners": {
+    "basic_fields": [
+      {
+        "var_name": "basic_fields_sign_width_or_height",
+        "name": "sign_width_or_height",
+        "value": "sign_width_or_height"
+      }
+    ]
+  }
+}

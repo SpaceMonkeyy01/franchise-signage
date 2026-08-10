@@ -1,0 +1,78 @@
+placement	category	sign_type	variant	pricing_type	pricing_basis	render_key	fabricated_finish	source_id	active
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Painted Finish (Same as logo)	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	originalColorsMatt	5	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Polished Gold	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	goldenMirror	6	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Brushed Gold	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	goldenBrushed	7	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Polished Bronze	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	bronzeMirror	8	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Brushed Bronze	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	bronzeBrushed	9	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Polished Silver (Mirror)	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	silverMirror	10	true
+indoor	Non-Illuminated	Dimensional Fabricated Letters	Brushed Silver	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	silverBrushed	11	true
+indoor	Non-Illuminated	Dimensional Flat Cut Letters	Acrylic	Flat Cut Acrylic Letters	direct	flat-cut-pasted		1	true
+indoor	Non-Illuminated	Dimensional Flat Cut Letters	Metal (Aluminum/Stainless Steel)	Flat Cut Aluminum Letters	direct	flat-cut-pasted		2	true
+indoor	Non-Illuminated	Dimensional Flat Cut Letters	PVC	Halo Lit Channel Letters	standin			3	true
+indoor	Non-Illuminated	Dimensional Flat Cut Letters	Metal Laminate (e.g. Brushed Gold over PVC)	Flat Cut Acrylic with Metal Pasting	direct			4	true
+indoor	Non-Illuminated	Wall Plaques	Acrylic with Standoffs	Neon Acrylic Sign	direct	wall-plaques-acrylic-standoffs		12	true
+indoor	Non-Illuminated	Wall Plaques	Engraved Metal	Halo Lit Channel Letters	standin	wall-plaques-metal-standoffs		13	true
+indoor	Non-Illuminated	Vinyl Graphics	Decals	Halo Lit Channel Letters	standin	vinyl-graphics-decals		14	true
+indoor	Non-Illuminated	Vinyl Graphics	Window Frosting	Halo Lit Channel Letters	standin	vinyl-graphics-window-frosting-cutout		15	true
+indoor	Non-Illuminated	Vinyl Graphics	Wall Wraps	Halo Lit Channel Letters	standin	vinyl-graphics-wall-wraps-full		16	true
+indoor	Illuminated	Illuminated Dimensional Letters	Halo-Lit (Back-lit)	Halo Lit Channel Letters	direct	halo-lit-channel		17	true
+indoor	Illuminated	Illuminated Dimensional Letters	Face Lit (Premium Channel Letters)	Premium Face Lit Channel Letters - Metallic Trim	direct	face-lit-channel		72	true
+indoor	Illuminated	Illuminated Dimensional Letters	Face-Lit (Standard Channel Letter)	Standard Face Lit Letters - Plastic Trim	direct	face-lit-channel		18	true
+indoor	Illuminated	Illuminated Dimensional Letters	Face & Halo-Lit	Face & Halo Lit Channel Letters	direct	face-and-halo-lit-channel		19	true
+indoor	Illuminated	Illuminated Dimensional Letters	Side-Lit	Halo Lit Channel Letters	direct	side-lit-channel		59	true
+indoor	Illuminated	Illuminated Dimensional Letters	Face & Side-Lit	Face & Side Lit Channel Letters	direct	side-lit-channel		68	true
+indoor	Illuminated	Illuminated Dimensional Letters	Vacuum Formed	Vacuum Formed Channel Letters	direct			69	true
+indoor	Illuminated	Lightbox/Cabinet Signs	Standard Cabinet (Square/Rectangle)	Fabricated Lightbox - Single Sided	direct	light-box		20	true
+indoor	Illuminated	Lightbox/Cabinet Signs	Custom Shape Cabinet	Fabricated Lightbox - Single Sided	direct	cut-to-shape-light-box		21	true
+indoor	Illuminated	Push-Through Signage	Halo-lit	Fabricated Push Through - Single Sided	direct	push-through-halo-lit		22	true
+indoor	Illuminated	Push-Through Signage	Face-lit	Fabricated Push Through - Single Sided	direct	push-through-face-lit		23	true
+indoor	Illuminated	LED Neon Signs	Custom Bent LED Flex Tubing	Neon Sign	direct	led-neon		24	true
+indoor	Illuminated	Digital/Display Signs	Digital Menu Boards	Halo Lit Channel Letters	standin			25	true
+indoor	Illuminated	Digital/Display Signs	LED Display Screens	Halo Lit Channel Letters	standin			26	true
+outdoor	Building/Wall Signs	Dimensional Flat Cut Letters	Aluminum	Flat Cut Aluminum Letters	direct	flat-cut-pasted		27	true
+outdoor	Building/Wall Signs	Dimensional Flat Cut Letters	Acrylic	Flat Cut Acrylic Letters	direct	flat-cut-pasted		28	true
+outdoor	Building/Wall Signs	Dimensional Flat Cut Letters	HDU Foam	Halo Lit Channel Letters	standin	flat-cut-pasted		29	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Halo-Lit (Back-lit)	Halo Lit Channel Letters	direct	halo-lit-channel		32	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Face Lit (Premium Channel Letters)	Premium Face Lit Channel Letters - Metallic Trim	direct	face-lit-channel		73	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Face-Lit (Standard Channel Letter)	Standard Face Lit Letters - Plastic Trim	direct	face-lit-channel		33	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Face & Halo-Lit	Face & Halo Lit Channel Letters	direct	face-and-halo-lit-channel		34	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Side-Lit	Halo Lit Channel Letters	direct	side-lit-channel		66	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Face & Side-Lit	Face & Side Lit Channel Letters	direct	side-lit-channel		70	true
+outdoor	Building/Wall Signs	Illuminated Channel Letters	Vacuum Formed	Vacuum Formed Channel Letters	direct			71	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Painted Finish (Same as logo)	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	originalColorsMatt	30	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Polished Gold	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	goldenMirror	60	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Brushed Gold	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	goldenBrushed	61	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Polished Bronze	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	bronzeMirror	62	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Brushed Bronze	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	bronzeBrushed	63	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Polished Silver (Mirror)	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	silverMirror	64	true
+outdoor	Building/Wall Signs	Dimensional Fabricated Letters	Brushed Silver	Fabricated Channel Letters - Non Illuminated	direct	fabricated-non-lit	silverBrushed	65	true
+outdoor	Building/Wall Signs	Lightbox/Cabinet Signs	Standard Cabinet (Square/Rectangle)	Fabricated Lightbox - Single Sided	direct	light-box		35	true
+outdoor	Building/Wall Signs	Lightbox/Cabinet Signs	Custom Shape Cabinet	Fabricated Lightbox - Single Sided	direct	cut-to-shape-light-box		36	true
+outdoor	Building/Wall Signs	Push-Through Signage	Halo-lit	Fabricated Push Through - Single Sided	direct	push-through-halo-lit		37	true
+outdoor	Building/Wall Signs	Push-Through Signage	Face-lit	Fabricated Push Through - Single Sided	direct	push-through-face-lit		38	true
+outdoor	Building/Wall Signs	Wall Plaques	Acrylic with Standoff with backlit	Halo Lit Channel Letters	standin	wall-plaques-acrylic-standoffs-backlit		67	true
+outdoor	Building/Wall Signs	Open Face Neon Signs		Open Face Neon Channel Letters	direct	open-face-neon-channel		20	true
+outdoor	Building/Wall Signs	Marquee Signs		Marquee Channel Letters	direct	marquee-channel		21	true
+outdoor	Building/Wall Signs	Wall Graphics/Murals		Halo Lit Channel Letters	standin			23	true
+outdoor	Building/Wall Signs	Awnings & Canopies	Vinyl	Halo Lit Channel Letters	standin			39	true
+outdoor	Building/Wall Signs	Awnings & Canopies	Fabric	Halo Lit Channel Letters	standin			40	true
+outdoor	Building/Wall Signs	Awnings & Canopies	Metal	Halo Lit Channel Letters	standin			41	true
+outdoor	Freestanding Signs	Pylon Signs	Single or Double Pole	Halo Lit Channel Letters	standin	pylon-sign-single-or-double		45	true
+outdoor	Freestanding Signs	Pylon Signs	Multi-Tenant or Single Business	Halo Lit Channel Letters	standin	pylon-sign-multi-tenant-or-single-business		46	true
+outdoor	Freestanding Signs	Monument Signs	Brick/Stone Base	Halo Lit Channel Letters	standin	monument-stone-base		42	true
+outdoor	Freestanding Signs	Monument Signs	Aluminum Frame	Halo Lit Channel Letters	standin	monument-sign-monument-aluminum-frame		43	true
+outdoor	Freestanding Signs	Monument Signs	Digital Message Center Integration	Halo Lit Channel Letters	standin	monument-digital-message-center		44	true
+outdoor	Freestanding Signs	A-Frame Sign		A - Frame Sign	direct	a-frame-sign		31	true
+outdoor	Freestanding Signs	Post & Panel Signs	Single or Double Sided	Halo Lit Channel Letters	standin	post-panel-sign-single-double-sided		47	true
+outdoor	Freestanding Signs	Post & Panel Signs	Standard Aluminum or Sandblasted HDU	Halo Lit Channel Letters	standin	post-panel-sign-standard		48	true
+outdoor	Freestanding Signs	Blade/Projecting Signs	Bracket Mounted	Flat Blade Sign	direct	blade-projecting-sign-bracket-mounted		50	true
+outdoor	Freestanding Signs	Blade/Projecting Signs	Double-Sided	Fabricated Blade Sign - Non Illuminated / Double Sided	direct	blade-projecting-sign-double-sided		51	true
+outdoor	Freestanding Signs	Blade/Projecting Signs	Non-Illuminated or Illuminated	Fabricated Blade Sign - Illuminated/Double Sided	direct			52	true
+outdoor	Freestanding Signs	Yard Sign		Halo Lit Channel Letters	standin	yard-sign		30	true
+outdoor	Freestanding Signs	Wayfinding & Directional	Entrance Signs	Halo Lit Channel Letters	standin			53	true
+outdoor	Freestanding Signs	Wayfinding & Directional	Parking Signs	Halo Lit Channel Letters	standin			54	true
+outdoor	Freestanding Signs	Wayfinding & Directional	Regulatory Signs	Halo Lit Channel Letters	standin			55	true
+outdoor	Specialty Signs	Banners & Flags	Vinyl Banners	Vinyl Banners	direct			56	true
+outdoor	Specialty Signs	Banners & Flags	Feather Flags	Halo Lit Channel Letters	standin			57	true
+outdoor	Specialty Signs	Banners & Flags	Teardrop Flags	Halo Lit Channel Letters	standin			58	true
+outdoor	Specialty Signs	Vehicle Graphics/Wraps		Halo Lit Channel Letters	standin			33	true

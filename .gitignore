@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+.next/
+out/
+
+# Environment — never commit. reference/design-studio/.env.development.local
+# holds live Signize API service-account credentials (see .env.example).
+.env
+.env.*
+!.env.example
+*.local
+
+# Supabase local dev (from session 1 onward)
+.branches/
+.temp/
+supabase/.temp/
+
+# Local Claude Code permissions (machine-specific paths)
+.claude/settings.local.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
