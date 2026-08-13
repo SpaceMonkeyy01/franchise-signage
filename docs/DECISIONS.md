@@ -108,6 +108,20 @@ contract — entries here are proposed amendments to it, not replacements.
   master row is `direct`-priced.
 - **No Storage buckets yet.** Session 2 owns uploads and creates them.
 
+### Corrected after Session 1 was committed
+
+- **`line_items.replaces_sign_id` is `ON DELETE RESTRICT`, not `SET NULL`.**
+  Found by running the seed twice. Deleting an installed sign fired the SET NULL
+  cascade, which produced an UPDATE that violated
+  `line_items_replacement_fields` — the constraint requiring a replacement to
+  name its target. The behaviour was wrong either way: an installed sign a live
+  request points at is history and must not be deletable. Retiring one is a
+  status change to `removed`. The migration was edited in place rather than
+  patched by a follow-up, because the schema has never been applied to any real
+  database. Covered by a schema check.
+- **The seed no longer rebuilds `installed_signs` wholesale.** It inserts only
+  signs that are not already on the location, for the same reason.
+
 ### Open items this session did not touch
 
 Unchanged from CLAUDE.md: the Design Studio integration path, the pilot brand's

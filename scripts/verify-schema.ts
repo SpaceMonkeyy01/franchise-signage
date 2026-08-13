@@ -136,6 +136,18 @@ const checks: Check[] = [
     describe: (rows) => rows.map((r) => r.column_name).join(', '),
   },
   {
+    // Found by running the seed twice: with ON DELETE SET NULL, deleting an
+    // installed sign fired an update that violated the replacement item's own
+    // check constraint. History a live request points at must not be deletable.
+    label: 'deleting an installed sign a replacement points at is refused',
+    sql: `select con.confdeltype from pg_constraint con
+           join pg_class c on c.oid = con.conrelid
+          where c.relname = 'line_items' and con.conname = 'line_items_replaces_sign_fk'`,
+    // 'r' = RESTRICT, 'n' = SET NULL
+    expect: (rows) => rows[0]?.confdeltype === 'r',
+    describe: (rows) => `on delete = ${rows[0]?.confdeltype ?? '(constraint missing)'}`,
+  },
+  {
     label: 'the replacement/exception invariants are enforced in the database',
     sql: `select conname from pg_constraint con join pg_class c on c.oid = con.conrelid
           where c.relname = 'line_items' and con.contype = 'c'`,

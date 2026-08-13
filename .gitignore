@@ -51,3 +51,8 @@ next-env.d.ts
 .pnp
 .pnp.*
 *.pem
+
+# Local dev database (PGlite data dir) and dev server logs
+.pglite/
+dev-db.log
+dev-web.log

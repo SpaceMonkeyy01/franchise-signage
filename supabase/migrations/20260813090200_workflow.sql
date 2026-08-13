@@ -153,8 +153,13 @@ create index installed_signs_location_idx on installed_signs (location_id) where
 
 -- Cross-references, added after both sides exist.
 alter table line_items
+  -- restrict, NOT set null: a replacement item must always name the sign it
+  -- replaces (line_items_replacement_fields below enforces that), so deleting
+  -- the target would fire an update that violates the item's own invariant.
+  -- An installed sign a request points at is history and stays put; retiring
+  -- one is a status change to 'removed', never a delete.
   add constraint line_items_replaces_sign_fk
-    foreign key (replaces_sign_id) references installed_signs (id) on delete set null,
+    foreign key (replaces_sign_id) references installed_signs (id) on delete restrict,
   add constraint line_items_mockup_file_fk
     foreign key (mockup_file_id) references request_files (id) on delete set null;
 
