@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+/* Scan only the portal's own source. reference/design-studio is a read-only
+   copy of the retail app with its own (daisyUI, dark) styling — letting Tailwind
+   walk it would be slow and would pull in classes this app never uses. */
+@source "../";
+
+@theme {
+  /* Co-branding is per brand at runtime (brands.brand_colors), so components
+     reference these tokens and the brand overrides them on :root. The defaults
+     are Freshbites, the pilot brand in docs/flow-demo.jsx. */
+  --color-brand: #2e7d32;
+  --color-brand-dark: #1b5e20;
+  --color-brand-light: #e8f5e9;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Deliberately light-only. The franchisee flow is a document-like white-card UI
+   matching the demo, and half of it is printed or PDF'd for lenders and
+   landlords (SPEC §8b) — a dark variant would be a second design to maintain
+   for no audience. */
+body {
+  background: #f9fafb;
+  color: #111827;
+}

@@ -1,0 +1,43 @@
+{
+  "name": "franchise-portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Franchise by Signage — co-branded signage workflow portal",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:verify": "tsx scripts/verify-schema.ts",
+    "seed": "tsx scripts/seed.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.58.0",
+    "next": "16.3.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "resend": "^6.1.2",
+    "zod": "^4.1.11"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.12",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^17.2.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "supabase": "^2.114.0",
+    "tailwindcss": "^4",
+    "tsx": "^4.20.6",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
+  }
+}
