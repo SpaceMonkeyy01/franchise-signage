@@ -7,6 +7,10 @@
 ## What this is
 A co-branded signage workflow portal Signage.com operates for franchise brands (pilot brand: "Freshbites", fictional). Three participants: Signage.com team (admin/queue), franchisor corporate (approvals + dashboard, no login for approvals), franchisee (tokenized links, no accounts). External vendors receive email packages only. A parallel DID track (spec §8c) serves franchisees at the loan stage, before any location exists.
 
+## Start here
+`docs/STATE.md` — what is built, how to run it, and what is next. Read it before
+anything else when resuming; it is kept current at the end of each session.
+
 ## Source-of-truth documents (read before writing any code)
 - `docs/SPEC.md` — the build contract (currently spec v2.1): full data model, status machine, approval rules, vendor routing, Design Studio integration contract, DID module, two-level access, build order. Authoritative.
 - `docs/flow-demo.jsx` — interactive reference implementation of the UX (all three personas, shared state). The real app's flows, screens, copy tone, and behavior should match this demo. Where SPEC.md and the demo disagree, STOP and flag it — do not guess. **Note: the file on disk is v12. Spec v2.1 and Session 8 reference a v13 demo that adds the DID generator screens; it has not landed in the repo yet.**
@@ -17,6 +21,11 @@ A co-branded signage workflow portal Signage.com operates for franchise brands (
 
 ## Stack (fixed decisions — do not revisit)
 Next.js (App Router, TypeScript) · Supabase (Postgres, Storage; Auth only for the team admin) · Resend for all email · Vercel deploy. Tailwind for styling, matching the demo's visual language (Freshbites green #2E7D32, co-branded header, clean white cards). Stripe for exactly one thing: the DID fee (see below).
+
+Database access is plain SQL through `pg`, not supabase-js, so the same
+statements run against the local dev database and against Supabase. There is no
+Docker on this machine: `npm run dev` starts a PGlite-backed Postgres on port
+5433 alongside Next. Set `DATABASE_URL` to target a real project instead.
 
 ## Core model (compressed; SPEC.md has details)
 - Locations are permanent entities with installed-sign records. Requests are events against a location; first request is a form, later requests are lookups.
