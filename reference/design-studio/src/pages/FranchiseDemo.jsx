@@ -1,6 +1,6 @@
-// Hosts the franchise flow demo (the canonical UX reference at the project
-// root) inside this app, so its Design Studio modal can reach the real Signize
-// mockup engine through src/studio-bridge/.
+// Hosts the franchise flow demo (the canonical UX reference, docs/flow-demo.jsx)
+// inside this app, so its Design Studio modal can reach the real Signize mockup
+// engine through src/studio-bridge/.
 //
 // Public route — no ProtectedRoute wrapper. The demo is a walkthrough of the
 // franchisee / corporate / team flows, none of which use portal login. The

@@ -1,8 +1,9 @@
-# Franchise by Signage — MVP Spec v2
+# Franchise Signage Studio — MVP Spec v2.1
 
-Version 2.0 · Supersedes v1 entirely · Handoff document for implementation (Claude Code)
+Version 2.1 · Supersedes v2 · Handoff document for implementation (Claude Code)
 Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for admin) + Resend + Vercel.
-Companion artifact: `docs/flow-demo.jsx` (v12) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess.
+Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
+What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -46,10 +47,10 @@ A named brand item pins one master row's attributes. Franchisees only ever see b
 | pinned_attributes | jsonb | corporate-locked choices, e.g. `{ trim: "trimless", return_color: "match_logo", finish: "gloss", mounting: "standard_raceway", ul: true }` |
 | site_variables | text[] | which attributes remain per-site (e.g. `["size", "mounting"]`) |
 | spec_summary | text | human-readable pinned spec line for UI/emails |
-| est_price | numeric nullable | estimate for direct-priced items; null ⇒ "Custom quote", manual pricing by team |
+| est_price | numeric nullable | estimate for direct-priced items; null → "Custom quote", manual pricing by team |
 | thumbnail_url | text nullable | falls back to generic render by render_key |
 | requires_review_override | boolean nullable | per-item override of brand approval rules |
-| vendor_policy_override | text nullable | per-item routing override (see §4); null ⇒ brand default |
+| vendor_policy_override | text nullable | per-item routing override (see §4); null → brand default |
 | active / sort_order | | |
 
 ## 3. Brand configuration
@@ -129,7 +130,7 @@ Two lifecycle tails after `sent_for_quote`:
 | reviewed_at / reviewed_via_token | |
 
 ### 5.5 `request_files`, `request_events`, `change_requests`
-As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_photo, landlord_criteria), append-only event log powering all timelines, and change_requests for the revision loop (comment + flagged line_item ids; only flagged items reopen).
+As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_photo), append-only event log powering all timelines, and change_requests for the revision loop (comment + flagged line_item ids; only flagged items reopen).
 
 ### 5.6 `quotes`
 | Field | Notes |
@@ -184,9 +185,47 @@ Most new franchisees fund signage through a lender (commonly SBA 7(a)-style loan
 
 **Permits (MVP: log-only events; phase 2: a first-class stage of the internal fulfillment tail):** permit packages (elevations, site plans, mounting/electrical details, stamped engineering where required) are normally produced by the sign company — when Signage.com fulfills, this becomes part of the service. Phase 2 extends the internal tail: drawings_prepared → landlord_approved → permit_submitted → permit_issued before in_production. Do not build in MVP; do not preclude in the schema (events cover it).
 
-**v1.1 corporate feature note:** exportable per-format budget one-pager ("inline location signage: ~$X + custom items") so franchisors can hand prospective franchisees a signage number for their loan application before any request exists.
+**Document timing, two moments (validated against SBA lending research):** the franchisee needs two different signage numbers at two different times. Moment A, before any site exists (loan pre-qualification and business plan): a format-level number only, which is the budget one-pager. Moment B, once a candidate site is at LOI and the loan is in underwriting: a site-specific number, which is the DID plus budgetary quote. Lenders require the lease, buildout budget, and contractor bids during underwriting, before any sign vendor exists. Invoice lands at fabrication (controlled disbursement), paid receipt after payment.
+
+**Budget one-pager (MVP, decided Aug 2026):** exportable per-format signage number ("inline location signage: ~$X + custom items") so franchisors can hand prospective franchisees a number for their loan application before any request exists. It serves the two earliest touchpoints in the journey (franchise sales and loan pre-qualification) and is generated from prices already in brand_items and packages. Interface 5 scope. Corporate-triggered export plus a public brand-page download if trivial; keep it to one page.
 
 **Never promise compliance or approval outcomes** — the portal collects, routes, generates documents, and tracks; humans judge.
+
+## 8c. Concept Drawings Generator (DIDs) — parallel track
+
+Franchisees applying for buildout loans need design intent drawings (DIDs): concept architectural drawings of the proposed storefront including signage. The portal generates them from data it already holds, making this the earliest monetizable touchpoint (agreement-signed / loan-application stage) and a brand-onboarding wedge.
+
+**Flow:** franchisee authenticates with their corporate-approved brand email (pulls the magic-link auth forward from v1.1) → enters new location address + ZIP → optional current-storefront photo (fallback: Google Street View imagery for the address) → optional shop area (fallback: OpenStreetMap footprint/frontage estimate) → portal generates a concept elevation sheet: the brand's standard sign package composited onto the facade, labeled "DESIGN INTENT — NOT FOR CONSTRUCTION," plus a sign schedule with est_prices and an estimated signage investment line for the loan's use-of-proceeds breakdown → franchisee pays a fixed fee → signed copy issued as PDF.
+
+**Two-document deliverable, decoupled on purpose:** (1) the concept drawing set — shippable immediately as an unstamped "design intent" package; the stamped tier switches on when the architect JV is signed; (2) the signage cost estimate on Signage.com letterhead — zero external dependency, this is the budgetary quote formalized.
+
+**Candidate-site framing (copy requirement):** label the address field "candidate site," not "your location." Franchisees run DIDs while site hunting, often on two or three candidate addresses, and only one becomes real. Multiple did_requests per requester_email is normal use, not an edge case. Track the DID-to-location conversion rate; it is the funnel metric for this feature.
+
+**New object `did_requests`:** brand_id, requester_email (brand-domain validated), address jsonb, zip, area_sqft nullable, imagery_source enum (upload | street_view | none), format_inference, drawing_file_ids, estimate_total, fee_status (unpaid | paid), payment_ref, signature_status (unsigned | intent_only | signed), signed_at, location_id nullable FK (linked when the franchisee proceeds to real setup — the DID becomes the first document in the location record and prefills address/format/photos).
+
+**Scope changes it introduces:** brand-email magic-link auth (moved up from v1.1); Stripe checkout for the fixed fee (payments were out of scope; this is the single exception, scoped to DID fees only).
+
+**The stamp: legal design (corrected in v2.1, replaces the earlier "review and adopt" wording):**
+The seal itself can never be automated. Auto-applying an architect's seal to generated drawings is plan stamping, banned in all 50 states, and under the NCARB standard most states use, reviewing documents after they were prepared may not count as "responsible control" either. The version that survives a licensing board: the JV architect authors the drawing template and the generation rules (responsible control over the system that prepares the drawings), every output lands in their review queue, they judge each drawing (minutes at DID complexity), and they apply their own e-seal in one click. From the franchisee's side this feels automated; legally it is a controlled professional workflow. The sealing architect must also be licensed in the project's state, so the signed tier rolls out state by state and JV partner selection should weigh how many state licenses the firm holds. Team decision pending: (a) ship unstamped only and let lender calls decide whether signed is needed, or (b) build the signed tier the legal way. Recommendation: a now, b if lenders demand it. Never build any code path that applies a seal without a per-drawing architect action.
+
+**Diligence gates before promising the stamped tier (owners: Mike/Hassan/Samiullah):**
+1. Licensing lawyer sign-off on the responsible-control design above, and JV per-drawing review cost budgeted into unit economics.
+2. Verify with 2–3 SBA lenders what they accept for the buildout line — an unstamped intent package + vendor budgetary quote may suffice, enabling a cheaper unstamped tier first. Also ask at which gate documentation must be site-specific (application vs closing).
+3. Edge cases to design for: stale/absent Street View (new construction is the core use case), OSM giving building footprint not tenant demise width, multi-tenant frontage ambiguity. Graceful fallback: "upload a photo or we proceed with a generic elevation for your format."
+
+## 8d. Two-level access and the franchisee welcome email (new in v2.1)
+
+Access happens in two steps, at two different moments, because the DID is needed before the lease but the location workspace only makes sense after it.
+
+**Level 1, at agreement signing:** corporate registers the franchisee's email in the portal (this is the same corporate approval that gates DID generation in §8c). Registration fires the **welcome email**: co-branded, sent as the brand, carrying the brand-email magic link. Content covers only what matters at signing: concept drawings and a signage number for the bank (DID + budget one-pager). Signage ordering stays invisible; nothing about it is relevant yet. Corporate's lift is one email address per new franchisee, appended to the welcome bundle they already send at countersigning.
+
+**Level 2, after the lease:** the location workspace (tokenized links per request, as in §10), created either fresh or via the DID's convert-to-location prefill.
+
+**Build requirements:** the welcome email is a first-class MVP deliverable — template, trigger on email registration, brand-styled sender — and belongs in interface 5 (notifications) scope. It was implicit in v2; every flow assumed the franchisee already held a link. It is the first thing a franchisee ever sees from the product.
+
+**Adoption note for pilot setup (process, not code):** corporate's natural habit is introducing vendors after the lease, which would kill the DID window. At-signing registration must be written into the white-glove onboarding SOP and treated as a pilot success criterion. If a brand will not commit, its DID revenue quietly dies; make that trade knowingly.
+
+**Retrofit path:** when a brand onboards with existing locations, the announcement email to existing franchisees leads with the fast lane ("replacements in about 3 clicks, it knows what is on your building"), not the DID, which is irrelevant to them.
 
 ## 9. Interfaces (build order)
 
@@ -195,7 +234,7 @@ Most new franchisees fund signage through a lender (commonly SBA 7(a)-style loan
 2. **Team queue** (Supabase Auth allowlist): request list w/ fast-lane badges and rollups; detail w/ line items+prices+TBD flags, manual-pricing banner for standin items, vendor-policy display, action chain for both tails; "mark installed" writes the location record.
 3. **Approval emails + landing pages** (per-item decisions, change-request loop).
 4. **Routing engine** (resolve policy incl. per-item overrides, compose + send package email, create quote row).
-5. **Notification emails + lender documents**: submitted, changes requested, item approved/declined, quote ready, order accepted, shipped, installed. Plus the §8b PDF set: budgetary quote (franchisee-downloadable from the status page), formal invoice and paid receipt (team-triggered from the queue).
+5. **Notification emails + lender documents**: submitted, changes requested, item approved/declined, quote ready, order accepted, shipped, installed. Plus the §8b PDF set: budgetary quote (franchisee-downloadable from the status page), formal invoice and paid receipt (team-triggered from the queue). Plus the §8d welcome email (template + trigger on corporate email registration) and the §8b budget one-pager export (per-format PDF from brand package prices, corporate-triggered).
 6. **Corporate dashboard** (read-only, magic-link or simple auth): portfolio metrics (locations, installed signs, open requests, pending approvals, program spend), per-location compliance cards, jump-to-approvals.
 7. **Brand admin**: seed pilot brand via script (brand, brand_items, packages, master_catalog import from the taxonomy sheet); CRUD UI only when onboarding brand #2.
 
@@ -205,7 +244,13 @@ Franchisee: tokenized links per request; brand entry page mints new requests. v1
 
 ## 11. Out of scope (MVP)
 
-Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding · franchisee accounts · vendor portal · payments/deposits · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
+Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding · franchisee accounts · vendor portal · payments/deposits (single exception: the §8c Stripe checkout for DID fees) · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
+
+**Phase-2 backlog added in v2.1 (from lifecycle research; do not build, do not preclude in schema):**
+- De-identification workflow: on franchise exit, all branded signage must come down, sometimes within days, with trademark law behind it. installed_signs is the removal checklist; workflow adds removal tracking and proof photos for corporate legal.
+- Reimage forecasting: franchise agreements require remodel/reimage at renewal (5–15 yr terms) and often on transfer; refresh cycles now run 5–7 years. Demand can be read off agreement dates.
+- Municipality variance knowledge base: which cities allow what, mined from permit outcomes in request_events. Gets more useful as history builds.
+- Note on installed_signs (no schema change): the record (spec, value, photos) also works as insurance claim paperwork when a sign is destroyed. Worth mentioning in franchisee-facing copy someday.
 
 ## 12. Open questions
 
@@ -214,3 +259,23 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding �
 3. Pilot brand's real vendor policy — determines which tail gets exercised first.
 4. Pilot franchisees single- or multi-unit? (drives whether magic-link lookup moves into v1.)
 5. SLA default (5 days, remind) — confirm with pilot franchisor at setup.
+6. DID diligence (§8c): licensing lawyer sign-off on the responsible-control design; per-drawing review cost; SBA lender acceptance of unstamped packages and which gate needs site-specific docs; DID fee amount and Stripe account setup.
+7. The stamp decision (§8c): unstamped only for now, or build the signed tier the legal way. Recommendation: unstamped first, signed if lenders demand it.
+8. Business model: what does corporate pay, if anything? Assumed free-to-corporate so far, never decided.
+9. Fast lane guardrails: does corporate want a dollar cap or annual limit on like-for-like auto-approval? Assumed unlimited.
+10. At-signing email registration: confirmed as a corporate SOP commitment and pilot success criterion (§8d)?
+
+Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
+
+---
+
+## Changelog v2 → v2.1 (Aug 2026)
+
+- Header: companion demo is now v13 (adds the DID generator flow).
+- §8b: added the two-moment document timing (format-level number pre-site, site-specific DID + quote at LOI during underwriting), validated against SBA lending research. Budget one-pager flagged as an MVP promotion candidate.
+- §8c: added the candidate-site copy requirement, multiple DIDs per franchisee as normal use, and DID-to-location conversion tracking. Replaced the "review and adopt" stamp language with the responsible-control design: post-hoc review alone may not qualify as responsible control, the seal is applied by the architect per drawing, never by the system, and state licensure gates the signed tier's rollout. Diligence gate 1 now requires licensing lawyer sign-off.
+- §8d (new): two-level access model and the franchisee welcome email as a first-class MVP deliverable, with the at-signing registration adoption note and the retrofit path.
+- §9 interface 5: welcome email added to scope; one-pager conditionally added.
+- §11: phase-2 backlog extended with de-identification workflow, reimage forecasting, municipality variance knowledge base, and the insurance-claim note on installed_signs.
+- §12: new open questions (stamp decision, business model, fast-lane guardrails, at-signing registration).
+- Post-changelog decision (Aug 2026): budget one-pager promoted from v1.1 to MVP; §8b and interface 5 updated accordingly.

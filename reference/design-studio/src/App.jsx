@@ -20,6 +20,7 @@ import AllMockups from "./pages/AllMockups";
 import "./config/config";
 import NotFound from "./pages/NotFound";
 import FranchiseDemo from "./pages/FranchiseDemo";
+import FlowPage from "./pages/FlowPage";
 import { GetGlobalSignTypes } from "./store/action/GlobalSignTypesAction";
 import { DEFAULT_BRAND, PRODUCT_NAME, applyBrandTheme } from "./brand/brandTheme";
 
@@ -128,8 +129,11 @@ function App() {
           />
         </Route>
 
-        {/* Franchise flow demo (project-root file) with the studio bridge wired in. */}
+        {/* Franchise flow demo (docs/flow-demo.jsx) with the studio bridge wired in. */}
         <Route path="/demo" element={<FranchiseDemo />} />
+
+        {/* Stakeholder walkthrough of the system — the visual form of docs/FLOW.md. */}
+        <Route path="/flow" element={<FlowPage />} />
 
         <Route path="/login" element={<Login />} />
         <Route path="/verification" element={<Verfiy2fa />} />
