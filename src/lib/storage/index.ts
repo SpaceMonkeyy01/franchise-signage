@@ -77,10 +77,9 @@ export async function getUpload(storagePath: string): Promise<{
   return driver().get(storagePath);
 }
 
-/** Where a stored file is served from. Route handler: src/app/api/files. */
-export function fileUrl(storagePath: string): string {
-  return `/api/files/${storagePath}`;
-}
+// Re-exported so server code has one import for storage; client components must
+// import it from './url' directly, since this module reaches for node:fs.
+export { fileUrl } from './url';
 
 // --------------------------------------------------------------------- drivers
 

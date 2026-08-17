@@ -226,15 +226,53 @@ throwaway UI over permanent rules.
     Supabase Auth + the `team_members` allowlist, and with signed single-use
     reviewer links; this must be deleted then, not secured.
 
-### Not done, and why
+---
+
+## Session 3 — the team queue
+
+23. **Team identity is swappable; team authorization is not.**
+    §10 specifies Supabase Auth with an email allowlist, and there is no Supabase
+    project on this machine to authenticate against. So `src/lib/auth/team.ts`
+    splits the two halves: *identity* ("which email is this?") comes from
+    Supabase Auth when a project is configured and from a dev cookie when one is
+    not, while *authorization* ("is that email on the team?") is the same
+    `team_members` lookup either way, re-checked on every request so
+    deactivating a row signs someone out immediately. The dev provider refuses to
+    run in production, where a missing Supabase config is a hard error rather
+    than a fallback. **The Supabase path has never executed** — the magic-link
+    send and the session read are written but unverified.
+
+24. **`/admin` shows only the actions that are legal right now.** The §6 machine
+    would reject the rest, so rendering them would be offering an operator a
+    button that cannot work. The queue's "next step" column and the detail
+    panel's action set are both derived from the request's own status, which is
+    also why the queue is bucketed by whose move it is rather than by raw status.
+
+25. **The external tail logs three things the portal does not control**:
+    `log vendor quote` (a number came back), `log order placed` (the franchisee
+    ordered with the vendor directly) and `mark installed`. Written as logging
+    rather than as driving, because on this tail the portal's job is to stay an
+    accurate record — it is not in the loop and should not imply that it is.
+
+26. **`fileUrl` moved to `src/lib/storage/url.ts`.** Client components need to
+    link to a stored file; `src/lib/storage/index.ts` reaches for `node:fs`, and
+    importing it from a client component fails the Turbopack build outright. The
+    pure string function is now its own import-free module, re-exported from the
+    index so server callers are unaffected.
+
+### Not done, and why (Sessions 2–3)
 
 - **Still no behavioural RLS tests, and still no Supabase project.** Unchanged
   from Session 1, and now the largest untested assumption in a build that has
-  real franchisee write paths.
+  real franchisee write paths, a team console, and an auth path written against
+  an API nothing here has called.
 - **The Supabase Storage driver is not written.** `src/lib/storage/` has the
   interface and a local-disk driver; setting `SUPABASE_STORAGE_BUCKET` throws a
   deliberate error rather than silently writing files to a container's disk.
-- **No mockups from Design Studio.** `mockup_file_id` is written when a file of
-  kind `mockup` is attached, but nothing in the franchisee flows produces one
-  yet — the generic `render_key` thumbnail is what every screen shows, as
-  CLAUDE.md requires.
+- **No mockups from Design Studio.** `mockup_file_id` is written when the team
+  uploads one by hand (Session 3) or a file of kind `mockup` is attached, but
+  nothing generates one — the generic `render_key` thumbnail is what every screen
+  falls back to, as CLAUDE.md requires.
+- **No emails.** Session 3's queue moves requests; nobody is told. Every
+  notification, including the approval email whose stand-in is `/dev`, is
+  Sessions 4–5.

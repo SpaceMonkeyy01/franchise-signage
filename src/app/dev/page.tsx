@@ -1,14 +1,12 @@
-// The temporary operator console — the queue.
+// The corporate reviewer stand-in — the queue of things waiting on corporate.
 //
-// TEMPORARY. Sessions 3 and 4 replace this with /admin behind Supabase Auth and
-// with signed single-use reviewer links. It exists because the franchisee flows
-// (Session 2) submit real requests that nothing can currently move: package prep
-// belongs to the team and approvals belong to corporate, and neither has a
-// screen yet. Without it the storyline dead-ends at `submitted`.
+// TEMPORARY, and now narrower than it was: the Signage.com team's half moved to
+// /admin when Session 3 built it for real. What is left is the reviewer, because
+// Session 4 delivers their decisions as signed single-use links in an approval
+// email and that does not exist yet. Without this screen a request that needs
+// corporate cannot move at all.
 //
-// It deliberately puts both personas in one place, the way docs/flow-demo.jsx
-// puts them behind one switcher — the point is to walk the whole lifecycle, not
-// to model who may do what. That part comes with the real screens.
+// Delete this route when Session 4 lands. Do not secure it — see ./guard.ts.
 
 import Link from 'next/link';
 
@@ -17,103 +15,55 @@ import { getRequestQueue } from '@/lib/db/queries';
 
 import { assertDevConsole } from './guard';
 
-const INTENT_LABEL: Record<string, string> = {
-  initial_setup: 'Initial setup',
-  add: 'New signs',
-  replace_like: 'Replacement',
-  modify: 'Modification',
-  remove: 'Removal',
-  rebrand: 'Rebrand',
-};
-
-/** What the operator should do next, given where the request is. */
-const NEXT_STEP: Record<string, string> = {
-  submitted: 'Prepare the package',
-  needs_review: 'Corporate decision',
-  changes_requested: 'With the franchisee',
-  approved: 'Route for quote',
-  sent_for_quote: 'Deliver the quote',
-  quote_ready: 'With the franchisee',
-  accepted: 'Start production',
-  in_production: 'Mark shipped',
-  shipped: 'Mark installed',
-  completed: '—',
-};
-
-export default async function DevQueue() {
+export default async function DevReviewerQueue() {
   assertDevConsole();
-  const queue = await getRequestQueue();
+  // Exactly what a reviewer would be emailed about: requests with items pending
+  // their decision. Nothing else on the queue is theirs to act on.
+  const waiting = await getRequestQueue(['needs_review']);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
       <Banner />
 
-      <h1 className="mt-6 text-xl font-bold text-gray-900">Request queue</h1>
+      <h1 className="mt-6 text-xl font-bold text-gray-900">Awaiting corporate approval</h1>
       <p className="mt-1 text-sm text-gray-500">
-        {queue.length} request(s). Fast-lane requests never reach corporate — they go straight from
-        prep to routing.
+        {waiting.length} request(s). Only add-ons and exceptions reach this list — standard package
+        items and like-for-like replacements auto-approve and never appear.
       </p>
 
-      <div className="mt-5 overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[46rem] text-sm">
-          <thead className="border-b border-gray-100 text-left text-xs text-gray-500">
-            <tr>
-              <th className="px-4 py-2.5 font-medium">Request</th>
-              <th className="px-4 py-2.5 font-medium">Location</th>
-              <th className="px-4 py-2.5 font-medium">Items</th>
-              <th className="px-4 py-2.5 font-medium">Status</th>
-              <th className="px-4 py-2.5 font-medium">Next step</th>
-            </tr>
-          </thead>
-          <tbody>
-            {queue.map((row) => (
-              <tr key={row.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
-                <td className="px-4 py-2.5">
-                  <Link href={`/dev/request/${row.id}`} className="font-medium text-gray-900 underline-offset-2 hover:underline">
-                    {row.code}
-                  </Link>
-                  <span className="ml-2 text-xs text-gray-400">
-                    {INTENT_LABEL[row.intent] ?? row.intent}
-                  </span>
-                  {row.fast_lane && (
-                    <span
-                      className="ml-2 rounded px-1.5 py-0.5 text-[10px] font-medium"
-                      style={{ background: '#DCFCE7', color: '#166534' }}
-                    >
-                      ⚡ fast lane
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-gray-600">{row.location_name}</td>
-                <td className="px-4 py-2.5 text-xs text-gray-600">
-                  {row.item_count}
-                  {row.pending_count > 0 && (
-                    <span className="ml-1.5 rounded bg-amber-100 px-1.5 py-0.5 text-amber-800">
-                      {row.pending_count} to review
-                    </span>
-                  )}
-                  {row.changes_count > 0 && (
-                    <span className="ml-1.5 rounded bg-rose-100 px-1.5 py-0.5 text-rose-800">
-                      {row.changes_count} reopened
-                    </span>
-                  )}
-                  {row.tbd_count > 0 && (
-                    <span className="ml-1.5 rounded bg-gray-100 px-1.5 py-0.5 text-gray-600">
-                      {row.tbd_count} TBD
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5">
-                  <RequestStatusChip status={row.status} />
-                </td>
-                <td className="px-4 py-2.5 text-xs text-gray-500">
-                  {NEXT_STEP[row.status] ?? '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-5 space-y-2">
+        {waiting.map((row) => (
+          <Link
+            key={row.id}
+            href={`/dev/request/${row.id}`}
+            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300"
+          >
+            <span className="text-sm">
+              <span className="font-medium text-gray-900">{row.code}</span>
+              <span className="ml-2 text-gray-500">
+                {row.brand_name} · {row.location_name}
+              </span>
+              <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800">
+                {row.pending_count} to review
+              </span>
+            </span>
+            <RequestStatusChip status={row.status} />
+          </Link>
+        ))}
+        {waiting.length === 0 && (
+          <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-400">
+            Nothing is waiting on corporate.
+          </p>
+        )}
       </div>
+
+      <p className="mt-6 text-xs text-gray-400">
+        Looking for the Signage.com side?{' '}
+        <Link href="/admin" className="underline underline-offset-2">
+          The operator console is at /admin
+        </Link>
+        .
+      </p>
     </main>
   );
 }
@@ -122,13 +72,12 @@ export function Banner() {
   return (
     <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
       <p className="text-sm font-semibold text-amber-900">
-        Temporary console — Signage.com team + corporate reviewer
+        Temporary reviewer stand-in — corporate approvals
       </p>
       <p className="mt-1 text-xs leading-relaxed text-amber-900/80">
-        No login, no permissions, both personas in one place. It exists so the whole storyline can
-        be walked end to end before Session 3 builds the authenticated team queue and Session 4
-        builds the reviewer&rsquo;s email links. Every action here calls the same status machine the
-        real screens will. Not reachable in production.
+        No login and no identity: this is a stand-in for the approval email Session 4 sends, whose
+        Approve / Request changes / Decline actions are signed single-use links. The decisions it
+        records are real and go through the same §7 rules. Not reachable in production.
       </p>
     </div>
   );
