@@ -123,8 +123,10 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
       {request.status === 'needs_review' && (
         <Waiting>
           With corporate — {request.items.filter((i) => i.item_status === 'pending_review').length}{' '}
-          item(s) awaiting a decision. Approvals arrive by email (Session 4); until then the
-          reviewer stand-in at <code className="rounded bg-gray-100 px-1">/dev</code> decides them.
+          item(s) awaiting a decision. The approval email has gone to the brand&rsquo;s reviewer
+          with a link that expires in seven days; the SLA timer chases it after the brand&rsquo;s
+          review window. With no mail provider configured, the message is in the outbox at{' '}
+          <code className="rounded bg-gray-100 px-1">/dev</code>.
         </Waiting>
       )}
 

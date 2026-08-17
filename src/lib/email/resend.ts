@@ -1,29 +1,19 @@
-// Resend transport. One template file per notification type lands in Session 4
-// and Session 5; this is only the client and the brand-sender rule.
+// The Resend client.
+//
+// Constructed only when RESEND_API_KEY is set — src/lib/email/send.ts imports
+// this module lazily, so a machine with no key never loads it and never needs
+// one. The From-line rules live in ./sender.ts, which every template path uses
+// whether or not a provider exists.
 
 import { Resend } from 'resend';
-
-import { serverEnv } from '../env';
 
 let cached: Resend | null = null;
 
 export function resend(): Resend {
-  if (!cached) cached = new Resend(serverEnv().RESEND_API_KEY);
+  if (!cached) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) throw new Error('RESEND_API_KEY is not set');
+    cached = new Resend(key);
+  }
   return cached;
-}
-
-/**
- * The From line for franchisee-facing mail.
- *
- * SPEC §8d: the welcome email — and by extension everything a franchisee
- * receives — is sent AS THE BRAND, not as Signage.com. The franchisee has a
- * relationship with their franchisor; Signage.com is the operator behind it.
- * Vendor and team mail is the exception and uses the platform sender.
- */
-export function brandSender(brand: { name: string }, address?: string | null): string {
-  return `${brand.name} <${address ?? serverEnv().RESEND_FROM_EMAIL}>`;
-}
-
-export function platformSender(): string {
-  return `Signage.com <${serverEnv().RESEND_FROM_EMAIL}>`;
 }

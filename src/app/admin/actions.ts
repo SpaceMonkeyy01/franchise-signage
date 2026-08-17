@@ -17,6 +17,7 @@ import { assertTeamMember } from '@/lib/auth/team';
 import { withStatusStore } from '@/lib/db/pg-status-store';
 import { query, queryOne } from '@/lib/db/pool';
 import { routeRequestForQuote } from '@/lib/db/routing';
+import { notifyReviewNeeded } from '@/lib/email/notify';
 import type { SubmitFailure } from '@/lib/forms';
 import { prepPackage, transitionRequest, type RequestStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
@@ -51,7 +52,12 @@ export async function prepPackageAction(
   landlordCriteriaReviewed: 'yes' | 'no' | 'not_provided',
 ): Promise<Result> {
   return run(async () => {
-    await withStatusStore((store) => prepPackage(store, requestId, { landlordCriteriaReviewed }));
+    const { derived } = await withStatusStore((store) =>
+      prepPackage(store, requestId, { landlordCriteriaReviewed }),
+    );
+    // The approval email goes out only when the package actually needs corporate.
+    // The fast lane's whole promise is that this never fires.
+    if (derived.status === 'needs_review') await notifyReviewNeeded(requestId);
   });
 }
 

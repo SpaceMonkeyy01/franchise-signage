@@ -401,25 +401,50 @@ const lifecycleId = await withDb(async (client) =>
   (await client.query('select id from requests where code = $1', [lifecycleCode])).rows[0].id,
 );
 const admin = `${BASE}/admin/request/${lifecycleId}`;
-const reviewer = `${BASE}/dev/request/${lifecycleId}`;
 
 await page.goto(admin, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Prepare package' }).click();
 await expectVisible(page, 'text=Package prepared · 0 auto-approved, 2 sent for review', 'package prep derives the request to corporate');
 await expectVisible(page, 'text=Landlord sign criteria reviewed: not provided', 'the §8b landlord check is logged either way');
 
-await page.goto(reviewer, { waitUntil: 'networkidle' });
-await page.locator('input[placeholder="Note — required to request changes, optional otherwise"]').first().fill('Confirm the pole height with the city.');
-await page.locator('article').first().getByRole('button', { name: 'Request changes' }).click();
-// The sibling item is still theirs to decide: sending one item back does not
-// take the others off the reviewer's desk (SPEC §7).
-await page.goto(reviewer, { waitUntil: 'networkidle' });
-await expectCount(page, 'article', 1, 'sending one item back leaves its siblings with the reviewer');
+// The approval email — and the link inside it, which is the reviewer's whole
+// credential. Read out of the outbox exactly as a reviewer reads their inbox.
+const approvalEmail = await withDb(async (client) =>
+  (
+    await client.query(
+      `select id from sent_emails where request_id = $1 and kind = 'review_requested'
+        order by created_at desc limit 1`,
+      [lifecycleId],
+    )
+  ).rows[0],
+);
+record('preparing the package sent the approval email', Boolean(approvalEmail));
+
+await page.goto(`${BASE}/dev/mail/${approvalEmail.id}`, { waitUntil: 'networkidle' });
+const emailFrame = page.frameLocator('iframe');
+const approveHref = await emailFrame.locator('a:has-text("Approve")').first().getAttribute('href');
+record('the email carries a per-item approval link', /\/review\/.+item=/.test(approveHref ?? ''));
+
+// Opening the link must decide nothing: corporate mail scanners follow links.
+await page.goto(approveHref, { waitUntil: 'networkidle' });
+const statusAfterOpening = await withDb(async (client) =>
+  (await client.query('select status from requests where id = $1', [lifecycleId])).rows[0].status,
+);
+record('opening the link decides nothing', statusAfterOpening === 'needs_review');
+await expectVisible(page, 'text=/already proceeding|need a decision|Approve this sign/', 'the link opens the review page');
+
+// Send one item back — the note is required.
+await page.locator('button:has-text("Request changes")').first().click();
+const blocked = await page.locator('button:has-text("Send back with this note")').first().isDisabled();
+record('request-changes is blocked without a note', blocked);
+await page.locator('textarea').first().fill('Confirm the pole height with the city.');
+await page.locator('button:has-text("Send back with this note")').first().click();
+await expectVisible(page, 'text=/Sent back to the franchisee/', 'the reviewer can send one item back');
 
 await page.goto(admin, { waitUntil: 'networkidle' });
 await expectGone(page, 'button:has-text("Route for quote")', 'a request with an item out for changes cannot be routed');
 
-// The franchisee answers; corporate approves what comes back.
+// The franchisee answers; that mints a NEW link and kills the old email's.
 const lifecycleToken = await withDb(async (client) =>
   (await client.query('select access_token from requests where id = $1', [lifecycleId])).rows[0]
     .access_token,
@@ -429,11 +454,41 @@ await page.locator('input[placeholder="Sizing / site notes"]').first().fill('18f
 await page.getByRole('button', { name: /Resubmit for review/ }).click();
 await expectVisible(page, 'text=/package v2/', 'the franchisee answers the change request');
 
-await page.goto(reviewer, { waitUntil: 'networkidle' });
-await page.locator('article').first().getByRole('button', { name: 'Approve' }).click();
-await page.goto(reviewer, { waitUntil: 'networkidle' });
-await page.locator('article').first().getByRole('button', { name: 'Approve' }).click();
-await expectVisible(page, 'text=Nothing on this request needs a decision', 'both items end up decided');
+await page.goto(approveHref, { waitUntil: 'networkidle' });
+await expectVisible(page, 'h1:has-text("That link was replaced")', 'the superseded link stops working');
+
+const reReview = await withDb(async (client) =>
+  (
+    await client.query(
+      `select id, subject from sent_emails where request_id = $1 and kind = 'review_requested_again'
+        order by created_at desc limit 1`,
+      [lifecycleId],
+    )
+  ).rows[0],
+);
+record('resubmission sent the re-review email', Boolean(reReview));
+
+// Decide everything from the fresh link.
+await page.goto(`${BASE}/dev/mail/${reReview.id}`, { waitUntil: 'networkidle' });
+const freshHref = await page
+  .frameLocator('iframe')
+  .locator('a:has-text("Approve")')
+  .first()
+  .getAttribute('href');
+await page.goto(freshHref, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Approve this sign' }).first().click();
+await page.waitForTimeout(1500);
+await page.reload({ waitUntil: 'networkidle' });
+const stillPending = await page.getByRole('button', { name: 'Approve this sign' }).count();
+if (stillPending > 0) {
+  await page.getByRole('button', { name: 'Approve this sign' }).first().click();
+  await page.waitForTimeout(1500);
+}
+await expectVisible(page, 'text=/Every item on this request has been decided|already proceeding/', 'both items end up decided');
+
+// Single-use: once the review is complete the link retires itself.
+await page.goto(freshHref, { waitUntil: 'networkidle' });
+await expectVisible(page, 'h1:has-text("This review is complete")', 'the link retires once the review is done');
 
 await page.goto(admin, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Route for quote' }).click();

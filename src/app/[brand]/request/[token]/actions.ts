@@ -10,6 +10,7 @@ import { revalidatePath } from 'next/cache';
 
 import { toRequestFile } from '@/lib/db/create-request';
 import { createPgStatusStore, withStatusStore } from '@/lib/db/pg-status-store';
+import { notifyReviewNeeded } from '@/lib/email/notify';
 import { query, queryOne, transaction } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
 import { resubmitRequest, transitionRequest } from '@/lib/status';
@@ -134,6 +135,11 @@ export async function resubmitChanges(input: {
     console.error('resubmission failed', error);
     return { error: 'That resubmission failed. Nothing was saved — try again.' };
   }
+
+  // The re-review email (SPEC §9 interface 3). Outside the transaction: the
+  // resubmission is committed and must not be undone by a mail failure, and
+  // minting the new link revokes the one the reviewer was sent for v1.
+  await notifyReviewNeeded(request.id);
 
   revalidatePath(`/[brand]/request/[token]`, 'page');
 }

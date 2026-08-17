@@ -1,6 +1,6 @@
 # Where the build is
 
-Last updated: 17 Aug 2026, end of Session 3.
+Last updated: 17 Aug 2026, end of Session 4.
 
 Read this first when picking the work back up. `docs/SPEC.md` is still the
 contract and `claude-code-sessions.md` is still the plan — this file only says
@@ -19,7 +19,8 @@ npm run dev          # starts the dev database AND the web server
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | no login; tokenized links |
 | Signage.com team | http://localhost:3000/admin | allowlisted team email |
-| Corporate reviewer | http://localhost:3000/dev | temporary stand-in, no login |
+| Corporate reviewer | from a link in the approval email | no login, ever |
+| Outbox (dev) | http://localhost:3000/dev | what would have been emailed |
 
 Sign in to `/admin` as `team@signage.com` — with no Supabase project configured
 the login screen is a picker over `team_members`, which is a stand-in for a
@@ -30,7 +31,8 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 59 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 67 checks (needs `npm run dev` up) |
+| `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 58 unit tests — the §6 state machine and the seed pins |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 13 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
@@ -40,11 +42,17 @@ PGlite (Postgres compiled to WASM) runs as its own process speaking the real
 Postgres wire protocol, and the app connects with `pg`. Point `DATABASE_URL` at
 a Supabase connection string and the identical SQL runs there.
 
+**No mail is delivered.** With no `RESEND_API_KEY`, every message is rendered
+and recorded in `sent_emails` instead of being sent, and `/dev` is how you read
+it — including clicking the approval links a reviewer would click. Set the key
+and the same code sends through Resend.
+
 **The dev database serves one connection at a time.** The app's pool is capped
 at one in dev and releases it after 500 ms idle, so a script can still connect
 while `next dev` runs — but two clients at once get `ECONNRESET`. Anything that
 talks SQL directly (the seed, the smoke test) should connect, work, disconnect,
-and retry.
+and retry. If it starts refusing every connection, it has wedged — restart
+`npm run dev:db`.
 
 Uploaded files land in `.storage/` (gitignored) and are served from
 `/api/files/…`. Setting `SUPABASE_STORAGE_BUCKET` makes the app refuse that path
@@ -90,25 +98,40 @@ and real uploads behind `src/lib/storage/`.
 - `Mark installed` performs the `installed_signs` writeback — replacements update
   the row they replace rather than duplicating it.
 
-**Still temporary — `/dev`** is now only the **corporate reviewer** stand-in: the
-queue of requests awaiting corporate, and per-item Approve / Request changes /
-Decline with notes. It is the web version of the approval email Session 4 sends.
-It has no login and refuses to exist in production unless `DEV_CONSOLE=1`.
-**Delete the route when Session 4 lands — do not secure it.**
+**Session 4 — the approval email and the reviewer's links** (SPEC §9 interface 3):
+
+- The approval email, co-branded, leading with how many items are proceeding
+  WITHOUT corporate and then one card per pending item — spec, origin, vendor,
+  price, mockup, exception text, TBD note — with Approve / Request changes /
+  Decline per item.
+- Those buttons are signed links to `/review/{token}`: hashed in the database,
+  expiring after 7 days, revoked the moment the package version changes, and
+  retired once nothing is pending. Opening one decides nothing — mail scanners
+  follow links, so the decision happens on the page.
+- The re-review email on resubmission, which mints a new link and kills the old
+  one.
+- The SLA timer: `npm run sla`, `/api/cron/review-sla` (Bearer `CRON_SECRET`),
+  and a daily Vercel cron. `remind` re-asks, `escalate` writes to the secondary
+  reviewer or corporate, `auto_forward` records the brand's policy and tells the
+  team to confirm — **nothing is ever approved by a clock**.
+- `/dev` is now the outbox: every message the system sent or would have sent.
+  The reviewer stand-in that lived there is deleted — the real links replaced it.
+  The outbox itself stays useful once mail is live ("what exactly did we send
+  them"), but it is still guarded and still unauthenticated: keep it only if it
+  earns its place, and put it behind `/admin` if it does.
 
 ---
 
-## Next: Session 4 — approval emails + the change-request loop by mail
+## Next: Session 5 — routing emails, notifications, lender documents
 
-Per `claude-code-sessions.md`: the reviewer email via Resend (auto-approved count
-line, then each pending item with mockup, spec, vendor chip, price and a note
-field), Approve / Request changes / Decline as **signed single-use expiring
-links** (7 days) hitting minimal public pages, the re-review email on
-resubmission, and the SLA timer (`review_sla_days` → the brand's `sla_action`).
+Per `claude-code-sessions.md`: the vendor package email (the routing that builds
+the packages already exists in `src/lib/db/routing.ts`), the seven franchisee
+notification templates, the §8b lender PDFs (budgetary quote, formal invoice,
+paid receipt, budget one-pager), and the §8d welcome email.
 
-The decisions themselves already exist and are tested — `decideLineItem` and
-`requestChanges` in `src/lib/status/`. Session 4 is the delivery mechanism and
-the link security around them, after which `/dev` is deleted.
+Worth settling first: **entry 20** — a brand has one vendor contact but §4 routes
+per item, so the pylon override has no address of its own. Session 5 is where
+that stops being cosmetic.
 
 ---
 
@@ -120,6 +143,10 @@ the link security around them, after which `/dev` is deleted.
   `src/lib/db/queries.ts` and the ownership checks in each server action.
   **The first time a real Supabase project exists, test that anon cannot read
   another location's rows.** Still the largest untested assumption in the build.
+- **No mail has ever actually been sent.** The Resend path in
+  `src/lib/email/send.ts` is written and unexercised; everything so far has gone
+  to the outbox. The templates, links, triggers and SLA around it are exercised
+  by the smoke suite.
 - **The Supabase Auth path has never run.** `/admin` authenticates through a dev
   cookie here; the magic-link send and session read in `src/lib/auth/team.ts` are
   written against an API nothing on this machine has called. The allowlist half —
@@ -148,6 +175,11 @@ In `docs/DECISIONS.md`, none blocking:
    anything is actually emailed.
 5. Session 3's calls (entries 23–26), chiefly the split between swappable
    identity and fixed authorization in `/admin`.
+6. Session 4's calls (entries 27–33), chiefly: **one link per email rather than
+   per button** (a per-click link would break the other buttons in the same
+   message), and **`auto_forward` never approving anything** — SPEC §3.1 offers
+   it as a policy, and a timer that approves signage puts words in a
+   franchisor's mouth.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

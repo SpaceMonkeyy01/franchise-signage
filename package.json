@@ -16,7 +16,8 @@
     "dev:db": "tsx scripts/dev-db-server.ts",
     "dev:web": "next dev",
     "smoke": "node scripts/smoke.mjs",
-    "dev:db:reset": "tsx scripts/dev-db-server.ts --reset"
+    "dev:db:reset": "tsx scripts/dev-db-server.ts --reset",
+    "sla": "tsx scripts/run-sla.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -26,8 +26,6 @@ export function pool(): Pool {
     const connectionString = process.env.DATABASE_URL ?? DEV_DATABASE_URL;
     globalForPool.__pgPool = new Pool({
       connectionString,
-      // The dev server is a single WASM Postgres; a large pool buys nothing and
-      // costs connection churn. Supabase sits behind its own pooler.
       // One connection against the dev server, ten against Supabase's pooler.
       // PGlite is a single WASM Postgres behind a socket bridge and serves ONE
       // connection at a time: a second one is reset mid-query, which surfaces as
@@ -41,15 +39,58 @@ export function pool(): Pool {
       idleTimeoutMillis: process.env.DATABASE_URL ? 30_000 : 500,
       ssl: process.env.DATABASE_URL?.includes('supabase.') ? { rejectUnauthorized: false } : undefined,
     });
+
+    // An idle client that dies emits on the POOL, and an unhandled 'error' event
+    // takes the process down with it. Against the dev database that happens
+    // routinely — it drops the connection whenever a second one is attempted —
+    // so a script running beside `next dev` would crash rather than retry.
+    globalForPool.__pgPool.on('error', (error) => {
+      console.warn('[db] idle client error:', error.message);
+    });
+
+    // Same problem one level down: a socket that resets while a client is being
+    // handed out raises on the CLIENT, and an EventEmitter with no 'error'
+    // listener throws globally — killing a script mid-retry. The rejected query
+    // still surfaces to the caller; this only stops the duplicate from being
+    // fatal.
+    globalForPool.__pgPool.on('connect', (client) => {
+      client.on('error', () => {});
+    });
   }
   return globalForPool.__pgPool;
+}
+
+/**
+ * Retry a connection-level failure against the DEV database only.
+ *
+ * PGlite serves one connection at a time, so a script (`npm run sla`, the seed,
+ * the smoke test) that asks while `next dev` holds the socket gets ECONNRESET —
+ * a property of the stand-in, not of Postgres. Retrying briefly makes the two
+ * coexist. Against a real database this is off: a dropped connection there means
+ * something is wrong and should surface, not be papered over.
+ */
+async function withDevRetry<T>(run: () => Promise<T>): Promise<T> {
+  if (process.env.DATABASE_URL) return run();
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      return await run();
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'ECONNRESET' && code !== 'ECONNREFUSED') throw error;
+      lastError = error;
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  }
+  throw lastError;
 }
 
 export async function query<T>(
   text: string,
   params: unknown[] = [],
 ): Promise<T[]> {
-  const result = await pool().query(text, params);
+  const result = await withDevRetry(() => pool().query(text, params));
   return result.rows as T[];
 }
 
@@ -61,13 +102,27 @@ export async function queryOne<T>(
   return rows[0] ?? null;
 }
 
+/**
+ * Close the pool.
+ *
+ * For one-shot scripts (`npm run sla`): exiting with a live pooled connection
+ * makes `pg` emit "Connection terminated unexpectedly" from a socket nobody is
+ * listening to any more. Long-running servers never call this.
+ */
+export async function closePool(): Promise<void> {
+  const existing = globalForPool.__pgPool;
+  if (!existing) return;
+  globalForPool.__pgPool = undefined;
+  await existing.end().catch(() => {});
+}
+
 /** Run a set of statements in one transaction — used by every write path. */
 export async function transaction<T>(
   fn: (exec: {
     query: <R>(text: string, params?: unknown[]) => Promise<R[]>;
   }) => Promise<T>,
 ): Promise<T> {
-  const client = await pool().connect();
+  const client = await withDevRetry(() => pool().connect());
   try {
     await client.query('begin');
     const result = await fn({

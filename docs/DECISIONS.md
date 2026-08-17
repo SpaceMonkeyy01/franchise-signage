@@ -260,7 +260,63 @@ throwaway UI over permanent rules.
     pure string function is now its own import-free module, re-exported from the
     index so server callers are unaffected.
 
-### Not done, and why (Sessions 2–3)
+---
+
+## Session 4 — approval emails and the reviewer's links
+
+27. **One link per email, not one per button.** "Signed single-use expiring
+    links" (SPEC §9 interface 3) reads naturally as a link per action, but an
+    approval email carries three buttons per item and a reviewer decides several
+    — so a link burned by the first click would break every other button in the
+    same message. Instead the token identifies the EMAIL: it stays valid until
+    nothing on the request is pending (`used_at`), and is revoked the moment the
+    package version changes. The per-item buttons carry `?item=&action=` so the
+    right card opens with the right action selected.
+
+28. **Links open a page; they never act on GET.** Corporate mail filters follow
+    every link in a message, so a URL that approved a sign would be approved by
+    a spam scanner. The link renders the item and the decision happens on POST,
+    which is also why the review page shows the whole request rather than a bare
+    confirmation.
+
+29. **The token is stored hashed.** `review_links.token_hash`, never the token.
+    It is the reviewer's entire credential — a dump of that table would otherwise
+    be a set of working approvals.
+
+30. **`sla_action = auto_forward` does not approve anything.** SPEC §3.1 offers
+    it as a brand policy, and the obvious reading — proceed without corporate —
+    would mean a timer putting words in a franchisor's mouth. It logs that the
+    brand's policy is to proceed and tells the team to confirm; no item is ever
+    decided by a clock. `remind` re-sends the ask (minting a fresh link, since
+    the original may be near expiry) and `escalate` writes to the secondary
+    reviewer or corporate with a short notice that carries no decision buttons.
+
+31. **The SLA clock starts at the ask, not at submission.** It measures from the
+    most recent `review_email_sent` event, so a request that waited three days
+    for package prep has not spent the reviewer's week. A lapse is acted on once
+    per package version, which makes the runner safe to schedule hourly.
+
+32. **Mail has an outbox, and it is not only for development.** Every message is
+    written to `sent_emails` before the provider is called and updated after.
+    With no `RESEND_API_KEY` the send is skipped and the row is all there is,
+    which is what `/dev` now reads. With a key, the same rows answer "what
+    exactly did we send them" long after the provider's retention window.
+
+33. **Templates render through a dynamic import of `react-dom/server`.** Next
+    refuses a static import of it anywhere in a Server Component's graph, and
+    these templates are reached from Server Actions. Importing it inside
+    `render()` keeps the JSX templates CLAUDE.md asks for.
+
+### Corrected while building Session 4
+
+- **The dev database wedges if a script exits the instant it closes its pool.**
+  `npm run sla` called `process.exit(0)` immediately after `closePool()`, cutting
+  the socket teardown short; every subsequent connection to the PGlite bridge was
+  then reset until the server was restarted. The script now lets Node exit on its
+  own. The pool also attaches `error` handlers at both pool and client level —
+  an unhandled one killed the process mid-retry.
+
+### Not done, and why (Sessions 2–4)
 
 - **Still no behavioural RLS tests, and still no Supabase project.** Unchanged
   from Session 1, and now the largest untested assumption in a build that has
