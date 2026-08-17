@@ -123,6 +123,15 @@ export function createPgStatusStore(
       await exec.query(`update line_items set item_status = $2 where id = $1`, [lineItemId, status]);
     },
 
+    async setLineItemReview(lineItemId, review) {
+      await exec.query(
+        `update line_items
+            set item_status = $2, review_note = $3, reviewed_at = now(), reviewed_via_token = $4
+          where id = $1`,
+        [lineItemId, review.status, review.note, review.reviewedVia ?? null],
+      );
+    },
+
     async insertEvent(event: RequestEventInput) {
       await exec.query(
         `insert into request_events

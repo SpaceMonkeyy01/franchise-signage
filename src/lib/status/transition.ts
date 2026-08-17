@@ -42,6 +42,11 @@ export interface StatusStore {
     },
   ): Promise<void>;
   setLineItemStatus(lineItemId: string, status: LineItemStatus): Promise<void>;
+  /** A reviewer's decision on one item: status, their note, and when. */
+  setLineItemReview(
+    lineItemId: string,
+    review: { status: LineItemStatus; note: string | null; reviewedVia?: string | null },
+  ): Promise<void>;
   insertEvent(event: RequestEventInput): Promise<void>;
   insertInstalledSign(row: {
     locationId: string;
@@ -233,6 +238,86 @@ export async function prepPackage(
   }
 
   return { ...result, derived };
+}
+
+export interface DecisionOutcome {
+  itemStatus: LineItemStatus;
+  derived: DerivedRequestState;
+  /** Set when this decision was the last one outstanding and the request moved. */
+  transition?: TransitionResult;
+}
+
+/**
+ * A reviewer approves or declines ONE item (SPEC §7).
+ *
+ * Approval is line-item level, so nothing about this touches the siblings: a
+ * decline writes a declined item and the rest of the request carries on. The
+ * request itself only moves when nothing is left pending, which is what makes a
+ * five-item package with one slow decision still deliver the other four.
+ *
+ * An all-declined request has nowhere to go (SPEC §6 has no request-level
+ * `declined`), so the derivation says so and the request is left for the team —
+ * see docs/DECISIONS.md #9.
+ */
+export async function decideLineItem(
+  store: StatusStore,
+  options: {
+    requestId: string;
+    lineItemId: string;
+    decision: 'approved' | 'declined';
+    note?: string | null;
+    /** The single-use review token the decision arrived on, when there is one. */
+    reviewedVia?: string | null;
+    itemLabel?: string;
+  },
+): Promise<DecisionOutcome> {
+  const request = await store.getRequest(options.requestId);
+  if (!request) throw new RequestNotFoundError(options.requestId);
+
+  const items = await store.getLineItems(options.requestId);
+  const item = items.find((candidate) => candidate.id === options.lineItemId);
+  if (!item) throw new Error(`Line item ${options.lineItemId} is not on ${options.requestId}`);
+  if (item.itemStatus !== 'pending_review') {
+    throw new Error(`That item is not awaiting review (it is ${item.itemStatus}).`);
+  }
+
+  const note = options.note?.trim() || null;
+  await store.setLineItemReview(item.id, {
+    status: options.decision,
+    note,
+    reviewedVia: options.reviewedVia ?? null,
+  });
+
+  const label = options.itemLabel ?? 'Item';
+  await store.insertEvent({
+    requestId: request.id,
+    lineItemId: item.id,
+    kind: options.decision === 'approved' ? 'item_approved' : 'item_declined',
+    actor: 'reviewer',
+    summary: `${label} ${options.decision} by corporate${note ? `: "${note}"` : ''}`,
+    detail: { lineItemId: item.id, note },
+  });
+
+  const next = items.map((candidate) =>
+    candidate.id === item.id ? { ...candidate, itemStatus: options.decision } : candidate,
+  );
+  const derived = deriveRequestStatus(next);
+
+  // Only the last outstanding decision moves the request.
+  if (derived.blocked || derived.status === request.status) {
+    return { itemStatus: options.decision, derived };
+  }
+
+  const transition = await transitionRequest(store, {
+    requestId: request.id,
+    to: derived.status,
+    actor: 'reviewer',
+    summary: `Corporate review complete · ${derived.approvedCount} approved${
+      derived.declinedCount ? `, ${derived.declinedCount} declined` : ''
+    }`,
+    detail: { approved: derived.approvedCount, declined: derived.declinedCount },
+  });
+  return { itemStatus: options.decision, derived, transition };
 }
 
 /** A reviewer requests changes on specific items; only those reopen. */

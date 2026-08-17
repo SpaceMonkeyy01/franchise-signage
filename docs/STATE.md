@@ -1,6 +1,6 @@
 # Where the build is
 
-Last updated: 17 Aug 2026, end of Session 2.
+Last updated: 17 Aug 2026, end of Session 2 (plus the temporary `/dev` console).
 
 Read this first when picking the work back up. `docs/SPEC.md` is still the
 contract and `claude-code-sessions.md` is still the plan — this file only says
@@ -15,15 +15,17 @@ npm install          # once
 npm run dev          # starts the dev database AND the web server
 ```
 
-Then open **http://localhost:3000/freshbites**.
+Then open **http://localhost:3000/freshbites** — and
+**http://localhost:3000/dev** for the temporary operator console (Signage.com
+team + corporate reviewer), which is what moves a request once it is submitted.
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 41 checks (needs `npm run dev` up) |
-| `npm test` | 54 unit tests — the §6 state machine and the seed pins |
+| `npm run smoke` | drive the real flows in a browser — 53 checks (needs `npm run dev` up) |
+| `npm test` | 58 unit tests — the §6 state machine and the seed pins |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 13 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
@@ -92,6 +94,20 @@ because the flows have no login) and the seed's new **REQ-0019**, a request
 sitting mid-change-request so the loop is reachable before the reviewer screens
 exist.
 
+**Temporary operator console** at **`/dev`** — both the Signage.com team and the
+corporate reviewer, in one unauthenticated screen, so the whole storyline runs
+today. Queue with fast-lane badges and TBD/pending rollups; per-request: prepare
+package, per-item approve / request-changes / decline with notes, route for
+quote (splits into one package per recipient), manual pricing for standin items,
+deliver quote, log external acceptance, production → shipped → installed, and
+§8b landlord event logging.
+
+It is **throwaway UI over permanent rules**: the two pieces it needed —
+`decideLineItem` (SPEC §7) and `src/lib/db/routing.ts` (SPEC §4) — live in the
+libraries and are what Sessions 4 and 5 will call. `/dev` refuses to exist
+outside development unless `DEV_CONSOLE=1` is set. **Delete it when Sessions 3
+and 4 land — do not secure it.**
+
 ---
 
 ## Next: Session 3 — the team queue
@@ -102,8 +118,8 @@ queue, package prep (`prepPackage`, which is what moves everything the
 franchisee has now submitted), manual pricing for standin items, mockup upload,
 and vendor routing into `quotes`.
 
-Everything the franchisee flows submit currently stops at `submitted` and waits
-for exactly that screen.
+`/dev` already performs every one of those transitions; Session 3's job is the
+authenticated screen around them, not the behaviour underneath.
 
 ---
 
@@ -136,6 +152,12 @@ In `docs/DECISIONS.md`, none blocking:
    `submitted`, the structured address, optional sizing on add-ons, the
    note-on-timeline when no lease exhibit is provided, resolving the change
    request on resubmission, and storing uploads before the request exists.
+4. **New, and the one worth answering before Session 5** (entry 20): a brand has
+   exactly one `vendor_name`/`vendor_email`, but §4 resolves routing per item —
+   so the Freshbites pylon's `approved_vendor` override has no address of its
+   own and falls back to the brand's only vendor contact. Routing and the
+   package split are right; the address is not. §3.1 needs per-policy vendor
+   contacts before anything is actually emailed.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

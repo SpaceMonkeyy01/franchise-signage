@@ -157,6 +157,20 @@ async function rewindChangeRequest() {
  */
 async function removeSmokeArtifacts(codes = []) {
   return withDb(async (client) => {
+    // The lifecycle section marks a request installed, which writes
+    // installed_signs — so Oak Plaza would grow a sign per run and the "five
+    // installed signs" assertion above would fail. Collected BEFORE the requests
+    // go, because source_line_item_id is SET NULL on delete and the trail
+    // vanishes with them. (Only inserts: a replacement UPDATES an existing row,
+    // and none of the smoke replacements reach `completed`.)
+    const { rows: written } = await client.query(
+      `select s.id from installed_signs s
+         join line_items li on li.id = s.source_line_item_id
+         join requests r on r.id = li.request_id
+        where r.code = any($1)`,
+      [codes],
+    );
+
     await client.query(`alter table request_events disable trigger request_events_append_only`);
     try {
       await client.query(
@@ -165,6 +179,9 @@ async function removeSmokeArtifacts(codes = []) {
              or location_id in (select id from locations where name = $2)`,
         [codes, SMOKE_LOCATION],
       );
+      await client.query(`delete from installed_signs where id = any($1)`, [
+        written.map((row) => row.id),
+      ]);
       await client.query(`delete from locations where name = $1`, [SMOKE_LOCATION]);
     } finally {
       await client.query(`alter table request_events enable trigger request_events_append_only`);
@@ -336,6 +353,89 @@ await page.getByRole('button', { name: /Resubmit for review/ }).click();
 await expectVisible(page, 'text=/package v2/', 'resubmitting bumps the package version');
 await expectGone(page, 'h2:has-text("Update this item and resubmit")', 'the change request is closed');
 await expectVisible(page, 'text=Resubmitted with changes', 'the resubmission wrote its event');
+
+// ------------------------------------------------- the whole lifecycle, /dev
+// The temporary operator console. This section is what proves the storyline
+// actually closes: submit → prep → corporate → route → price → deliver →
+// accept → install → the location record grows.
+console.log('\nFull lifecycle through the temporary console');
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: /Request signage/i }).first().click();
+await page.getByRole('link', { name: /Add a new sign/i }).click();
+await page.waitForURL('**/add', { timeout: TIMEOUT });
+// The pylon overrides to an approved vendor and is standin-priced, so one
+// request exercises the package split AND manual pricing.
+for (const name of ['Freshbites Road Sign', 'Freshbites Neon Leaf']) {
+  await page.locator(`div:has(> p:text-is("${name}")) >> button:has-text("Add · needs approval")`).first().click();
+}
+await page.getByRole('button', { name: /Submit .*for approval/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await captureCode();
+const lifecycleCode = createdCodes.at(-1);
+const lifecycleId = await withDb(async (client) =>
+  (await client.query('select id from requests where code = $1', [lifecycleCode])).rows[0].id,
+);
+const console_ = `${BASE}/dev/request/${lifecycleId}`;
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Prepare package' }).click();
+await expectVisible(page, 'text=Package prepared · 0 auto-approved, 2 sent for review', 'package prep derives the request to corporate');
+
+await page.locator('input[placeholder="Note (required to request changes)"]').first().fill('Confirm the pole height with the city.');
+await page.locator('div:has(> p:text-is("Corporate decision"))').first().getByRole('button', { name: 'Request changes' }).click();
+await expectVisible(page, 'text=/Changes requested on 1 item/', 'corporate can send one item back');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.locator('div:has(> p:text-is("Corporate decision"))').first().getByRole('button', { name: 'Approve' }).click();
+await expectVisible(page, 'text=/approved by corporate/', 'the sibling item is decided independently');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await expectGone(page, 'button:has-text("Route for quote")', 'a request with an item still out for changes cannot be routed');
+
+// The franchisee answers, corporate approves, and the request becomes routable.
+const lifecycleToken = await withDb(async (client) =>
+  (await client.query('select access_token from requests where id = $1', [lifecycleId])).rows[0]
+    .access_token,
+);
+await page.goto(`${BASE}/freshbites/request/${lifecycleToken}`, { waitUntil: 'networkidle' });
+await page.locator('input[placeholder="Sizing / site notes"]').first().fill('18ft pole');
+await page.getByRole('button', { name: /Resubmit for review/ }).click();
+await expectVisible(page, 'text=/package v2/', 'the franchisee answers the change request');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.locator('div:has(> p:text-is("Corporate decision"))').first().getByRole('button', { name: 'Approve' }).click();
+await expectVisible(page, 'text=Corporate review complete', 'the last decision moves the request to approved');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Route for quote' }).click();
+// The pylon's per-item override disagrees with the brand policy, so ONE request
+// becomes TWO packages (SPEC §4) — the case the Freshbites seed exists to prove.
+// Scoped to the team panel's quote list — the timeline repeats the words.
+await expectCount(
+  page,
+  'section:has(h2:text-is("Signage.com team")) li',
+  2,
+  'routing splits the request into two vendor packages',
+);
+
+await page.locator('input[placeholder="e.g. 2400"]').first().fill('7400');
+await page.getByRole('button', { name: 'Set price' }).first().click();
+await expectVisible(page, 'text=/priced manually — \\$7,400/', 'a standin item is priced by hand');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Deliver quote to franchisee' }).click();
+await expectVisible(page, 'text=/Quote delivered to franchisee — \\$9,000/', 'delivering totals both packages');
+
+await page.getByRole('button', { name: 'Log acceptance' }).click();
+await expectVisible(page, 'text=/Acceptance logged/', 'the external tail is accepted by the team, not in-app');
+
+await page.goto(console_, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Mark installed' }).click();
+await expectVisible(page, 'text=/Installed — location record updated/', 'the request completes');
+
+// The point of the whole system: the location record grew.
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=Freshbites Road Sign', 'the new sign is on the location record');
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 

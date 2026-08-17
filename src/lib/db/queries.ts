@@ -295,6 +295,63 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   };
 }
 
+/** The same detail as getRequestByToken, reached by id instead of a token. */
+export async function getRequestById(requestId: string): Promise<RequestDetail | null> {
+  const row = await maybeOne<{ access_token: string }>(
+    `select access_token from requests where id = $1`,
+    [requestId],
+  );
+  return row ? getRequestByToken(row.access_token) : null;
+}
+
+// ---------------------------------------------------------------- operations
+
+export interface QueueRow {
+  id: string;
+  code: string;
+  intent: RequestIntent;
+  status: RequestStatus;
+  access_token: string;
+  submitted_at: string | null;
+  brand_slug: string;
+  brand_name: string;
+  location_name: string;
+  item_count: number;
+  pending_count: number;
+  changes_count: number;
+  tbd_count: number;
+  quote_count: number;
+  /** True when nothing needed corporate — the fast lane (SPEC §7). */
+  fast_lane: boolean;
+}
+
+/**
+ * Every request, newest first — the operator's queue.
+ *
+ * Not token-scoped, because this is the Signage.com side: the team sees all
+ * brands. The temporary console (src/app/dev) is the only caller today; the real
+ * queue in Session 3 sits behind Supabase Auth and the team_members allowlist.
+ */
+export function getRequestQueue(): Promise<QueueRow[]> {
+  return rows<QueueRow>(
+    `select r.id, r.code, r.intent, r.status, r.access_token, r.submitted_at,
+            b.slug as brand_slug, b.name as brand_name, l.name as location_name,
+            count(li.id)::int as item_count,
+            count(*) filter (where li.item_status = 'pending_review')::int as pending_count,
+            count(*) filter (where li.item_status = 'changes_requested')::int as changes_count,
+            count(*) filter (where cardinality(li.tbd_fields) > 0)::int as tbd_count,
+            (select count(*) from quotes q where q.request_id = r.id)::int as quote_count,
+            bool_and(li.item_status = 'auto_approved') as fast_lane
+       from requests r
+       join brands b on b.id = r.brand_id
+       join locations l on l.id = r.location_id
+       left join line_items li on li.request_id = r.id
+      where r.status <> 'draft'
+      group by r.id, b.slug, b.name, l.name
+      order by r.created_at desc`,
+  );
+}
+
 // ------------------------------------------------------------------ catalog
 
 export interface BrandItemRow {

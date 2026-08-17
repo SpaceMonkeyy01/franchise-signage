@@ -23,6 +23,8 @@ export interface MemoryStore extends StatusStore {
   lineItems: LineItemState[];
   installedSigns: InstalledSignState[];
   events: RequestEventInput[];
+  /** lineItemId → the reviewer's note, so decisions are assertable. */
+  reviewNotes: Map<string, string | null>;
   changeRequests: Array<{
     requestId: string;
     lineItemIds: string[];
@@ -41,6 +43,7 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
     lineItems: seed.lineItems.map((i) => ({ ...i })),
     installedSigns: (seed.installedSigns ?? []).map((s) => ({ ...s })),
     events: [],
+    reviewNotes: new Map(),
     changeRequests: [],
     submittedAt: null,
 
@@ -65,6 +68,12 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
       const item = store.lineItems.find((i) => i.id === lineItemId);
       if (!item) throw new Error(`No line item ${lineItemId}`);
       item.itemStatus = status;
+    },
+    async setLineItemReview(lineItemId, review) {
+      const item = store.lineItems.find((i) => i.id === lineItemId);
+      if (!item) throw new Error(`No line item ${lineItemId}`);
+      item.itemStatus = review.status;
+      store.reviewNotes.set(lineItemId, review.note);
     },
     async insertEvent(event) {
       store.events.push(event);

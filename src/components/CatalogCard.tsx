@@ -60,7 +60,7 @@ export function CatalogCard({
         </button>
         <span className="flex items-center gap-1">
           {installed && <span className="text-[9px] text-gray-400">installed</span>}
-          <VendorChip policy={policy} vendorName={brand.vendor_name} />
+          <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
         </span>
       </div>
 

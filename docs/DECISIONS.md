@@ -189,6 +189,43 @@ list for Usman is still unanswered.
   which starts at 1 — so the 16th real request in a seeded database would have
   collided on `requests.code`.
 
+### The temporary operator console (`/dev`)
+
+Built after Session 2 because the franchisee flows submit real requests that
+nothing could move: package prep belongs to the team (Session 3) and approvals to
+corporate (Session 4), so the storyline dead-ended at `submitted`. It is
+throwaway UI over permanent rules.
+
+20. **A brand has one vendor identity, and a per-item override has nowhere to
+    point.** §3.1 gives `brands` a single `vendor_name`/`vendor_email`, while §4
+    resolves routing per item as `brand_items.vendor_policy_override ??
+    brands.vendor_policy`. The Freshbites pylon — the seeded row that exists to
+    prove one request can split across two recipients — overrides to
+    `approved_vendor` while the brand's own policy is `signage_com`, so the
+    override resolves to a policy the brand has no contact for. Two consequences,
+    handled differently:
+    - **Display**: `VendorChip` now takes the brand's own policy and refuses to
+      print the brand's vendor name against a policy that is not it. Telling a
+      franchisee their pylon is going to "Signage.com Manufacturing" when it is
+      being routed elsewhere is worse than saying "External vendor".
+    - **Routing**: falls back to the brand's single vendor contact, which is the
+      only address on file. **§3.1 needs per-policy vendor contacts (or a contact
+      on `brand_items`) before Session 5 mails anything for real.** Related to
+      the open question of the pilot brand's actual vendor policy.
+
+21. **`decideLineItem` lives in `src/lib/status/`, not in the console.** The
+    console is temporary; "approve or decline one item, and move the request only
+    when nothing is left pending" is the §7 rule and belongs with the other
+    rules. Session 4's signed email links call the same function. Same reasoning
+    for `src/lib/db/routing.ts`, which is the routing half of Session 5 without
+    the email.
+
+22. **`/dev` has no authentication at all.** It performs every privileged action
+    in the system. It is refused outside development unless `DEV_CONSOLE=1` is
+    set deliberately (`src/app/dev/guard.ts`). Sessions 3 and 4 replace it with
+    Supabase Auth + the `team_members` allowlist, and with signed single-use
+    reviewer links; this must be deleted then, not secured.
+
 ### Not done, and why
 
 - **Still no behavioural RLS tests, and still no Supabase project.** Unchanged

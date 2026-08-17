@@ -12,6 +12,7 @@ import {
   resolveVendorPolicy,
 } from '../machine';
 import {
+  decideLineItem,
   prepPackage,
   requestChanges,
   resubmitRequest,
@@ -214,6 +215,75 @@ describe('the fast lane (REQ-0017 in the demo)', () => {
 });
 
 // ------------------------------------------------------- change-request loop
+
+// ---------------------------------------------------------- reviewer decisions
+
+describe('line-item decisions (SPEC §7)', () => {
+  const twoPending = () =>
+    createMemoryStore({
+      request: request({ status: 'needs_review' }),
+      lineItems: [
+        lineItem({ id: 'a', itemStatus: 'auto_approved' }),
+        lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' }),
+        lineItem({ id: 'c', origin: 'addon', itemStatus: 'pending_review' }),
+      ],
+    });
+
+  it('leaves the request in review while any item is still pending', async () => {
+    const store = twoPending();
+    const outcome = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'approved',
+      note: 'Dining area only.',
+    });
+
+    expect(outcome.transition).toBeUndefined();
+    expect(store.request.status).toBe('needs_review');
+    expect(store.reviewNotes.get('b')).toBe('Dining area only.');
+    expect(store.events.map((e) => e.kind)).toEqual(['item_approved']);
+  });
+
+  it('moves the request once the last decision lands', async () => {
+    const store = twoPending();
+    await decideLineItem(store, { requestId: 'REQ-0016', lineItemId: 'b', decision: 'approved' });
+    const last = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'c',
+      decision: 'declined',
+    });
+
+    expect(last.transition?.to).toBe('approved');
+    expect(store.request.status).toBe('approved');
+    // The decline neither blocks its siblings nor the request.
+    expect(store.lineItems.find((i) => i.id === 'c')?.itemStatus).toBe('declined');
+    expect(last.derived.approvedCount).toBe(2);
+  });
+
+  it('refuses to decide an item twice', async () => {
+    const store = twoPending();
+    await decideLineItem(store, { requestId: 'REQ-0016', lineItemId: 'b', decision: 'approved' });
+    await expect(
+      decideLineItem(store, { requestId: 'REQ-0016', lineItemId: 'b', decision: 'declined' }),
+    ).rejects.toThrow(/not awaiting review/);
+  });
+
+  it('parks an all-declined request rather than inventing a status', async () => {
+    const store = createMemoryStore({
+      request: request({ status: 'needs_review' }),
+      lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
+    });
+    const outcome = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'declined',
+    });
+
+    expect(outcome.derived.blocked).toBe('all_items_declined');
+    expect(outcome.transition).toBeUndefined();
+    expect(store.request.status).toBe('needs_review');
+  });
+});
 
 describe('the change-request loop (SPEC §6/§7)', () => {
   it('reopens only the flagged item and leaves siblings alone', () => {

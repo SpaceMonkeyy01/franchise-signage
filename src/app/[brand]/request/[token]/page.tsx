@@ -194,7 +194,7 @@ function ItemCard({
             </span>
             {item.sizing && <span>{item.sizing}</span>}
             <span className="font-medium text-gray-900">{formatPrice(item.est_price_snapshot)}</span>
-            <VendorChip policy={policy} vendorName={brand.vendor_name} />
+            <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
           </div>
 
           {item.site_notes && (

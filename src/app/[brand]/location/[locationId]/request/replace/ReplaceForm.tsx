@@ -176,7 +176,7 @@ export function ReplaceForm({
                 {brand.default_tat && ` · TAT ${brand.default_tat}`}
               </>
             )}
-            <VendorChip policy={policy} vendorName={brand.vendor_name} />
+            <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
           </p>
         </div>
       )}

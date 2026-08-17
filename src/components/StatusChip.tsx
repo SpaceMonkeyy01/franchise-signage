@@ -56,11 +56,23 @@ function Chip({ label, className }: { label: string; className: string }) {
 export function VendorChip({
   policy,
   vendorName,
+  brandPolicy,
 }: {
   policy: string;
   vendorName: string | null;
+  /**
+   * The brand's own policy, when the caller knows it.
+   *
+   * `brands` carries ONE vendor identity, so an item whose override resolves to
+   * a different policy has no name on file — and printing the brand's vendor
+   * name there tells a franchisee their pylon is going somewhere it is not.
+   * Passing this makes the chip fall back to the honest generic label. See
+   * docs/DECISIONS.md #20.
+   */
+  brandPolicy?: string;
 }) {
   const external = policy !== 'signage_com';
+  const named = brandPolicy === undefined || policy === brandPolicy ? vendorName : null;
   return (
     <span
       className="inline-block whitespace-nowrap rounded px-1.5 py-0.5 text-[9px] font-medium"
@@ -70,7 +82,7 @@ export function VendorChip({
           : { background: 'var(--color-brand-light)', color: 'var(--color-brand-dark)' }
       }
     >
-      {external ? (vendorName ?? 'External vendor') : 'Signage.com'}
+      {external ? (named ?? 'External vendor') : 'Signage.com'}
     </span>
   );
 }

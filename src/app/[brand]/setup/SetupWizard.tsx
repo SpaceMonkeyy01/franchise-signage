@@ -500,6 +500,7 @@ function StepPackage({
                       <VendorChip
                         policy={brandItem.vendor_policy_override ?? brand.vendor_policy}
                         vendorName={brand.vendor_name}
+                        brandPolicy={brand.vendor_policy}
                       />
                       <span className="text-[11px] font-normal text-gray-500">
                         {formatPrice(brandItem.est_price)}
@@ -804,6 +805,7 @@ function ReviewRow({
         <VendorChip
           policy={brandItem.vendor_policy_override ?? brand.vendor_policy}
           vendorName={brand.vendor_name}
+          brandPolicy={brand.vendor_policy}
         />
       </span>
       <span className="text-xs text-gray-400">
