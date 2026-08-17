@@ -28,6 +28,7 @@ export interface MemoryStore extends StatusStore {
     lineItemIds: string[];
     comment: string;
     packageVersion: number;
+    resolvedAt: Date | null;
   }>;
   submittedAt: Date | null;
 }
@@ -86,7 +87,12 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
       target.status = 'active';
     },
     async insertChangeRequest(row) {
-      store.changeRequests.push(row);
+      store.changeRequests.push({ ...row, resolvedAt: null });
+    },
+    async resolveChangeRequests(requestId) {
+      for (const entry of store.changeRequests) {
+        if (entry.requestId === requestId && !entry.resolvedAt) entry.resolvedAt = new Date();
+      }
     },
   };
   return store;

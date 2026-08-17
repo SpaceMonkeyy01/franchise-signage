@@ -28,7 +28,17 @@ export function pool(): Pool {
       connectionString,
       // The dev server is a single WASM Postgres; a large pool buys nothing and
       // costs connection churn. Supabase sits behind its own pooler.
-      max: process.env.DATABASE_URL ? 10 : 4,
+      // One connection against the dev server, ten against Supabase's pooler.
+      // PGlite is a single WASM Postgres behind a socket bridge and serves ONE
+      // connection at a time: a second one is reset mid-query, which surfaces as
+      // ECONNRESET the moment a page runs two queries in a Promise.all. Capping
+      // the pool at one makes the pool itself the queue, so application code can
+      // stay written the way it would be written against a real Postgres.
+      max: process.env.DATABASE_URL ? 10 : 1,
+      // And it must let go when idle, or the one connection is held forever and
+      // nothing else on the machine — the seed, the smoke test, psql — can talk
+      // to the dev database while `next dev` is running.
+      idleTimeoutMillis: process.env.DATABASE_URL ? 30_000 : 500,
       ssl: process.env.DATABASE_URL?.includes('supabase.') ? { rejectUnauthorized: false } : undefined,
     });
   }

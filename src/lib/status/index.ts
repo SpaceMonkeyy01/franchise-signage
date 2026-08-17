@@ -7,4 +7,6 @@ export * from './events';
 export * from './machine';
 export * from './writeback';
 export * from './transition';
-export { createSupabaseStatusStore } from './supabase-store';
+// The only StatusStore implementation is src/lib/db/pg-status-store.ts: the app
+// talks SQL through `pg` to both the dev database and Supabase, so the
+// supabase-js adapter that used to sit here had no caller.

@@ -12,6 +12,7 @@ const TOKENS = {
   'REQ-0016': 'demo-cedar-park-initial-setup',
   'REQ-0017': 'demo-oak-plaza-menu-replacement',
   'REQ-0018': 'demo-oak-plaza-neon-addon',
+  'REQ-0019': 'demo-oak-plaza-changes-requested',
 } as const;
 
 interface ItemSpec {
@@ -45,6 +46,8 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     status: string;
     financing?: boolean;
     items: ItemSpec[];
+    /** An open reviewer change request, against the items flagged below. */
+    changeRequest?: { comment: string; flagged: string[] };
     quote?: {
       recipientKind: string;
       recipientEmail: string;
@@ -59,8 +62,16 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     };
     events: Array<[string, string, string, string]>; // [timestamp, kind, actor, summary]
   }) => {
-    // Idempotent: a re-seed replaces the demo request wholesale.
-    await db.query(`delete from requests where code = $1`, [spec.code]);
+    // Idempotent: a re-seed replaces the demo request wholesale. Deleting it
+    // cascades into request_events, which the append-only trigger refuses — so
+    // the trigger comes off for exactly this statement. That protection is doing
+    // its job; demo state is the one thing allowed to be rewritten.
+    await db.query(`alter table request_events disable trigger request_events_append_only`);
+    try {
+      await db.query(`delete from requests where code = $1`, [spec.code]);
+    } finally {
+      await db.query(`alter table request_events enable trigger request_events_append_only`);
+    }
 
     const { rows } = await db.query<{ id: string }>(
       `insert into requests
@@ -77,6 +88,7 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     const requestId = rows[0].id;
 
     let sortOrder = 0;
+    const lineItemIdByBrandItem = new Map<string, string>();
     for (const item of spec.items) {
       const brandItemId = brand.itemIdByName.get(item.brandItem);
       if (!brandItemId) throw new Error(`Unknown brand item "${item.brandItem}"`);
@@ -94,18 +106,33 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
         replacesSignId = found.rows[0].id;
       }
 
-      await db.query(
+      const { rows: created } = await db.query<{ id: string }>(
         `insert into line_items
            (request_id, brand_item_id, origin, item_status, sizing, tbd_fields,
             replaces_sign_id, replace_reason, est_price_snapshot, review_note, sort_order)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         returning id`,
         [
           requestId, brandItemId, item.origin, item.status, item.sizing,
           item.tbd ?? [], replacesSignId, item.replaceReason ?? null,
           priceOf.get(item.brandItem) ?? null, item.reviewNote ?? null, sortOrder,
         ],
       );
+      lineItemIdByBrandItem.set(item.brandItem, created[0].id);
       sortOrder += 10;
+    }
+
+    if (spec.changeRequest) {
+      await db.query(
+        `insert into change_requests
+           (request_id, line_item_ids, comment, raised_by, package_version)
+         values ($1,$2,$3,'reviewer',1)`,
+        [
+          requestId,
+          spec.changeRequest.flagged.map((name) => lineItemIdByBrandItem.get(name)!),
+          spec.changeRequest.comment,
+        ],
+      );
     }
 
     if (spec.quote) {
@@ -150,6 +177,47 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
       ['2026-08-04T11:30:00Z', 'package_prepared', 'team', 'Package prepared · 1 sent for review'],
       ['2026-08-04T11:31:00Z', 'review_email_sent', 'system',
        'Approval email sent to corporate reviewer'],
+    ],
+  });
+
+  // REQ-0019 — the change-request loop, mid-loop. Corporate has sent one item
+  // back with a note and the ball is with the franchisee; the sibling item keeps
+  // its approval, which is the whole point of line-item review (SPEC §7). The
+  // reviewer screens are Session 4, so without this row the resubmission loop
+  // cannot be reached from the franchisee side at all.
+  await create({
+    code: 'REQ-0019',
+    locationId: oakPlaza,
+    intent: 'add',
+    status: 'changes_requested',
+    items: [
+      {
+        brandItem: 'Freshbites Blade Sign',
+        origin: 'addon',
+        status: 'changes_requested',
+        sizing: '36" projection',
+        reviewNote: 'Projection exceeds our standard — confirm the landlord allows 36".',
+      },
+      {
+        brandItem: 'Freshbites Sidewalk A-Frame',
+        origin: 'addon',
+        status: 'approved',
+        sizing: 'Standard',
+        reviewNote: 'Approved.',
+      },
+    ],
+    changeRequest: {
+      comment: 'Confirm the projection with the landlord before we quote the blade sign.',
+      flagged: ['Freshbites Blade Sign'],
+    },
+    events: [
+      ['2026-08-10T10:02:00Z', 'request_submitted', 'franchisee',
+       '2 new sign(s) requested for existing location — needs corporate approval'],
+      ['2026-08-10T14:40:00Z', 'package_prepared', 'team', 'Package prepared · 2 sent for review'],
+      ['2026-08-11T09:05:00Z', 'item_approved', 'reviewer',
+       'Freshbites Sidewalk A-Frame approved by corporate'],
+      ['2026-08-11T09:07:00Z', 'changes_requested', 'reviewer',
+       'Changes requested on 1 item(s): Confirm the projection with the landlord before we quote the blade sign.'],
     ],
   });
 
@@ -236,6 +304,16 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
        'Quote delivered to franchisee — $12,900 + 2 custom items'],
     ],
   });
+
+  // These four take their codes from the demo rather than from the sequence, so
+  // the sequence has to be moved past them — otherwise the 16th real request
+  // generated in this database would be handed 'REQ-0016' and collide with the
+  // unique constraint.
+  await db.query(
+    `select setval('request_code_seq',
+       greatest((select last_value from request_code_seq), $1::bigint))`,
+    [Object.keys(TOKENS).length + 15],
+  );
 }
 
 export const DEMO_TOKENS = TOKENS;

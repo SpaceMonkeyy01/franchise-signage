@@ -128,3 +128,76 @@ Unchanged from CLAUDE.md: the Design Studio integration path, the pilot brand's
 real vendor policy, the stamp decision, the business model, the DID fee amount,
 and the v13 flow demo. Session 0's `docs/design-studio-findings.md` question
 list for Usman is still unanswered.
+
+---
+
+## Session 2 — the franchisee flows
+
+### Judgment calls where the spec and the demo are silent
+
+14. **Submission leaves a request at `submitted`, never at its derived status.**
+    Deriving forward — the fast lane collapsing to `approved`, or the split into
+    `needs_review` — is package prep, which SPEC §6 gives to the team. So the
+    three submitting screens all stop at `submitted` and Session 3's queue moves
+    them. Matches the demo, whose submitted requests all sit at "Submitted" until
+    a "Package prepared" event appears.
+
+15. **The setup form collects a structured address; the demo collects one line.**
+    `locations.address` is jsonb with `{line1, city, state, zip}` and the brand
+    home already renders the parts separately. The §8b lender documents and §8c
+    DID both need a real ZIP, so the fields are split rather than parsed back out
+    of a free-text line later.
+
+16. **Add-ons and package items now collect optional sizing.** The demo's
+    add-a-sign screen collects nothing but the item, yet its seeded REQ-0018
+    carries `48" back wall`. Collecting it (with the same TBD toggle as setup)
+    is what the seed data implies, and the alternative is that the team chases
+    every add-on by email.
+
+17. **A `landlord_criteria` file that is not provided writes a `note_added`
+    event.** §8b makes the lease sign exhibit TBD-able and never blocking, but
+    "not provided" then leaves no trace at all. A franchisee note on the timeline
+    is the lightest way to give the team something to chase without inventing a
+    column or a status.
+
+18. **A `changes_requested` request resolves its change request on
+    resubmission.** `change_requests.resolved_at` existed with nothing to set it,
+    so the franchisee's status page would still say "corporate asked for changes"
+    after they had made them. Closing it belongs to `resubmitRequest()`, next to
+    the item statuses it reopens, so the loop closes in one place.
+
+19. **Uploads are stored before the request exists.** All three flows collect
+    photos while the form is still being filled, so the file goes to storage on
+    pick and the `request_files` row is written at submission. An abandoned form
+    therefore leaves an orphaned object and no row — cheaper than writing draft
+    rows for requests that may never be submitted, and invisible to every query.
+
+### Corrected while building
+
+- **The dev database serves one connection at a time.** PGlite behind the socket
+  bridge resets a second connection mid-query, which surfaced as `ECONNRESET`
+  the first time a page ran two queries in a `Promise.all`. The pool is capped at
+  one connection in dev, with a 500 ms idle timeout so the seed, the smoke test
+  and `psql` can still reach the database while `next dev` is running. Against
+  Supabase both settings are the normal ones.
+- **`seedDemoRequests` was not actually idempotent.** Its "replace the demo
+  request wholesale" delete cascades into `request_events`, which the append-only
+  trigger refuses — so a re-seed of an already-seeded database failed. The
+  trigger now comes off for exactly that statement.
+- **The request code sequence had to be moved past the demo codes.** REQ-0016…19
+  are hardcoded demo state while real requests draw from `request_code_seq`,
+  which starts at 1 — so the 16th real request in a seeded database would have
+  collided on `requests.code`.
+
+### Not done, and why
+
+- **Still no behavioural RLS tests, and still no Supabase project.** Unchanged
+  from Session 1, and now the largest untested assumption in a build that has
+  real franchisee write paths.
+- **The Supabase Storage driver is not written.** `src/lib/storage/` has the
+  interface and a local-disk driver; setting `SUPABASE_STORAGE_BUCKET` throws a
+  deliberate error rather than silently writing files to a container's disk.
+- **No mockups from Design Studio.** `mockup_file_id` is written when a file of
+  kind `mockup` is attached, but nothing in the franchisee flows produces one
+  yet — the generic `render_key` thumbnail is what every screen shows, as
+  CLAUDE.md requires.

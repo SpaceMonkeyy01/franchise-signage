@@ -1,6 +1,6 @@
 # Where the build is
 
-Last updated: 13 Aug 2026, end of Session 2 part 1 (commit `122f13c`).
+Last updated: 17 Aug 2026, end of Session 2.
 
 Read this first when picking the work back up. `docs/SPEC.md` is still the
 contract and `claude-code-sessions.md` is still the plan — this file only says
@@ -22,7 +22,7 @@ Then open **http://localhost:3000/freshbites**.
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 41 checks (needs `npm run dev` up) |
 | `npm test` | 54 unit tests — the §6 state machine and the seed pins |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 13 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
@@ -32,6 +32,16 @@ PGlite (Postgres compiled to WASM) runs as its own process speaking the real
 Postgres wire protocol, and the app connects with `pg`. Point `DATABASE_URL` at
 a Supabase connection string and the identical SQL runs there — the application
 cannot tell the two apart.
+
+**The dev database serves one connection at a time.** The app's pool is capped
+at one in dev and releases it after 500 ms idle, so a script can still connect
+while `next dev` runs — but two clients at once get `ECONNRESET`. Anything that
+talks SQL directly (the seed, the smoke test) should connect, work, disconnect,
+and retry.
+
+Uploaded files land in `.storage/` (gitignored) and are served from
+`/api/files/…`. Set `SUPABASE_STORAGE_BUCKET` and the app refuses to boot that
+path on purpose — the Supabase driver is not written yet.
 
 Also useful: the reference app at `reference/design-studio` (`npm run dev` inside
 it, port 5173) serves `/demo` — the canonical v12 UX reference — and `/flow`, the
@@ -52,38 +62,48 @@ schema in five migrations including the §8b fields and §8c `did_requests`; the
 §10 RLS policies; `src/lib/status/` as the single write path for request status;
 the seed (taxonomy + Freshbites + Oak Plaza).
 
-**Session 2, part 1** — the app actually runs. `/{brand_slug}` home with
-installed-sign records and open requests; `/{brand_slug}/request/{token}` status
-page with per-item status, prices, vendor chips, TBD and exception callouts,
-quote card, production progress and timeline; a working accept-quote that runs
-through the state machine.
+**Session 2** — the whole franchisee interface (SPEC §9 interface 1) works
+against the real database:
+
+- `/{brand}` home — installed-sign records and open requests per location.
+- `/{brand}/request/{token}` status page — per-item status, prices, vendor chips,
+  TBD and exception callouts, attached photos, quote card with accept, production
+  progress, timeline.
+- `/{brand}/location/{id}/request` — the intent picker; add and replace-like
+  live, modify / remove / rebrand stubbed as the demo stubs them.
+- `/{brand}/location/{id}/request/replace` — the like-for-like fast lane: pick an
+  installed sign, say what happened, optional condition photo, submit. Spec and
+  sizing come off the installed record; the item auto-approves.
+- `/{brand}/location/{id}/request/add` — the catalog picker, with per-item sizing
+  and the running estimate.
+- `/{brand}/setup` — the four-step initial setup: basics + format + the §8b
+  financing question + landlord contact and lease sign exhibit → the pre-loaded
+  package checklist with photos, TBD and exception flagging → add-ons → review
+  and submit.
+- The change-request loop, on the status page: only the flagged items are
+  editable, resubmitting bumps the package version, reopens exactly those items,
+  and closes the change request.
+- Real uploads behind `src/lib/storage/` — local disk in dev, one interface, with
+  a type allowlist and a 10 MB cap.
+
+Two shared pieces underneath all of it: `src/lib/db/create-request.ts` (the one
+validated write path for a new request; every id is re-checked against the brand
+because the flows have no login) and the seed's new **REQ-0019**, a request
+sitting mid-change-request so the loop is reachable before the reviewer screens
+exist.
 
 ---
 
-## Next: finish Session 2
+## Next: Session 3 — the team queue
 
-In the order the demo walks them:
+Per `claude-code-sessions.md`. In short: the Signage.com operator's side —
+`/admin` behind Supabase Auth and the `team_members` allowlist, the request
+queue, package prep (`prepPackage`, which is what moves everything the
+franchisee has now submitted), manual pricing for standin items, mockup upload,
+and vendor routing into `quotes`.
 
-1. **Intent picker** — `/{brand_slug}/location/{id}/request`. Add and
-   replace-like live; modify / remove / rebrand stubbed exactly as the demo
-   stubs them. Show the approval path up front.
-2. **Like-for-like fast lane** — installed-sign picker with thumbnails → reason
-   (damaged / worn / vandalized) → optional condition photo → pre-approved
-   confirmation with the price → submit. Specs come from the installed record.
-   The state machine already does this; it needs the screens.
-3. **Initial setup** — `/{brand_slug}/setup`: basics and format (including the
-   §8b financing question, optional landlord contact, and the TBD-able lease
-   sign-exhibit upload as a `landlord_criteria` file) → the pre-loaded package
-   checklist with per-item config, TBD toggles and exception flagging → add-ons
-   with prices and vendor chips → review with estimate totals and the
-   vendor-policy note → submit.
-4. **Resubmission** — the change-request loop with real field editing, not the
-   demo's simulated button. `applyResubmission` in `src/lib/status/machine.ts`
-   already handles the state; the status page needs editable flagged items.
-5. **Uploads** — real photo uploads. No Storage bucket exists yet; on the dev
-   database this needs a local filesystem adapter behind the same interface.
-
-Then Session 3 (team queue), per `claude-code-sessions.md`.
+Everything the franchisee flows submit currently stops at `submitted` and waits
+for exactly that screen.
 
 ---
 
@@ -92,23 +112,30 @@ Then Session 3 (team queue), per `claude-code-sessions.md`.
 - **No behavioural RLS tests.** The policies are verified as valid SQL, never as
   behaviour: the dev database connects as the table owner, so RLS is present but
   never consulted. Token scoping is currently enforced by the WHERE clauses in
-  `src/lib/db/queries.ts`, which mirror the policies. **The first time a real
-  Supabase project exists, test that anon actually cannot read another
-  location's rows.** This is the single largest untested assumption in the build.
+  `src/lib/db/queries.ts` and by the ownership checks in the server actions,
+  which mirror the policies. **The first time a real Supabase project exists,
+  test that anon actually cannot read another location's rows.** This is the
+  single largest untested assumption in the build, and Session 2 added real
+  write paths on top of it.
 - **The seed has never run against Supabase**, only against the dev database.
-- **`src/lib/status/supabase-store.ts` is now redundant** — everything went to
-  `pg`. Delete it, or keep it only if supabase-js is genuinely wanted later.
-- **`src/lib/supabase/clients.ts` and `src/lib/env.ts` are unused** so far.
+- **The Supabase Storage driver is unwritten** — `src/lib/storage/index.ts` has
+  the interface and the local driver; the Supabase one is a deliberate throw.
+- **`src/lib/supabase/clients.ts` and `src/lib/env.ts` are still unused.**
+  (`src/lib/status/supabase-store.ts` is gone — everything goes through `pg`.)
 
 ## Decisions waiting on you
 
-Both written up in `docs/DECISIONS.md`, neither blocking:
+In `docs/DECISIONS.md`, none blocking:
 
 1. Should SPEC §6 gain a terminal request-level `declined`, or is an
    all-declined request closed by hand? Today the derivation refuses to guess
    and returns `blocked: 'all_items_declined'`.
 2. SPEC §5.4 should gain `changes_requested` as a fifth `line_item_status` — the
    change-request loop cannot record which items reopened without it.
+3. Session 2's calls, listed as entries 14–19: submission stopping at
+   `submitted`, the structured address, optional sizing on add-ons, the
+   note-on-timeline when no lease exhibit is provided, resolving the change
+   request on resubmission, and storing uploads before the request exists.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

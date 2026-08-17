@@ -52,6 +52,7 @@ export interface InstalledSignRow {
   sizing: string | null;
   installed_at: string;
   est_price: string | null;
+  vendor_policy_override: VendorPolicy | null;
 }
 
 export interface LocationRow {
@@ -93,7 +94,8 @@ export async function getLocationsForBrand(brandId: string): Promise<LocationRow
 
   const signs = await rows<InstalledSignRow & { location_id: string }>(
     `select s.id, s.location_id, s.brand_item_id, bi.name as brand_item_name,
-            bi.spec_summary, bi.est_price, mc.render_key, s.sizing, s.installed_at
+            bi.spec_summary, bi.est_price, bi.vendor_policy_override,
+            mc.render_key, s.sizing, s.installed_at
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id
@@ -125,6 +127,8 @@ export interface LineItemRow {
   brand_item_id: string;
   brand_item_name: string;
   spec_summary: string | null;
+  /** Which attributes stay per-site — what the resubmission form asks for. */
+  site_variables: string[];
   render_key: string | null;
   origin: LineItemOrigin;
   item_status: LineItemStatus;
@@ -135,6 +139,16 @@ export interface LineItemRow {
   review_note: string | null;
   est_price_snapshot: string | null;
   vendor_policy_override: VendorPolicy | null;
+  files: RequestFileRow[];
+}
+
+export interface RequestFileRow {
+  id: string;
+  line_item_id: string | null;
+  kind: string;
+  storage_path: string;
+  file_name: string | null;
+  content_type: string | null;
 }
 
 export interface QuoteRow {
@@ -172,6 +186,8 @@ export interface RequestDetail {
   quotes: QuoteRow[];
   events: EventRow[];
   change_request: { comment: string; line_item_ids: string[] } | null;
+  /** Request-level files — the lease sign exhibit and anything else not per item. */
+  files: RequestFileRow[];
 }
 
 /**
@@ -212,9 +228,16 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   const brand = await getBrandBySlug(request.brand_slug);
   if (!brand) return null;
 
-  const items = await rows<LineItemRow>(
+  const files = await rows<RequestFileRow>(
+    `select id, line_item_id, kind, storage_path, file_name, content_type
+       from request_files where request_id = $1 order by created_at`,
+    [request.id],
+  );
+
+  const items = await rows<Omit<LineItemRow, 'files'>>(
     `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.vendor_policy_override, mc.render_key, li.origin, li.item_status,
+            bi.site_variables, bi.vendor_policy_override, mc.render_key,
+            li.origin, li.item_status,
             li.sizing, li.site_notes, li.tbd_fields, li.exception_issue,
             li.review_note, li.est_price_snapshot
        from line_items li
@@ -254,6 +277,7 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     package_version: request.package_version,
     financing_involved: request.financing_involved,
     submitted_at: request.submitted_at,
+    files: files.filter((file) => file.line_item_id === null),
     location: {
       id: request.location_id,
       code: request.location_code,
@@ -261,7 +285,10 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
       format: request.location_format,
     },
     brand,
-    items,
+    items: items.map((item) => ({
+      ...item,
+      files: files.filter((file) => file.line_item_id === item.id),
+    })),
     quotes,
     events,
     change_request: changeRequest,
@@ -329,10 +356,40 @@ export async function getPackageForFormat(
   };
 }
 
+/**
+ * Every format's package, expanded — what the setup screen offers.
+ *
+ * All formats at once, not the chosen one: switching format on step 1 reloads
+ * the whole checklist, and a franchisee comparing an inline unit against an
+ * endcap should not wait on a round trip to see what changes.
+ */
+export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]> {
+  const packages = await rows<{
+    format: LocationFormat;
+    label: string;
+    description: string | null;
+    items: string[];
+  }>(
+    `select format, label, description, items
+       from brand_packages where brand_id = $1 order by format`,
+    [brandId],
+  );
+  const catalog = await getBrandCatalog(brandId);
+  const byId = new Map(catalog.map((item) => [item.id, item]));
+
+  return packages.map((pkg) => ({
+    format: pkg.format,
+    label: pkg.label,
+    description: pkg.description,
+    // Map rather than filter: an endcap's two storefront sets are two entries.
+    items: pkg.items.map((id) => byId.get(id)).filter((item): item is BrandItemRow => !!item),
+  }));
+}
+
 export function getInstalledSignsForLocation(locationId: string): Promise<InstalledSignRow[]> {
   return rows<InstalledSignRow>(
     `select s.id, s.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.est_price, mc.render_key, s.sizing, s.installed_at
+            bi.est_price, bi.vendor_policy_override, mc.render_key, s.sizing, s.installed_at
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id

@@ -9,8 +9,12 @@
 // Every assertion auto-waits. Next navigates on the client, so a plain
 // `.count()` races the render and reports a failure the app does not have.
 //
-// It MUTATES the dev database (it accepts a quote). Reset with
-// `npm run dev:db:reset`.
+// It MUTATES the dev database: it accepts a quote, submits three new requests
+// and creates a location. Reset with `npm run dev:db:reset`.
+//
+// The dev database serves ONE connection at a time (PGlite behind a socket
+// bridge), so the direct-SQL helpers here connect, do their work and disconnect
+// — and retry, because `next dev` may be holding the connection when they ask.
 
 import { chromium } from 'playwright';
 import pg from 'pg';
@@ -18,6 +22,15 @@ import pg from 'pg';
 const BASE = process.env.SMOKE_BASE_URL ?? 'http://localhost:3000';
 const TIMEOUT = 15_000;
 const results = [];
+
+/** The location the initial-setup section creates, and then removes. */
+const SMOKE_LOCATION = 'Freshbites — Smoke Test';
+
+/** A 1×1 PNG — the smallest thing that exercises the real upload path. */
+const PIXEL_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
 
 const record = (label, passed, detail = '') => {
   results.push({ label, passed });
@@ -55,6 +68,27 @@ async function expectGone(page, selector, label) {
   }
 }
 
+/** One connection, taken and released, retried while the app holds the socket. */
+async function withDb(fn, attempt = 0) {
+  const client = new pg.Client({
+    connectionString:
+      process.env.DATABASE_URL ??
+      `postgres://postgres:postgres@127.0.0.1:${process.env.DEV_DB_PORT ?? 5433}/postgres`,
+  });
+  client.on('error', () => {});
+  try {
+    await client.connect();
+    return await fn(client);
+  } catch (error) {
+    await client.end().catch(() => {});
+    if (attempt > 6) throw error;
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    return withDb(fn, attempt + 1);
+  } finally {
+    await client.end().catch(() => {});
+  }
+}
+
 /**
  * Put REQ-0016 back to `quote_ready` so the accept step is repeatable.
  *
@@ -64,13 +98,7 @@ async function expectGone(page, selector, label) {
  * database keeps whatever state it had.
  */
 async function rewindDemoQuote() {
-  const client = new pg.Client({
-    connectionString:
-      process.env.DATABASE_URL ??
-      `postgres://postgres:postgres@127.0.0.1:${process.env.DEV_DB_PORT ?? 5433}/postgres`,
-  });
-  await client.connect();
-  try {
+  return withDb(async (client) => {
     const { rows } = await client.query(`select id from requests where code = 'REQ-0016'`);
     if (!rows[0]) return;
     const id = rows[0].id;
@@ -81,12 +109,76 @@ async function rewindDemoQuote() {
     await client.query(`alter table request_events disable trigger request_events_append_only`);
     await client.query(`delete from request_events where request_id = $1 and kind = 'quote_accepted'`, [id]);
     await client.query(`alter table request_events enable trigger request_events_append_only`);
-  } finally {
-    await client.end();
-  }
+  });
 }
 
+/**
+ * Put REQ-0019 back mid-change-request, so the resubmission step is repeatable.
+ *
+ * Same reasoning as the quote: the run answers the change request, which is a
+ * real transition, so a second run would otherwise find nothing to resubmit.
+ */
+async function rewindChangeRequest() {
+  return withDb(async (client) => {
+    const { rows } = await client.query(`select id from requests where code = 'REQ-0019'`);
+    if (!rows[0]) return;
+    const id = rows[0].id;
+    await client.query(
+      `update requests set status = 'changes_requested', package_version = 1 where id = $1`,
+      [id],
+    );
+    await client.query(
+      `update line_items set item_status = 'changes_requested', sizing = '36" projection',
+              site_notes = null
+        where request_id = $1 and item_status = 'pending_review'`,
+      [id],
+    );
+    await client.query(
+      `update change_requests set resolved_at = null where request_id = $1`,
+      [id],
+    );
+    await client.query(`alter table request_events disable trigger request_events_append_only`);
+    await client.query(
+      `delete from request_events where request_id = $1 and kind = 'request_resubmitted'`,
+      [id],
+    );
+    await client.query(`alter table request_events enable trigger request_events_append_only`);
+  });
+}
+
+/**
+ * Remove what this suite submits.
+ *
+ * The new flows create real requests and a real location, and the assertions
+ * above count things ("Cedar Park shows the empty state") — so without this the
+ * suite fails on its own leftovers by the second run. Called at both ends: the
+ * tail-end call keeps the database tidy, the opening one covers a run that
+ * crashed before reaching it.
+ */
+async function removeSmokeArtifacts(codes = []) {
+  return withDb(async (client) => {
+    await client.query(`alter table request_events disable trigger request_events_append_only`);
+    try {
+      await client.query(
+        `delete from requests
+          where code = any($1)
+             or location_id in (select id from locations where name = $2)`,
+        [codes, SMOKE_LOCATION],
+      );
+      await client.query(`delete from locations where name = $1`, [SMOKE_LOCATION]);
+    } finally {
+      await client.query(`alter table request_events enable trigger request_events_append_only`);
+    }
+  });
+}
+
+/** Codes the run submits, so the tail-end cleanup can name them exactly. */
+const createdCodes = [];
+const captureCode = async () => createdCodes.push(await page.locator('h1').innerText());
+
 await rewindDemoQuote();
+await rewindChangeRequest();
+await removeSmokeArtifacts();
 
 const browser = await chromium.launch({ channel: 'msedge' });
 const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -141,9 +233,114 @@ await expectCount(
 );
 await expectCount(page, 'text=Corporate', 0, 'corporate never appears in its timeline');
 
+// ------------------------------------------------------------- intent picker
+console.log('\nIntent picker');
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: /Request signage/i }).first().click();
+await page.waitForURL('**/request', { timeout: TIMEOUT });
+await expectVisible(page, 'h1:has-text("What does Oak Plaza need?")', 'the intent picker names the site');
+await expectCount(page, 'text=coming in v1.1', 3, 'modify / remove / rebrand are stubbed, not hidden');
+await expectVisible(page, 'text=Pre-approved — straight to quote', 'the fast lane states its rule up front');
+
+// -------------------------------------------------- like-for-like submission
+console.log('\nSubmitting a like-for-like replacement');
+await page.getByRole('link', { name: /Replace like-for-like/i }).click();
+await page.waitForURL('**/replace', { timeout: TIMEOUT });
+await page.getByRole('button', { name: /Freshbites Storefront Letters/ }).click();
+await page.getByRole('button', { name: 'Faded / worn', exact: true }).click();
+await expectVisible(page, 'text=Ready to submit — pre-approved', 'the pre-approval is stated before submitting');
+await page
+  .locator('input[type=file]')
+  .setInputFiles({ name: 'condition.png', mimeType: 'image/png', buffer: PIXEL_PNG });
+await expectVisible(page, 'text=condition.png', 'the condition photo uploads');
+await page.getByRole('button', { name: /Submit replacement request/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await captureCode();
+await expectCount(page, 'text=Pre-approved', 1, 'the new item auto-approved — no corporate step');
+await expectVisible(page, 'text=Condition photo', 'the uploaded photo is attached to the item');
+await expectVisible(
+  page,
+  'text=/Like-for-like replacement: Freshbites Storefront Letters/',
+  'the submission wrote its timeline event',
+);
+
+// ------------------------------------------------------------- adding a sign
+console.log('\nAdding a sign to an existing location');
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: /Request signage/i }).first().click();
+await page.getByRole('link', { name: /Add a new sign/i }).click();
+await page.waitForURL('**/add', { timeout: TIMEOUT });
+await page.getByRole('button', { name: /Add · needs approval/ }).first().click();
+await page.locator('input[placeholder="Sizing / site notes"]').first().fill('48" back wall');
+await page.getByRole('button', { name: /Submit .*for approval/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await captureCode();
+// Scoped to the item card's chip: the same words appear in the timeline
+// summary, which is correct and not what this assertion is about.
+await expectCount(
+  page,
+  'article span:has-text("Needs corporate approval")',
+  1,
+  'an add-on goes to corporate',
+);
+await expectVisible(page, 'text=/needs corporate approval/', 'the timeline says why');
+
+// ------------------------------------------------------------- initial setup
+console.log('\nInitial setup (new location)');
+await page.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
+await page.getByLabel('Location name').fill(SMOKE_LOCATION);
+await page.getByLabel('Street address').fill('1 Smoke Test Way');
+await page.getByLabel('City').fill('Austin');
+await page.getByLabel('State').fill('TX');
+await page.getByLabel('ZIP').fill('78704');
+await page.getByLabel('Your name').fill('Dana Whitfield');
+await page.getByRole('button', { name: /Freestanding/ }).click();
+await page.getByRole('button', { name: /Yes — a lender is involved/ }).click();
+await page.getByRole('button', { name: /Load my sign package/ }).click();
+await expectVisible(page, 'h1:has-text("requires these 5 signs")', 'the freestanding package loads five signs');
+await page.locator('input[placeholder="Sizing / site notes"]').first().fill("24' frontage");
+await page.getByRole('button', { name: /This standard sign won/ }).click();
+await page.locator('textarea').first().fill('Landlord prohibits illuminated signage');
+await page.getByRole('button', { name: /Flag for corporate review/ }).click();
+await expectVisible(page, 'text=/corporate will review this item/', 'a flagged standard sign becomes an exception');
+await page.getByRole('button', { name: /Continue ·/ }).click();
+await page.getByRole('button', { name: /No add-ons needed|Continue →/ }).click();
+await expectVisible(page, 'h2:has-text("Going to corporate for approval (1)")', 'review splits the package by approval path');
+await page.getByRole('button', { name: /Submit location request/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await expectCount(
+  page,
+  'article span:has-text("Exception")',
+  1,
+  'the exception item carries its origin',
+);
+await expectVisible(page, 'text=Landlord prohibits illuminated signage', 'the issue text reaches the status page');
+await expectVisible(page, 'text=/Initial setup submitted \\(4 standard \\+ 1 needing review\\)/', 'the submission event counts the split');
+await expectVisible(page, 'text=/lender is funding this location/', 'the §8b financing answer is carried through');
+
+// -------------------------------------------------------- change-request loop
+console.log('\nAnswering a change request (REQ-0019)');
+await page.goto(`${BASE}/freshbites/request/demo-oak-plaza-changes-requested`, {
+  waitUntil: 'networkidle',
+});
+await expectVisible(page, 'h2:has-text("Update this item and resubmit")', 'only the flagged item is editable');
+await expectCount(
+  page,
+  'article span:text-is("Approved")',
+  1,
+  'the sibling item keeps its approval',
+);
+await page.locator('input[placeholder="Sizing / site notes"]').first().fill('30" projection');
+await page.locator('textarea').first().fill('Landlord confirmed 30" is within the lease exhibit.');
+await page.getByRole('button', { name: /Resubmit for review/ }).click();
+await expectVisible(page, 'text=/package v2/', 'resubmitting bumps the package version');
+await expectGone(page, 'h2:has-text("Update this item and resubmit")', 'the change request is closed');
+await expectVisible(page, 'text=Resubmitted with changes', 'the resubmission wrote its event');
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();
+await removeSmokeArtifacts(createdCodes);
 
 const failed = results.filter((r) => !r.passed);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

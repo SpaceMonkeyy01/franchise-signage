@@ -6,8 +6,8 @@
 // email, dashboard and lender document inherits the gap.
 //
 // Persistence is behind the StatusStore interface so the rules can be tested
-// against an in-memory store, and so the Supabase implementation stays a
-// mechanical adapter (supabase-store.ts).
+// against an in-memory store, and so the real implementation stays a mechanical
+// adapter (src/lib/db/pg-status-store.ts).
 
 import { statusChangeSummary, type RequestEventInput } from './events';
 import {
@@ -64,6 +64,8 @@ export interface StatusStore {
     comment: string;
     packageVersion: number;
   }): Promise<void>;
+  /** Close the open change requests — the franchisee has answered them. */
+  resolveChangeRequests(requestId: string): Promise<void>;
 }
 
 export interface TransitionOptions {
@@ -292,6 +294,11 @@ export async function resubmitRequest(
       await store.setLineItemStatus(item.id, 'pending_review');
     }
   }
+  // The open change request is answered by this resubmission. Closing it is what
+  // stops the franchisee's status page from still showing "corporate asked for
+  // changes" after they have made them.
+  await store.resolveChangeRequests(requestId);
+
   return transitionRequest(store, {
     requestId,
     to: 'submitted',

@@ -260,6 +260,7 @@ describe('the change-request loop (SPEC §6/§7)', () => {
         lineItemIds: ['b'],
         comment: 'Move it to the dining wall.',
         packageVersion: 1,
+        resolvedAt: null,
       },
     ]);
 
@@ -268,6 +269,8 @@ describe('the change-request loop (SPEC §6/§7)', () => {
     expect(store.request.status).toBe('submitted');
     expect(store.request.packageVersion).toBe(2);
     expect(store.lineItems.find((i) => i.id === 'b')?.itemStatus).toBe('pending_review');
+    // Answered: the status page stops showing "corporate asked for changes".
+    expect(store.changeRequests[0].resolvedAt).not.toBeNull();
 
     // And it re-derives back to the reviewer.
     const reprep = await prepPackage(store, 'REQ-0016');

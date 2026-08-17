@@ -13,8 +13,19 @@ import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
 import type { RequestStatus } from '@/lib/status/types';
+import { fileUrl } from '@/lib/storage';
 
 import { acceptQuote } from './actions';
+import { ResubmitPanel } from './ResubmitPanel';
+
+const FILE_KIND_LABEL: Record<string, string> = {
+  placement_photo: 'Placement photo',
+  condition_photo: 'Condition photo',
+  mockup: 'Mockup',
+  site_file: 'Site file',
+  landlord_criteria: 'Lease sign exhibit',
+  package_pdf: 'Package',
+};
 
 const ORIGIN_LABEL: Record<string, string> = {
   standard: 'Standard package',
@@ -44,6 +55,10 @@ export default async function RequestStatusPage({
 
   const quote = request.quotes[0] ?? null;
   const changed = new Set(request.change_request?.line_item_ids ?? []);
+  // The editable set is the items that actually reopened, not the ids the
+  // change request named: a reviewer can flag an item and the franchisee can
+  // have answered it already.
+  const reopened = request.items.filter((item) => item.item_status === 'changes_requested');
 
   return (
     <>
@@ -77,6 +92,26 @@ export default async function RequestStatusPage({
           </section>
         )}
 
+        {/* §8b: the documents come with the quote, but the franchisee told us a
+            lender is involved at submission — so acknowledge it from the start
+            rather than only once there is something to attach. */}
+        {request.financing_involved && !quote && (
+          <p className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900/80">
+            You told us a lender is funding this location. Once the quote lands, the budgetary
+            quote, formal invoice and paid receipt your lender asks for are generated from it — you
+            will not have to ask us for them.
+          </p>
+        )}
+
+        {request.change_request && reopened.length > 0 && (
+          <ResubmitPanel
+            token={token}
+            brandSlug={slug}
+            items={reopened}
+            comment={request.change_request.comment}
+          />
+        )}
+
         <section className="mt-5 space-y-3">
           {request.items.map((item) => (
             <ItemCard
@@ -87,6 +122,26 @@ export default async function RequestStatusPage({
             />
           ))}
         </section>
+
+        {request.files.length > 0 && (
+          <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+            <h2 className="text-sm font-semibold text-gray-900">Documents you sent</h2>
+            <ul className="mt-2 space-y-1">
+              {request.files.map((file) => (
+                <li key={file.id} className="text-xs text-gray-600">
+                  <a
+                    href={fileUrl(file.storage_path)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    {FILE_KIND_LABEL[file.kind] ?? 'File'}: {file.file_name ?? 'view'}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         {quote && <QuoteCard request={request} quote={quote} token={token} />}
 
@@ -142,6 +197,10 @@ function ItemCard({
             <VendorChip policy={policy} vendorName={brand.vendor_name} />
           </div>
 
+          {item.site_notes && (
+            <p className="mt-2 text-[11px] leading-relaxed text-gray-600">{item.site_notes}</p>
+          )}
+
           {item.tbd_fields.length > 0 && (
             <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-[11px] text-amber-800">
               TBD: {item.tbd_fields.join(', ')} — the Signage.com team will follow up. This never
@@ -158,6 +217,22 @@ function ItemCard({
           {item.review_note && (
             <p className="mt-2 rounded bg-green-50 px-2 py-1 text-[11px] text-green-800">
               Corporate: {item.review_note}
+            </p>
+          )}
+
+          {item.files.length > 0 && (
+            <p className="mt-2 flex flex-wrap gap-2">
+              {item.files.map((file) => (
+                <a
+                  key={file.id}
+                  href={fileUrl(file.storage_path)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded bg-gray-100 px-2 py-1 text-[11px] text-gray-600 underline-offset-2 hover:underline"
+                >
+                  {FILE_KIND_LABEL[file.kind] ?? 'File'}: {file.file_name ?? 'view'}
+                </a>
+              ))}
             </p>
           )}
         </div>

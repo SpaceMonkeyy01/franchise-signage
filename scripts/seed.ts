@@ -3,7 +3,7 @@
 //
 //   npm run seed                          — seeds DATABASE_URL, or the dev database
 //   npm run seed -- --reset               — drop the brand and its locations first
-//   npm run seed -- --with-demo-requests  — add REQ-0016/17/18 from the demo
+//   npm run seed -- --with-demo-requests  — add REQ-0016…19 from the demo
 //
 // A script, not an admin UI, on purpose: brand #2 is when CRUD gets built.
 // Everything it writes is reproducible from docs/ — the taxonomy TSV and the
@@ -61,7 +61,7 @@ async function main() {
 
     if (WITH_DEMO) {
       await seedDemoRequests(client, seeded);
-      console.log('demo requests: REQ-0016, REQ-0017, REQ-0018');
+      console.log('demo requests: REQ-0016, REQ-0017, REQ-0018, REQ-0019');
     }
 
     console.log('\nSeed complete. Freshbites is live at /freshbites.');

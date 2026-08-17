@@ -167,6 +167,14 @@ export function createPgStatusStore(
         [row.requestId, row.lineItemIds, row.comment, row.packageVersion],
       );
     },
+
+    async resolveChangeRequests(requestId) {
+      await exec.query(
+        `update change_requests set resolved_at = now()
+          where request_id = $1 and resolved_at is null`,
+        [requestId],
+      );
+    },
   };
 }
 

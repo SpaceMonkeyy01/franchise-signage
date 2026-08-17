@@ -56,3 +56,6 @@ next-env.d.ts
 .pglite/
 dev-db.log
 dev-web.log
+
+# Uploaded files (the local stand-in for the Supabase Storage bucket)
+.storage/
