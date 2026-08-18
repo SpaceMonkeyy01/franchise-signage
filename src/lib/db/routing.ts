@@ -16,9 +16,16 @@ import { resolveVendorPolicy } from '../status/machine';
 import { transitionRequest } from '../status/transition';
 import type { VendorPolicy } from '../status/types';
 
-export interface QuotePackagePlan {
+export interface QuotePackagePlan extends QuotePackageDraft {
+  /** The `quotes` row this package became. */
+  quoteId: string;
+}
+
+interface QuotePackageDraft {
   recipientKind: VendorPolicy;
   recipientEmail: string;
+  /** Who that address belongs to — used in the package email's salutation. */
+  recipientName: string;
   ccEmail: string | null;
   lineItemIds: string[];
   pricedTotal: number;
@@ -26,6 +33,8 @@ export interface QuotePackagePlan {
   /** Standin-priced items: quoted by hand, never estimated (SPEC §2.1). */
   manualCount: number;
   external: boolean;
+  /** Turnaround shown to the franchisee; only meaningful on the internal tail. */
+  tat: string | null;
 }
 
 export interface RoutingResult {
@@ -39,6 +48,14 @@ interface BrandRouting {
   corporate_cc: boolean;
   corporate_email: string | null;
   default_tat: string | null;
+}
+
+interface VendorContact {
+  policy: VendorPolicy;
+  vendor_name: string;
+  vendor_email: string;
+  corporate_cc: boolean | null;
+  tat: string | null;
 }
 
 /**
@@ -65,6 +82,13 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
       [request.brand_id],
     );
 
+    const contactRows = await exec.query<VendorContact>(
+      `select policy, vendor_name, vendor_email, corporate_cc, tat
+         from brand_vendor_contacts where brand_id = $1`,
+      [request.brand_id],
+    );
+    const contacts = new Map(contactRows.map((row) => [row.policy, row]));
+
     const items = await exec.query<{
       id: string;
       est_price_snapshot: string | null;
@@ -79,7 +103,7 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
     );
     if (items.length === 0) throw new Error('There is nothing approved to route.');
 
-    const byRecipient = new Map<VendorPolicy, QuotePackagePlan>();
+    const byRecipient = new Map<VendorPolicy, QuotePackageDraft>();
     for (const item of items) {
       const { policy, tail } = resolveVendorPolicy(
         { vendorPolicy: brand.vendor_policy },
@@ -88,15 +112,22 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
 
       let pkg = byRecipient.get(policy);
       if (!pkg) {
+        const recipient = recipientFor(policy, brand, contacts);
+        // The contact's own preference wins where it has one; otherwise the
+        // brand's. `corporate_first` is never CC'd to corporate — it is already
+        // going there.
+        const cc = (recipient.cc ?? brand.corporate_cc) && policy !== 'corporate_first';
         pkg = {
           recipientKind: policy,
-          recipientEmail: recipientFor(policy, brand),
-          ccEmail: brand.corporate_cc ? brand.corporate_email : null,
+          recipientEmail: recipient.email,
+          recipientName: recipient.name,
+          ccEmail: cc ? brand.corporate_email : null,
           lineItemIds: [],
           pricedTotal: 0,
           pricedCount: 0,
           manualCount: 0,
           external: tail === 'external',
+          tat: tail === 'external' ? null : (recipient.tat ?? brand.default_tat),
         };
         byRecipient.set(policy, pkg);
       }
@@ -109,26 +140,29 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
       }
     }
 
-    const packages = [...byRecipient.values()];
-    for (const pkg of packages) {
-      await exec.query(
+    const packages: QuotePackagePlan[] = [];
+    for (const pkg of byRecipient.values()) {
+      const [quote] = await exec.query<{ id: string }>(
         `insert into quotes
-           (request_id, recipient_kind, recipient_email, cc_email, line_item_ids,
-            priced_total, priced_count, manual_count, external, tat, sent_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10, now())`,
+           (request_id, recipient_kind, recipient_email, recipient_name, cc_email,
+            line_item_ids, priced_total, priced_count, manual_count, external, tat, sent_at)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11, now())
+         returning id`,
         [
           requestId,
           pkg.recipientKind,
           pkg.recipientEmail,
+          pkg.recipientName,
           pkg.ccEmail,
           pkg.lineItemIds,
           pkg.pricedTotal,
           pkg.pricedCount,
           pkg.manualCount,
           pkg.external,
-          pkg.external ? null : brand.default_tat,
+          pkg.tat,
         ],
       );
+      packages.push({ ...pkg, quoteId: quote!.id });
     }
 
     await transitionRequest(createPgStatusStore(exec), {
@@ -138,8 +172,9 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
       kind: 'quote_sent',
       summary: packages
         .map(
+          // Worded as docs/flow-demo.jsx:180 words it — this line is the demo's.
           (pkg) =>
-            `Quote package emailed to ${pkg.recipientEmail}${
+            `Quote package emailed to ${pkg.recipientName} <${pkg.recipientEmail}>${
               pkg.ccEmail ? ` · cc ${pkg.ccEmail}` : ''
             } — ${pkg.pricedCount} priced item(s) $${pkg.pricedTotal.toLocaleString('en-US')}${
               pkg.manualCount ? ` + ${pkg.manualCount} manual-priced` : ''
@@ -154,25 +189,64 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
 }
 
 /**
- * Where a package goes.
+ * Where a package goes, and who it is addressed to.
  *
- * `corporate_first` routes to corporate rather than a vendor — they forward it
- * themselves (SPEC §4), which is why it is a recipient and not a CC.
+ * Resolution order for a resolved policy P (docs/DECISIONS.md #20):
  *
- * KNOWN GAP (docs/DECISIONS.md #20): `brands` carries exactly ONE vendor
- * identity. A brand whose policy is signage_com but which overrides one item to
- * `approved_vendor` — the Freshbites pylon, i.e. the seeded case that exists to
- * prove the split — has no separate address for that vendor, so the package
- * falls back to the brand's single vendor contact. The routing and the split are
- * right; the address is only as good as the one column there is. §3.1 needs
- * per-policy vendor contacts before this mails anything for real (Session 5).
+ *   1. the brand's `brand_vendor_contacts` row for P — the per-policy address;
+ *   2. else, if P is the brand's own `vendor_policy`, the brand's single
+ *      vendor_name/vendor_email, so brands configured before this table keep
+ *      working unchanged;
+ *   3. else, if P is `corporate_first`, corporate — they forward it themselves
+ *      (SPEC §4), which is why it is a recipient and not a CC;
+ *   4. else, if P is `signage_com`, the platform's own quoting address.
+ *
+ * With nothing matching, this THROWS rather than falling back to the brand's
+ * only vendor. An item overridden to an external policy the brand has no address
+ * for is a setup error, and the failure mode of guessing is mailing one vendor's
+ * package — mockups, specs, prices — to a different company.
  */
-function recipientFor(policy: VendorPolicy, brand: BrandRouting): string {
+function recipientFor(
+  policy: VendorPolicy,
+  brand: BrandRouting,
+  contacts: Map<VendorPolicy, VendorContact>,
+): { email: string; name: string; cc: boolean | null; tat: string | null } {
+  const contact = contacts.get(policy);
+  if (contact) {
+    return {
+      email: contact.vendor_email,
+      name: contact.vendor_name,
+      cc: contact.corporate_cc,
+      tat: contact.tat,
+    };
+  }
+
+  if (policy === brand.vendor_policy && brand.vendor_email) {
+    return {
+      email: brand.vendor_email,
+      name: brand.vendor_name ?? 'Vendor',
+      cc: null,
+      tat: null,
+    };
+  }
+
   if (policy === 'corporate_first') {
     if (!brand.corporate_email) throw new Error('The brand has no corporate email to route to.');
-    return brand.corporate_email;
+    return { email: brand.corporate_email, name: 'Corporate', cc: null, tat: null };
   }
-  if (policy === 'signage_com') return brand.vendor_email ?? 'quotes@signage.com';
-  if (!brand.vendor_email) throw new Error('The brand has no vendor email to route to.');
-  return brand.vendor_email;
+
+  if (policy === 'signage_com') {
+    return {
+      email: process.env.SIGNAGE_QUOTES_EMAIL ?? 'quotes@signage.com',
+      name: 'Signage.com Manufacturing',
+      cc: null,
+      tat: null,
+    };
+  }
+
+  throw new Error(
+    `No vendor contact is configured for this brand's "${policy}" routing. ` +
+      `Add a brand_vendor_contacts row for it before routing — the package would ` +
+      `otherwise go to the wrong company.`,
+  );
 }

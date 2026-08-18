@@ -130,6 +130,17 @@ const checks: Check[] = [
     describe: (rows) => rows.map((r) => r.polname).join(', '),
   },
   {
+    // DECISIONS #20: routing groups by resolved policy, so two contacts for the
+    // same policy would make the recipient ambiguous — and the failure mode of
+    // an ambiguous recipient is mailing one vendor's package to another.
+    label: 'a brand has at most one vendor contact per policy',
+    sql: `select con.conname from pg_constraint con
+           join pg_class c on c.oid = con.conrelid
+          where c.relname = 'brand_vendor_contacts' and con.contype = 'u'`,
+    expect: (rows) => rows.some((r) => r.conname === 'brand_vendor_contacts_one_per_policy'),
+    describe: (rows) => rows.map((r) => r.conname).join(', ') || '(none)',
+  },
+  {
     label: 'brands_public exposes no contact emails',
     sql: `select column_name from information_schema.columns where table_name = 'brands_public'`,
     expect: (rows) => !rows.some((r) => String(r.column_name).includes('email')),

@@ -55,11 +55,20 @@ export interface InstalledSignRow {
   vendor_policy_override: VendorPolicy | null;
 }
 
+/** The `locations.address` jsonb shape (SPEC §5.1). */
+export interface LocationAddress {
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
 export interface LocationRow {
   id: string;
   code: string;
   name: string;
-  address: { line1?: string; city?: string; state?: string; zip?: string };
+  address: LocationAddress;
   format: LocationFormat;
   opening_date: string | null;
   installed_signs: InstalledSignRow[];
@@ -129,7 +138,11 @@ export interface LineItemRow {
   spec_summary: string | null;
   /** Which attributes stay per-site — what the resubmission form asks for. */
   site_variables: string[];
+  /** The brand's locked-down spec (SPEC §2.2) — what a vendor actually builds to. */
+  pinned_attributes: Record<string, unknown>;
   render_key: string | null;
+  /** `direct` → est_price is real; `standin` → "Custom quote" (SPEC §2.1). */
+  pricing_basis: string;
   origin: LineItemOrigin;
   item_status: LineItemStatus;
   sizing: string | null;
@@ -180,7 +193,14 @@ export interface RequestDetail {
   package_version: number;
   financing_involved: boolean | null;
   submitted_at: string | null;
-  location: { id: string; code: string; name: string; format: LocationFormat };
+  location: {
+    id: string;
+    code: string;
+    name: string;
+    format: LocationFormat;
+    address: LocationAddress;
+    opening_date: string | null;
+  };
   brand: BrandPublic;
   items: LineItemRow[];
   quotes: QuoteRow[];
@@ -211,12 +231,15 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     location_code: string;
     location_name: string;
     location_format: LocationFormat;
+    location_address: LocationAddress;
+    location_opening_date: string | null;
     brand_slug: string;
   }>(
     `select r.id, r.code, r.intent, r.status, r.access_token, r.package_version,
             r.financing_involved, r.submitted_at,
             l.id as location_id, l.code as location_code, l.name as location_name,
-            l.format as location_format, b.slug as brand_slug
+            l.format as location_format, l.address as location_address,
+            l.opening_date as location_opening_date, b.slug as brand_slug
        from requests r
        join locations l on l.id = r.location_id
        join brands b on b.id = r.brand_id
@@ -236,7 +259,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
 
   const items = await rows<Omit<LineItemRow, 'files'>>(
     `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.site_variables, bi.vendor_policy_override, mc.render_key,
+            bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override,
+            mc.render_key, mc.pricing_basis,
             li.origin, li.item_status,
             li.sizing, li.site_notes, li.tbd_fields, li.exception_issue,
             li.review_note, li.est_price_snapshot
@@ -283,6 +307,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
       code: request.location_code,
       name: request.location_name,
       format: request.location_format,
+      address: request.location_address ?? {},
+      opening_date: request.location_opening_date,
     },
     brand,
     items: items.map((item) => ({

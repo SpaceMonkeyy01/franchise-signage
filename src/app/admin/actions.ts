@@ -17,7 +17,7 @@ import { assertTeamMember } from '@/lib/auth/team';
 import { withStatusStore } from '@/lib/db/pg-status-store';
 import { query, queryOne } from '@/lib/db/pool';
 import { routeRequestForQuote } from '@/lib/db/routing';
-import { notifyReviewNeeded } from '@/lib/email/notify';
+import { notifyQuotePackages, notifyReviewNeeded } from '@/lib/email/notify';
 import type { SubmitFailure } from '@/lib/forms';
 import { prepPackage, transitionRequest, type RequestStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
@@ -64,7 +64,10 @@ export async function prepPackageAction(
 /** Resolve vendors and create one quote package per recipient (SPEC §4). */
 export async function routeAction(requestId: string): Promise<Result> {
   return run(async () => {
-    await routeRequestForQuote(requestId);
+    const { packages } = await routeRequestForQuote(requestId);
+    // Outside the routing transaction on purpose: a mail failure must not
+    // unroute the request. The packages exist; the send is recorded per package.
+    await notifyQuotePackages(requestId, packages);
   });
 }
 

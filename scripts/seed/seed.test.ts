@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { brandItems, oakPlaza, cedarPark, packages } from './freshbites';
+import { brand, brandItems, oakPlaza, cedarPark, packages, vendorContacts } from './freshbites';
 import { masterKey, parseTaxonomy } from './taxonomy';
 
 const taxonomy = parseTaxonomy();
@@ -73,6 +73,26 @@ describe('Freshbites brand items', () => {
   it('matches the demo: ten items', () => {
     expect(brandItems).toHaveLength(10);
     expect(new Set(brandItems.map((i) => i.demoMasterId)).size).toBe(10);
+  });
+});
+
+describe('Freshbites vendor contacts (DECISIONS #20)', () => {
+  it('gives the pylon’s policy an address that is not the brand’s own vendor', () => {
+    const approved = vendorContacts.find((c) => c.policy === 'approved_vendor');
+    expect(approved).toBeDefined();
+    // The whole point: the split package goes to a different company. If these
+    // ever match, routing is mailing both packages to one recipient again.
+    expect(approved!.vendor_email).not.toBe(brand.vendor_email);
+  });
+
+  it('leaves the brand’s own policy to the brand columns', () => {
+    // signage_com is Freshbites' vendor_policy, so it must resolve through
+    // brands.vendor_email — the fallback path a pre-existing brand relies on.
+    expect(vendorContacts.some((c) => c.policy === brand.vendor_policy)).toBe(false);
+  });
+
+  it('has one contact per policy', () => {
+    expect(new Set(vendorContacts.map((c) => c.policy)).size).toBe(vendorContacts.length);
   });
 });
 

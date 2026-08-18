@@ -19,6 +19,10 @@ export const EVENT_KINDS = [
   'mockup_attached',
   'item_priced',
   'quote_sent',
+  // Only on failure. `quote_sent` already says which packages went where; this
+  // exists so a package the mail provider rejected is visible on the timeline
+  // rather than only in the outbox.
+  'vendor_package_failed',
   'quote_delivered',
   'production_started',
   'shipped',

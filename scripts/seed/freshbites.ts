@@ -39,6 +39,33 @@ export const brand = {
   did_fee_cents: null as number | null,
 };
 
+/**
+ * Per-policy vendor contacts (SPEC §3.1; docs/DECISIONS.md #20).
+ *
+ * The brand routes to Signage.com, but the pylon overrides to `approved_vendor`
+ * — so routing splits the request into two packages, and until this existed the
+ * second one had no address but the first one's. The `approved_vendor` row here
+ * is what makes that split real: two packages, two companies, two emails you can
+ * read side by side in `/dev`.
+ *
+ * `signage_com` is deliberately NOT listed: it is the brand's own policy, so it
+ * resolves through brands.vendor_name/vendor_email, which is the fallback path
+ * this table has to keep working.
+ */
+export const vendorContacts = [
+  {
+    policy: 'approved_vendor' as VendorPolicy,
+    vendor_name: 'Meridian Sign Co.',
+    vendor_email: 'quotes@meridiansign.example',
+    // Corporate is copied on outside vendors' packages, which is the case the
+    // brand-level flag exists for; left null it would follow the brand anyway,
+    // but stating it is the point of a per-contact override.
+    corporate_cc: true,
+    tat: null as string | null,
+    notes: 'Freshbites-approved fabricator for pylon and monument work.',
+  },
+];
+
 export interface BrandItemSeed {
   /** The demo's master id, kept for cross-checking against docs/flow-demo.jsx. */
   demoMasterId: string;

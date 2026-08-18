@@ -501,6 +501,55 @@ await expectCount(
   'routing splits the request into two vendor packages',
 );
 
+// The split is only worth anything if the two packages reach two COMPANIES
+// (docs/DECISIONS.md #20). Before per-policy contacts existed, both of these
+// resolved to the brand's single vendor address and this passed anyway.
+const vendorEmails = await withDb(async (client) =>
+  (
+    await client.query(
+      `select to_email, cc_email, subject, html from sent_emails
+        where request_id = $1 and kind = 'vendor_package' order by created_at`,
+      [lifecycleId],
+    )
+  ).rows,
+);
+record('each package was emailed to its own vendor', vendorEmails.length === 2);
+record(
+  'the two packages went to two different addresses',
+  new Set(vendorEmails.map((mail) => mail.to_email)).size === 2,
+  vendorEmails.map((mail) => mail.to_email).join(' / '),
+);
+record(
+  'the pylon package went to the approved vendor, not the brand default',
+  vendorEmails.some((mail) => mail.to_email === 'quotes@meridiansign.example'),
+);
+record(
+  'corporate is copied on the routed packages',
+  vendorEmails.every((mail) => mail.cc_email === 'brand@freshbites.com'),
+);
+// A vendor is not a party to either credential in this system, and a forwarded
+// package must not hand a fabricator the franchisee's workspace.
+const accessToken = await withDb(async (client) =>
+  (await client.query('select access_token from requests where id = $1', [lifecycleId])).rows[0]
+    .access_token,
+);
+record(
+  'no vendor package leaks the franchisee token or a reviewer link',
+  vendorEmails.every(
+    (mail) => !mail.html.includes(accessToken) && !mail.html.includes('/review/'),
+  ),
+);
+record(
+  'each package lists only its own items',
+  vendorEmails.some((mail) => mail.html.includes('Freshbites Road Sign')) &&
+    vendorEmails.every(
+      (mail) =>
+        !(
+          mail.html.includes('Freshbites Road Sign') && mail.html.includes('Freshbites Neon Leaf')
+        ),
+    ),
+);
+
 await expectVisible(page, 'text=/need manual pricing/', 'standin items raise the manual-pricing banner');
 await page.locator('input[placeholder="e.g. 2400"]').first().fill('7400');
 await page.getByRole('button', { name: 'Set price' }).first().click();

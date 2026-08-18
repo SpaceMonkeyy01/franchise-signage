@@ -50,6 +50,8 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     changeRequest?: { comment: string; flagged: string[] };
     quote?: {
       recipientKind: string;
+      /** Who the address belongs to — matches docs/flow-demo.jsx:176. */
+      recipientName: string;
       recipientEmail: string;
       ccEmail: string | null;
       total: number;
@@ -139,14 +141,14 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
       const q = spec.quote;
       await db.query(
         `insert into quotes
-           (request_id, recipient_kind, recipient_email, cc_email, line_item_ids,
-            priced_total, priced_count, manual_count, external, tat,
+           (request_id, recipient_kind, recipient_name, recipient_email, cc_email,
+            line_item_ids, priced_total, priced_count, manual_count, external, tat,
             sent_at, delivered_at, accepted_at)
-         values ($1,$2,$3,$4,
+         values ($1,$2,$3,$4,$5,
                  (select coalesce(array_agg(id), '{}') from line_items where request_id = $1),
-                 $5,$6,$7,$8,$9,$10,$11,$12)`,
+                 $6,$7,$8,$9,$10,$11,$12,$13)`,
         [
-          requestId, q.recipientKind, q.recipientEmail, q.ccEmail, q.total,
+          requestId, q.recipientKind, q.recipientName, q.recipientEmail, q.ccEmail, q.total,
           q.pricedCount, q.manualCount, q.external, q.tat,
           spec.events[0][0], q.deliveredAt ?? null, q.acceptedAt ?? null,
         ],
@@ -238,6 +240,7 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     ],
     quote: {
       recipientKind: 'signage_com',
+      recipientName: 'Signage.com Manufacturing',
       recipientEmail: 'quotes@signage.com',
       ccEmail: 'brand@freshbites.com',
       total: 3200,
@@ -282,6 +285,7 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
     ],
     quote: {
       recipientKind: 'signage_com',
+      recipientName: 'Signage.com Manufacturing',
       recipientEmail: 'quotes@signage.com',
       ccEmail: 'brand@freshbites.com',
       total: 12900,

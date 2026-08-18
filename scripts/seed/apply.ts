@@ -103,6 +103,22 @@ export async function seedFreshbites(
     ],
   );
 
+  // ---- per-policy vendor contacts (§3.1; DECISIONS #20)
+  for (const contact of fb.vendorContacts) {
+    await db.query(
+      `insert into brand_vendor_contacts
+         (brand_id, policy, vendor_name, vendor_email, corporate_cc, tat, notes)
+       values ($1,$2,$3,$4,$5,$6,$7)
+       on conflict (brand_id, policy) do update set
+         vendor_name = excluded.vendor_name, vendor_email = excluded.vendor_email,
+         corporate_cc = excluded.corporate_cc, tat = excluded.tat, notes = excluded.notes`,
+      [
+        brandId, contact.policy, contact.vendor_name, contact.vendor_email,
+        contact.corporate_cc, contact.tat, contact.notes,
+      ],
+    );
+  }
+
   // ---- brand items
   const itemIdByName = new Map<string, string>();
   for (const item of fb.brandItems) {

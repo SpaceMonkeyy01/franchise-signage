@@ -307,6 +307,45 @@ throwaway UI over permanent rules.
     these templates are reached from Server Actions. Importing it inside
     `render()` keeps the JSX templates CLAUDE.md asks for.
 
+## Session 5 — routing emails, notifications, lender documents
+
+34. **Entry 20 is answered: vendor contacts are per policy, in their own table.**
+    `brands` carries exactly one `vendor_name`/`vendor_email`, but §4 resolves
+    routing per ITEM — so the Freshbites pylon's `approved_vendor` override had
+    no address of its own and fell back to the brand's only vendor. Cosmetic
+    while nothing was mailed; this session mails it. `brand_vendor_contacts` is
+    one row per (brand, policy), resolved in this order: the contact row → the
+    brand columns when the policy IS the brand's own → corporate for
+    `corporate_first` → the platform address for `signage_com`. Nothing already
+    configured has to move, because a brand's own policy still resolves through
+    the columns it always did.
+
+35. **An unresolvable recipient throws instead of falling back.** The old code
+    silently used the brand's single vendor address for any external policy. The
+    failure mode of guessing is mailing one vendor's package — mockups, specs,
+    prices, the site address — to a different company, so routing now refuses and
+    names the missing contact. A brand misconfigured this way cannot route at
+    all, which is the correct amount of broken.
+
+36. **The vendor package is the one email that carries no credential.** Every
+    other template goes to someone inside the program. This one leaves it, and it
+    gets forwarded — corporate forwards `corporate_first` packages by design. So
+    it contains no access token and no `/review/` link, only `/api/files/…` URLs
+    for the mockups and site documents it is useless without, and the smoke suite
+    asserts both absences on every routed package.
+
+37. **The package is sent as Signage.com, not as the brand.** SPEC §8d makes the
+    brand the voice for franchisee- and franchisor-facing mail. A vendor is being
+    contracted by Signage.com, and a request for quote should come from whoever
+    will be paying the invoice. Corporate is still CC'd per `corporate_cc`,
+    except on `corporate_first`, where the package is already addressed to them.
+
+38. **One timeline line per routing, not one per package.** `quote_sent` already
+    names every recipient and total, worded as `docs/flow-demo.jsx:180` words it.
+    A second event per package would only repeat it, so the mail record lives in
+    `sent_emails` — and an event is written only when a package FAILS to send,
+    which is the one thing the timeline would not otherwise show.
+
 ### Corrected while building Session 4
 
 - **The dev database wedges if a script exits the instant it closes its pool.**
