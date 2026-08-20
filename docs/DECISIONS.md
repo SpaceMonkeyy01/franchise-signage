@@ -346,6 +346,38 @@ throwaway UI over permanent rules.
     `sent_emails` — and an event is written only when a package FAILS to send,
     which is the one thing the timeline would not otherwise show.
 
+39. **One `review_decided` email per review, not one per item.** SPEC §9 lists
+    "item approved" and "item declined" as separate notifications. A reviewer
+    decides a whole package in one sitting, so per-item mail means five messages
+    in five minutes saying nearly the same thing, and the one that matters — a
+    decline — arrives buried among them. The email is sent once, when
+    `retireLinkIfReviewComplete` reports nothing left pending, and it carries
+    every decision at once: approvals with their prices, declines with their
+    reasons, and the count that never needed corporate at all. Per-item
+    notification is still the right shape for `changes_requested`, which is a
+    request for the franchisee to act, not a summary.
+
+40. **`in_production` sends nothing.** It is the only transition in the internal
+    tail with no franchisee email. They were already told production had started
+    in the moment they accepted the quote — the accept email says so and gives
+    the turnaround — so a second message hours later carries no new fact. The
+    smoke suite asserts the silence rather than leaving it to be read as a
+    missing template. Every other milestone on the tail does mail: `shipped` and
+    `installed` are both facts the franchisee could not otherwise know.
+
+41. **`add` and `replace` carry the requester forward from the location.**
+    Neither flow asks who the franchisee is — the question was answered at
+    initial setup, and putting a contact form between a franchisee and a
+    two-click like-for-like replacement is the friction the fast lane exists to
+    remove. So `createAndSubmitRequest` copies the contact from the most recent
+    request on the same location that has one. Until this landed, every request
+    after the first had a null `requester_email`, which `notifyFranchisee`
+    treats as a legitimate "no recipient" and returns on — so the whole
+    notification set silently did nothing from the second request onward while
+    every flow still passed. The smoke suite now asserts the recipient by
+    address, not just that mail was sent, because "sent nothing" was
+    indistinguishable from "worked" at every other level.
+
 ### Corrected while building Session 4
 
 - **The dev database wedges if a script exits the instant it closes its pool.**

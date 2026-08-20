@@ -144,6 +144,25 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
       'Unknown location',
     );
 
+    // Only the initial-setup form asks who the franchisee is. `add` and
+    // `replace` are reached from the location's own page, where that question
+    // has already been answered once and asking it again would be a form
+    // standing between a franchisee and a two-click replacement. So the contact
+    // is carried forward from the most recent request on this location that has
+    // one — which is also the only reason the notification set (SPEC §9
+    // interface 5) reaches anyone after the first request.
+    const requester = input.requester?.email
+      ? input.requester
+      : ((
+          await exec.query<{ name: string | null; email: string | null; phone: string | null }>(
+            `select requester_name as name, requester_email as email, requester_phone as phone
+               from requests
+              where location_id = $1 and requester_email is not null
+              order by created_at desc limit 1`,
+            [input.locationId],
+          )
+        )[0] ?? input.requester);
+
     const catalog = await loadBrandItems(
       exec,
       input.brandId,
@@ -161,9 +180,9 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
         input.brandId,
         input.locationId,
         input.intent,
-        input.requester?.name ?? null,
-        input.requester?.email ?? null,
-        input.requester?.phone ?? null,
+        requester?.name ?? null,
+        requester?.email ?? null,
+        requester?.phone ?? null,
         input.financingInvolved ?? null,
         input.landlordContact ? JSON.stringify(input.landlordContact) : null,
       ],

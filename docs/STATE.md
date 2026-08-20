@@ -1,6 +1,59 @@
 # Where the build is
 
-Last updated: 17 Aug 2026, end of Session 4.
+Last updated: 20 Aug 2026, Session 5. The franchisee notification set is
+finished and verified but **still uncommitted** — it is one commit's worth of
+work sitting in the tree, not work in progress. Session 5 has two pieces left
+after it, listed under "Next" below.
+
+## Session 5 so far
+
+- `7590170` — per-policy vendor contacts (answers DECISIONS #20) and the vendor
+  quote-package email.
+- **The franchisee notification set** (SPEC §9 interface 5), now proven rather
+  than just written: seven templates under
+  `src/lib/email/templates/franchisee/` (submitted, changes-requested,
+  review-decided, quote-ready, quote-accepted, shipped, installed) plus the
+  shared `shell.tsx` and the dispatcher `src/lib/email/franchisee.tsx`, wired at
+  all seven call sites.
+
+94 smoke checks, 61 unit tests, 14 schema checks, typecheck — all green.
+
+**What "proven" cost, and why it is worth knowing.** The set looked finished and
+passed every check while sending almost nothing. Two reasons, both invisible
+from the outside:
+
+1. `add` and `replace` never captured a requester, so every request after the
+   first had no `requester_email` — which `notifyFranchisee` correctly treats as
+   "no recipient" and returns on. Fixed by carrying the contact forward from the
+   location's most recent request (DECISIONS #41). The smoke suite now asserts
+   the recipient **by address**, because "sent nothing" and "worked" were
+   otherwise identical at every level.
+2. The suite only ever drove the **external** tail. `deliverQuoteAction` and the
+   `shipped` milestone were never called by anything, so `franchisee_quote_ready`
+   and `franchisee_shipped` had no coverage at all. There is now a section that
+   drives the **internal** tail end to end — a request holding only the Neon
+   Leaf, the one add-on with no vendor override, routes to a single internal
+   package — and asserts all seven notification kinds fire, that each is
+   addressed to the requester, and that none of them carries a reviewer link.
+
+Also fixed while there: a crashed smoke run used to poison the next one. The
+opening cleanup was meant to cover that but could only name codes from its own
+process, so an abandoned request that reached `completed` left Oak Plaza a sixth
+installed sign and the next run failed on an assertion about a state the app had
+produced correctly. The run now mirrors its codes to
+`scripts/.smoke-leftovers.json` (gitignored) and clears the file only on a clean
+finish.
+
+## Next: the rest of Session 5
+
+- The §8b lender PDFs: budgetary quote, formal invoice, paid receipt, budget
+  one-pager.
+- The §8d welcome email — the first thing a franchisee ever sees, fired when
+  corporate registers their brand email.
+
+---
+
+Previous update: 17 Aug 2026, end of Session 4.
 
 Read this first when picking the work back up. `docs/SPEC.md` is still the
 contract and `claude-code-sessions.md` is still the plan — this file only says
@@ -31,10 +84,10 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 67 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 94 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 58 unit tests — the §6 state machine and the seed pins |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 13 schema checks |
+| `npm test` | 61 unit tests — the §6 state machine and the seed pins |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres, 14 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
@@ -122,16 +175,17 @@ and real uploads behind `src/lib/storage/`.
 
 ---
 
-## Next: Session 5 — routing emails, notifications, lender documents
+**Session 5 — the outbound mail** (SPEC §9 interface 5), partly done:
 
-Per `claude-code-sessions.md`: the vendor package email (the routing that builds
-the packages already exists in `src/lib/db/routing.ts`), the seven franchisee
-notification templates, the §8b lender PDFs (budgetary quote, formal invoice,
-paid receipt, budget one-pager), and the §8d welcome email.
+- Per-policy vendor contacts (`brand_vendor_contacts`), which answers DECISIONS
+  #20 — the pylon's `approved_vendor` override now has an address of its own
+  instead of falling back to the brand's only vendor.
+- The vendor quote-package email: one per recipient, carrying no credential of
+  either kind, corporate CC'd per policy.
+- The seven franchisee notifications, driven end to end on both tails.
 
-Worth settling first: **entry 20** — a brand has one vendor contact but §4 routes
-per item, so the pylon override has no address of its own. Session 5 is where
-that stops being cosmetic.
+Still open in Session 5: the §8b lender PDFs and the §8d welcome email — see
+"Next" at the top of this file.
 
 ---
 
@@ -167,12 +221,9 @@ In `docs/DECISIONS.md`, none blocking:
    structured address, optional sizing on add-ons, the note-on-timeline when no
    lease exhibit is provided, resolving the change request on resubmission, and
    storing uploads before the request exists.
-4. **Worth answering before Session 5** (entry 20): a brand has exactly one
-   `vendor_name`/`vendor_email`, but §4 resolves routing per item — so the
-   Freshbites pylon's `approved_vendor` override has no address of its own and
-   falls back to the brand's only vendor contact. Routing and the package split
-   are right; the address is not. §3.1 needs per-policy vendor contacts before
-   anything is actually emailed.
+4. ~~Entry 20 — per-policy vendor contacts.~~ **Answered and built** (entry 34):
+   `brand_vendor_contacts`, one row per (brand, policy). Nothing already
+   configured had to move. §3.1 should be amended to match.
 5. Session 3's calls (entries 23–26), chiefly the split between swappable
    identity and fixed authorization in `/admin`.
 6. Session 4's calls (entries 27–33), chiefly: **one link per email rather than
@@ -180,6 +231,11 @@ In `docs/DECISIONS.md`, none blocking:
    message), and **`auto_forward` never approving anything** — SPEC §3.1 offers
    it as a policy, and a timer that approves signage puts words in a
    franchisor's mouth.
+7. Session 5's calls (entries 34–41), chiefly: **one `review_decided` email per
+   review rather than the per-item pair SPEC §9 lists** — a reviewer decides a
+   package in one sitting and a decline arrives buried if it is one of five
+   messages; and **`in_production` sending nothing**, because the accept email
+   already said production had started.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

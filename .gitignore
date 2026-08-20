@@ -62,3 +62,6 @@ dev-web.log
 
 # Throwaway screenshots from driving the app
 .tmp-shots/
+
+# Smoke-run leftovers, so a crashed run cleans up on the next one
+scripts/.smoke-leftovers.json

@@ -16,6 +16,8 @@
 // bridge), so the direct-SQL helpers here connect, do their work and disconnect
 // — and retry, because `next dev` may be holding the connection when they ask.
 
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+
 import { chromium } from 'playwright';
 import pg from 'pg';
 
@@ -189,13 +191,37 @@ async function removeSmokeArtifacts(codes = []) {
   });
 }
 
-/** Codes the run submits, so the tail-end cleanup can name them exactly. */
+/**
+ * Codes the run submits, so the cleanup can name them exactly.
+ *
+ * Mirrored to disk as they are captured, because a run that crashes half way
+ * takes the in-memory list with it — and the leftovers are not harmless: an
+ * abandoned request that reached `completed` has already grown Oak Plaza a
+ * sixth installed sign, and the next run fails on an assertion about a state
+ * the app put it in correctly. The file is the only way the opening cleanup can
+ * know what a previous process created, and naming codes rather than guessing
+ * from a range means it can never delete something the suite did not make.
+ */
+const LEFTOVERS = new URL('./.smoke-leftovers.json', import.meta.url);
 const createdCodes = [];
-const captureCode = async () => createdCodes.push(await page.locator('h1').innerText());
+const rememberCodes = () => writeFileSync(LEFTOVERS, JSON.stringify(createdCodes), 'utf8');
+const captureCode = async () => {
+  createdCodes.push(await page.locator('h1').innerText());
+  rememberCodes();
+};
+
+/** Whatever a previous run left behind, or nothing if it finished cleanly. */
+const abandonedCodes = existsSync(LEFTOVERS)
+  ? JSON.parse(readFileSync(LEFTOVERS, 'utf8'))
+  : [];
 
 await rewindDemoQuote();
 await rewindChangeRequest();
-await removeSmokeArtifacts();
+await removeSmokeArtifacts(abandonedCodes);
+if (abandonedCodes.length > 0) {
+  console.log(`  (cleared ${abandonedCodes.length} request(s) left by a run that did not finish)`);
+}
+rememberCodes();
 
 const browser = await chromium.launch({ channel: 'msedge' });
 const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -578,10 +604,193 @@ await expectVisible(page, 'text=/Installed — location record updated/', 'the r
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
 await expectVisible(page, 'text=Freshbites Road Sign', 'the new sign is on the location record');
 
+// ------------------------------------ the internal tail, and the notification set
+console.log('\nThe internal tail (Signage.com fulfills) and the franchisee notifications');
+
+/** The latest message of one kind for one request, read as the franchisee reads their inbox. */
+const franchiseeMail = async (requestId, kind) =>
+  withDb(async (client) =>
+    (
+      await client.query(
+        `select id, to_email, subject, html from sent_emails
+          where request_id = $1 and kind = $2 order by created_at desc limit 1`,
+        [requestId, kind],
+      )
+    ).rows[0],
+  );
+
+// The Neon Leaf is the only add-on with NO vendor override, so a request holding
+// just it resolves to exactly one INTERNAL package — the tail the lifecycle
+// above never reaches, and the only one that delivers a quote in-portal.
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: /Request signage/i }).first().click();
+await page.getByRole('link', { name: /Add a new sign/i }).click();
+await page.waitForURL('**/add', { timeout: TIMEOUT });
+await page
+  .locator('div:has(> p:text-is("Freshbites Neon Leaf")) >> button:has-text("Add · needs approval")')
+  .first()
+  .click();
+await page.getByRole('button', { name: /Submit .*for approval/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await captureCode();
+const internalCode = createdCodes.at(-1);
+const internalId = await withDb(async (client) =>
+  (await client.query('select id from requests where code = $1', [internalCode])).rows[0].id,
+);
+const internalAdmin = `${BASE}/admin/request/${internalId}`;
+
+// `add` never asks who the franchisee is — only initial setup does — so the
+// contact is carried forward from the location's most recent request. Without
+// that there is no recipient and every notification below silently does nothing,
+// which is exactly how it failed: the flow still passed, the mail never went.
+const submittedMail = await franchiseeMail(internalId, 'franchisee_submitted');
+record('the submission is confirmed to the franchisee by email', Boolean(submittedMail));
+record(
+  'an `add` request carries the requester forward from the location',
+  submittedMail?.to_email === 'dana@freshbites-austin.com',
+  submittedMail?.to_email ?? 'no recipient — the notification set is dead',
+);
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Prepare package' }).click();
+// Wait for the transition to land before reading the outbox — the click returns
+// to the browser before the server action has finished writing.
+await expectVisible(page, 'text=/Package prepared/', 'the single add-on is sent to corporate');
+const internalReview = await withDb(async (client) =>
+  (
+    await client.query(
+      `select id from sent_emails where request_id = $1 and kind = 'review_requested'
+        order by created_at desc limit 1`,
+      [internalId],
+    )
+  ).rows[0],
+);
+await page.goto(`${BASE}/dev/mail/${internalReview.id}`, { waitUntil: 'networkidle' });
+const internalApprove = await page
+  .frameLocator('iframe')
+  .locator('a:has-text("Approve")')
+  .first()
+  .getAttribute('href');
+await page.goto(internalApprove, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Approve this sign' }).first().click();
+await expectVisible(
+  page,
+  'text=/Every item on this request has been decided|already proceeding/',
+  'the single add-on is approved',
+);
+// One email per review, not per item (docs/DECISIONS.md): a reviewer decides a
+// package in one sitting, and one message per sign is worse than one message.
+record(
+  'the decision reaches the franchisee as a single email',
+  Boolean(await franchiseeMail(internalId, 'franchisee_review_decided')),
+);
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Route for quote' }).click();
+// The button is the routing having finished, so it gates the SQL read below.
+await expectVisible(
+  page,
+  'button:has-text("Deliver quote to franchisee")',
+  'the internal tail offers the quote in-portal, not a vendor log',
+);
+const internalPackages = await withDb(async (client) =>
+  (await client.query('select external from quotes where request_id = $1', [internalId])).rows,
+);
+record(
+  'a request with no vendor override routes to one internal package',
+  internalPackages.length === 1 && internalPackages[0].external === false,
+);
+
+await page.getByRole('button', { name: 'Deliver quote to franchisee' }).click();
+await expectVisible(page, 'text=/With the franchisee/', 'the delivered quote waits on the franchisee');
+const quoteReadyMail = await franchiseeMail(internalId, 'franchisee_quote_ready');
+record('delivering the quote emails the franchisee', Boolean(quoteReadyMail));
+record(
+  'the quote email carries the franchisee’s own workspace link',
+  quoteReadyMail?.html.includes('/freshbites/request/') ?? false,
+);
+
+const internalToken = await withDb(async (client) =>
+  (await client.query('select access_token from requests where id = $1', [internalId])).rows[0]
+    .access_token,
+);
+await page.goto(`${BASE}/freshbites/request/${internalToken}`, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: /Accept quote/i }).click();
+await expectVisible(page, 'text=Quote accepted', 'the franchisee accepts the quote it just received');
+record(
+  'accepting the quote is confirmed by email',
+  Boolean(await franchiseeMail(internalId, 'franchisee_quote_accepted')),
+);
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Start production' }).click();
+await expectVisible(page, 'button:has-text("Mark shipped")', 'production starts on the internal tail');
+// Deliberately silent (docs/DECISIONS.md): the accept email already told them
+// production had started, and saying it twice is how a sender gets filtered.
+const productionMailCount = await withDb(async (client) =>
+  (
+    await client.query(
+      `select count(*)::int as n from sent_emails
+        where request_id = $1 and kind = 'franchisee_in_production'`,
+      [internalId],
+    )
+  ).rows[0].n,
+);
+record('starting production sends nothing — the accept email already said so', productionMailCount === 0);
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Mark shipped' }).click();
+await expectVisible(page, 'button:has-text("Mark installed")', 'the internal tail ships');
+record('shipping emails the franchisee', Boolean(await franchiseeMail(internalId, 'franchisee_shipped')));
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Mark installed' }).click();
+await expectVisible(page, 'text=/Installed — location record updated/', 'the internal tail completes');
+record('the install notice reaches the franchisee', Boolean(await franchiseeMail(internalId, 'franchisee_installed')));
+
+// The set as a whole. Six of the seven belong to this request; the seventh —
+// changes_requested — fires on the lifecycle request above, the only one that
+// sends an item back. Asserted together so a template that stops firing is a
+// failure here rather than a silence nobody notices.
+const franchiseeMails = await withDb(async (client) =>
+  (
+    await client.query(
+      `select kind, to_email, html from sent_emails
+        where request_id = any($1) and kind like 'franchisee_%'`,
+      [[internalId, lifecycleId]],
+    )
+  ).rows,
+);
+const EXPECTED_NOTIFICATIONS = [
+  'franchisee_submitted',
+  'franchisee_changes_requested',
+  'franchisee_review_decided',
+  'franchisee_quote_ready',
+  'franchisee_quote_accepted',
+  'franchisee_shipped',
+  'franchisee_installed',
+];
+const sentKinds = new Set(franchiseeMails.map((mail) => mail.kind));
+const missing = EXPECTED_NOTIFICATIONS.filter((kind) => !sentKinds.has(kind));
+record('all seven franchisee notifications fired', missing.length === 0, missing.join(', ') || 'none missing');
+record(
+  'every franchisee email is addressed to the person who filled the form',
+  franchiseeMails.every((mail) => mail.to_email === 'dana@freshbites-austin.com'),
+);
+// The franchisee holds one credential and corporate holds another; a status
+// update must never hand the franchisee the reviewer's.
+record(
+  'no franchisee email carries a reviewer link',
+  franchiseeMails.every((mail) => !mail.html.includes('/review/')),
+);
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();
 await removeSmokeArtifacts(createdCodes);
+// Reached only on a clean finish, which is what makes the file mean "abandoned".
+createdCodes.length = 0;
+rememberCodes();
 
 const failed = results.filter((r) => !r.passed);
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`);

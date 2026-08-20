@@ -10,6 +10,7 @@
 import { redirect } from 'next/navigation';
 
 import { createAndSubmitRequest } from '@/lib/db/create-request';
+import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
 
@@ -31,6 +32,7 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
   if (!location) return { error: 'That location is not on this brand.' };
 
   let token: string;
+  let requestId: string;
   try {
     const created = await createAndSubmitRequest({
       brandId: location.brand_id,
@@ -50,10 +52,15 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
           : `${total} new sign(s) requested for existing location`,
     });
     token = created.accessToken;
+    requestId = created.id;
   } catch (error) {
     console.error('add-signs submission failed', error);
     return { error: 'That request could not be submitted. Nothing was saved — try again.' };
   }
+
+  // Outside the try: the request is committed, and a mail failure must not tell
+  // the franchisee their submission failed when it did not.
+  await notifyFranchisee(requestId, 'submitted');
 
   redirect(`/${input.brandSlug}/request/${token}`);
 }

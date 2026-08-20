@@ -11,6 +11,7 @@
 import { redirect } from 'next/navigation';
 
 import { createAndSubmitRequest, toRequestFile } from '@/lib/db/create-request';
+import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
 import type { ReplaceReason } from '@/lib/status/types';
@@ -56,6 +57,7 @@ export async function submitReplacement(
   if (!sign) return { error: 'That sign is not on this location’s record.' };
 
   let token: string;
+  let requestId: string;
   try {
     const created = await createAndSubmitRequest({
       brandId: sign.brand_id,
@@ -79,10 +81,13 @@ export async function submitReplacement(
         `pinned spec + sizing pulled from installed record`,
     });
     token = created.accessToken;
+    requestId = created.id;
   } catch (error) {
     console.error('replacement submission failed', error);
     return { error: 'That request could not be submitted. Nothing was saved — try again.' };
   }
+
+  await notifyFranchisee(requestId, 'submitted');
 
   redirect(`/${input.brandSlug}/request/${token}`);
 }

@@ -17,6 +17,7 @@ import { assertTeamMember } from '@/lib/auth/team';
 import { withStatusStore } from '@/lib/db/pg-status-store';
 import { query, queryOne } from '@/lib/db/pool';
 import { routeRequestForQuote } from '@/lib/db/routing';
+import { notifyFranchisee, type FranchiseeNotification } from '@/lib/email/franchisee';
 import { notifyQuotePackages, notifyReviewNeeded } from '@/lib/email/notify';
 import type { SubmitFailure } from '@/lib/forms';
 import { prepPackage, transitionRequest, type RequestStatus } from '@/lib/status';
@@ -180,13 +181,26 @@ export async function deliverQuoteAction(requestId: string): Promise<Result> {
         detail: { total, manual },
       }),
     );
+
+    // The quote is the moment the franchisee has something to decide, so this is
+    // the one team action that must reach them. Sent after the transition, and a
+    // failure is recorded rather than raised (src/lib/email/franchisee.tsx).
+    await notifyFranchisee(requestId, 'quote_ready');
   });
 }
 
-const MILESTONES: Record<string, { to: RequestStatus; kind: string; summary: string }> = {
+const MILESTONES: Record<
+  string,
+  { to: RequestStatus; kind: string; summary: string; notify?: FranchiseeNotification }
+> = {
   in_production: { to: 'in_production', kind: 'production_started', summary: 'Production started' },
-  shipped: { to: 'shipped', kind: 'shipped', summary: 'Shipped' },
-  completed: { to: 'completed', kind: 'installed', summary: 'Installed — location record updated' },
+  shipped: { to: 'shipped', kind: 'shipped', summary: 'Shipped', notify: 'shipped' },
+  completed: {
+    to: 'completed',
+    kind: 'installed',
+    summary: 'Installed — location record updated',
+    notify: 'installed',
+  },
 };
 
 /**
@@ -212,6 +226,11 @@ export async function milestoneAction(
         summary: step.summary,
       }),
     );
+
+    // `in_production` is deliberately silent: the franchisee was already told
+    // production had started when they accepted the quote, and a second email
+    // saying the same thing is the kind of noise that gets a sender filtered.
+    if (step.notify) await notifyFranchisee(requestId, step.notify);
   });
 }
 

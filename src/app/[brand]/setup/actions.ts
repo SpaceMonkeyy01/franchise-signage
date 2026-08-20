@@ -11,6 +11,7 @@
 import { redirect } from 'next/navigation';
 
 import { createLocationWithRequest, toRequestFile } from '@/lib/db/create-request';
+import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
 import type { LineItemOrigin, LocationFormat } from '@/lib/status/types';
@@ -58,6 +59,7 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   if (!brand) return { error: 'Unknown brand.' };
 
   let token: string;
+  let requestId: string;
   try {
     const { request } = await createLocationWithRequest({
       brandId: brand.id,
@@ -103,10 +105,13 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
       },
     });
     token = request.accessToken;
+    requestId = request.id;
   } catch (error) {
     console.error('initial setup submission failed', error);
     return { error: 'That submission failed. Nothing was saved — try again.' };
   }
+
+  await notifyFranchisee(requestId, 'submitted');
 
   redirect(`/${input.brandSlug}/request/${token}`);
 }

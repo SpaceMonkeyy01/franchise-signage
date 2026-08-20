@@ -23,6 +23,8 @@ export const EVENT_KINDS = [
   // exists so a package the mail provider rejected is visible on the timeline
   // rather than only in the outbox.
   'vendor_package_failed',
+  // Same rule for the franchisee set: only a send that FAILED is worth a line.
+  'franchisee_email_failed',
   'quote_delivered',
   'production_started',
   'shipped',

@@ -9,6 +9,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { toRequestFile } from '@/lib/db/create-request';
+import { notifyFranchisee } from '@/lib/email/franchisee';
 import { createPgStatusStore, withStatusStore } from '@/lib/db/pg-status-store';
 import { notifyReviewNeeded } from '@/lib/email/notify';
 import { query, queryOne, transaction } from '@/lib/db/pool';
@@ -50,6 +51,11 @@ export async function acceptQuote(token: string): Promise<void> {
   });
 
   await query(`update quotes set accepted_at = now() where id = $1`, [quote.id]);
+
+  // Their own click, so this confirms rather than informs — but it is also the
+  // record of what they committed to, and where §8b a formal invoice becomes
+  // available. Worth an email for both reasons.
+  await notifyFranchisee(request.id, 'quote_accepted');
 
   revalidatePath(`/[brand]/request/[token]`, 'page');
 }
