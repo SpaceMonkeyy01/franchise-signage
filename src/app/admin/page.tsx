@@ -9,8 +9,13 @@ import Link from 'next/link';
 
 import { RequestStatusChip } from '@/components/StatusChip';
 import { requireTeamMember } from '@/lib/auth/team';
-import { getRequestQueue, type QueueRow } from '@/lib/db/queries';
-import type { RequestStatus } from '@/lib/status/types';
+import {
+  getBrandsWithPackages,
+  getRequestQueue,
+  type BrandWithFormats,
+  type QueueRow,
+} from '@/lib/db/queries';
+import type { LocationFormat, RequestStatus } from '@/lib/status/types';
 
 const INTENT_LABEL: Record<string, string> = {
   initial_setup: 'Initial setup',
@@ -69,7 +74,7 @@ export default async function AdminQueue({
 
   // The counts are for every bucket, not just the open one — an operator should
   // see that four things need prep without clicking into it.
-  const all = await getRequestQueue();
+  const [all, brands] = await Promise.all([getRequestQueue(), getBrandsWithPackages()]);
   const shown = bucket.statuses
     ? all.filter((row) => bucket.statuses!.includes(row.status))
     : all;
@@ -138,7 +143,56 @@ export default async function AdminQueue({
           </tbody>
         </table>
       </div>
+
+      <BrandDocuments brands={brands} />
     </main>
+  );
+}
+
+const FORMAT_LABEL: Record<LocationFormat, string> = {
+  inline: 'Inline',
+  endcap: 'Endcap',
+  freestanding: 'Freestanding',
+};
+
+/**
+ * The §8b budget one-pager export.
+ *
+ * Lives on the team queue because SPEC §8b's real trigger is corporate, whose
+ * dashboard is Session 6 — until then the team exports on their behalf. It sits
+ * apart from the queue on purpose: every other control on this page acts on one
+ * request, and this one is about a brand before any request exists.
+ */
+function BrandDocuments({ brands }: { brands: BrandWithFormats[] }) {
+  const withPackages = brands.filter((brand) => brand.formats.length > 0);
+  if (withPackages.length === 0) return null;
+
+  return (
+    <section className="mt-8 rounded-xl border border-gray-200 bg-white p-4">
+      <h2 className="text-sm font-semibold text-gray-900">Brand documents</h2>
+      <p className="mt-1 text-xs text-gray-500">
+        The signage budget sheet a franchisor hands a candidate for their loan application —
+        standard package prices for one location format, before any site exists. An estimate, not a
+        quote.
+      </p>
+
+      <div className="mt-3 space-y-2">
+        {withPackages.map((brand) => (
+          <div key={brand.id} className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-gray-700">{brand.name}</span>
+            {brand.formats.map((format) => (
+              <a
+                key={format}
+                href={`/api/documents/budget/${brand.slug}/${format}`}
+                className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+              >
+                {FORMAT_LABEL[format]} budget PDF
+              </a>
+            ))}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

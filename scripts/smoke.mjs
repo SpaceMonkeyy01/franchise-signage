@@ -784,6 +784,50 @@ record(
   franchiseeMails.every((mail) => !mail.html.includes('/review/')),
 );
 
+// ------------------------------------------------ the §8b budget one-pager
+console.log('\nThe budget one-pager (SPEC §8b)');
+
+// Gated before anything else: the sheet carries a brand's whole standard-package
+// price list, and the export lives on an authenticated surface for that reason.
+const anonymousPdf = await fetch(`${BASE}/api/documents/budget/freshbites/endcap`, {
+  redirect: 'manual',
+});
+record(
+  'the budget sheet is not downloadable without signing in',
+  anonymousPdf.status === 404,
+  `status ${anonymousPdf.status}`,
+);
+
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+const documents = page.locator('section:has(h2:text-is("Brand documents"))');
+await documents.waitFor({ timeout: TIMEOUT }).catch(() => {});
+// One link per format that actually HAS a package — a brand with no
+// freestanding package has no freestanding number, and the panel must not
+// offer a link that can only 404.
+await expectCount(
+  page,
+  'section:has(h2:text-is("Brand documents")) a',
+  3,
+  'the queue offers a budget sheet per format with a package',
+);
+
+// Downloaded through the browser, as an operator does it — the route builds the
+// PDF on demand, so a template that throws shows up here and nowhere else.
+const [budgetDownload] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  documents.locator('a:has-text("Endcap budget PDF")').click(),
+]);
+const budgetBytes = await budgetDownload.createReadStream().then(async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+});
+record(
+  'the endcap sheet downloads as a real PDF',
+  budgetBytes.subarray(0, 5).toString() === '%PDF-' && budgetBytes.length > 1000,
+  `${budgetDownload.suggestedFilename()} · ${budgetBytes.length} bytes`,
+);
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();

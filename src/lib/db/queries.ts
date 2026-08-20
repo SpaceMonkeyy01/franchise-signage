@@ -41,6 +41,40 @@ export function getBrandBySlug(slug: string): Promise<BrandPublic | null> {
   );
 }
 
+export interface BrandWithFormats {
+  id: string;
+  name: string;
+  slug: string;
+  /** Only formats that actually have a package — the rest have no number to give. */
+  formats: LocationFormat[];
+}
+
+/**
+ * Every brand and the formats it can produce a §8b budget one-pager for.
+ *
+ * Formats come from `brand_packages` rather than the enum so the export panel
+ * offers only what exists: a brand with no freestanding package has no
+ * freestanding number, and a link that always 404s is worse than no link.
+ */
+export function getBrandsWithPackages(): Promise<BrandWithFormats[]> {
+  return rows<BrandWithFormats>(
+    // format::text, not format: pg has no parser registered for the
+    // location_format[] type OID, so an enum array arrives as the raw string
+    // '{endcap,inline}' rather than an array. That is worse than an error — a
+    // string still answers .length, so it survives an emptiness check and only
+    // fails later at .map, away from the query that caused it.
+    `select b.id, b.name, b.slug,
+            coalesce(
+              array_agg(p.format::text order by p.format) filter (where p.format is not null),
+              '{}'::text[]
+            ) as formats
+       from brands b
+       left join brand_packages p on p.brand_id = b.id
+      group by b.id, b.name, b.slug
+      order by b.name`,
+  );
+}
+
 // ---------------------------------------------------------------- locations
 
 export interface InstalledSignRow {

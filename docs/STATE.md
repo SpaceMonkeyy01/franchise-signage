@@ -1,22 +1,26 @@
 # Where the build is
 
-Last updated: 20 Aug 2026, Session 5. The franchisee notification set is
-finished and verified but **still uncommitted** — it is one commit's worth of
-work sitting in the tree, not work in progress. Session 5 has two pieces left
-after it, listed under "Next" below.
+Last updated: 20 Aug 2026, Session 5. Session 5 is most of the way done; what
+is left is listed under "Next" below.
 
 ## Session 5 so far
 
 - `7590170` — per-policy vendor contacts (answers DECISIONS #20) and the vendor
   quote-package email.
-- **The franchisee notification set** (SPEC §9 interface 5), now proven rather
-  than just written: seven templates under
+- `fd0867d` — **the franchisee notification set** (SPEC §9 interface 5), proven
+  rather than just written: seven templates under
   `src/lib/email/templates/franchisee/` (submitted, changes-requested,
   review-decided, quote-ready, quote-accepted, shipped, installed) plus the
   shared `shell.tsx` and the dispatcher `src/lib/email/franchisee.tsx`, wired at
   all seven call sites.
+- **The §8b budget one-pager** — the first of the lender documents, and the
+  foundation the other three sit on: `src/lib/pdf/letterhead.tsx` is the shared
+  Signage.com document shell, and `budget-one-pager.tsx` is the per-format
+  signage number a franchisor hands a candidate before any site exists.
+  Downloadable from `/admin` (see DECISIONS #44 for why it is gated there and
+  not public).
 
-94 smoke checks, 61 unit tests, 14 schema checks, typecheck — all green.
+97 smoke checks, 68 unit tests, 14 schema checks, typecheck and lint — all green.
 
 **What "proven" cost, and why it is worth knowing.** The set looked finished and
 passed every check while sending almost nothing. Two reasons, both invisible
@@ -46,10 +50,15 @@ finish.
 
 ## Next: the rest of Session 5
 
-- The §8b lender PDFs: budgetary quote, formal invoice, paid receipt, budget
-  one-pager.
-- The §8d welcome email — the first thing a franchisee ever sees, fired when
-  corporate registers their brand email.
+- The three remaining §8b lender PDFs, all on `letterhead.tsx`: the **budgetary
+  quote** (franchisee-downloadable from the status page once a quote exists),
+  the **formal invoice** (internal-tail acceptance, team-triggered), and the
+  **paid receipt** (team-triggered, marked PAID with date and method).
+- The **§8d welcome email** — deliberately last. Its entire payload is "concept
+  drawings and a signage number": the DID, which is Session 8 and still blocked
+  on the v13 demo, and the budget one-pager, which now exists. Built any
+  earlier it would have been an email whose main link had no destination. When
+  it lands, the DID link is the one open forward reference in it.
 
 ---
 
@@ -84,9 +93,9 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 94 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 97 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 61 unit tests — the §6 state machine and the seed pins |
+| `npm test` | 68 unit tests — the §6 state machine, the seed pins, the §8b totals |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 14 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 

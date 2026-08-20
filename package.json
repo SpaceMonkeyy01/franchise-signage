@@ -2,7 +2,7 @@
   "name": "franchise-portal",
   "version": "0.1.0",
   "private": true,
-  "description": "Franchise by Signage \u2014 co-branded signage workflow portal",
+  "description": "Franchise by Signage — co-branded signage workflow portal",
   "scripts": {
     "dev": "concurrently -n db,web -c magenta,cyan \"npm:dev:db\" \"next dev\"",
     "build": "next build",
@@ -20,6 +20,7 @@
     "sla": "tsx scripts/run-sla.ts"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.6.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.58.0",
     "next": "16.3.0",

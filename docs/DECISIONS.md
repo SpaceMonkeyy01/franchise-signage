@@ -378,6 +378,49 @@ throwaway UI over permanent rules.
     address, not just that mail was sent, because "sent nothing" was
     indistinguishable from "worked" at every other level.
 
+42. **`@react-pdf/renderer` for the §8b document set.** Four documents need a PDF
+    engine and the project had none. The alternative was HTML→PDF through
+    headless Chromium, which is already a devDependency for the smoke suite —
+    but making Playwright a *production* dependency to print four invoices means
+    shipping a browser to Vercel, and the documents are static letterhead with a
+    table. React-pdf keeps them as components next to the email templates they
+    are a sibling of, and renders in-process.
+
+43. **The §8b documents lead with Signage.com, not the brand — the inverse of
+    the emails.** SPEC §8d makes the brand the voice for franchisee-facing mail,
+    and the email chrome follows it. These four are read by a lender deciding
+    whether to disburse, and Signage.com is the payee on all of them. A document
+    that leads with the franchisor's logo invites exactly the wrong question
+    about which company the money goes to. `DocumentShell` also takes payee,
+    amount, date and purpose as required props rather than optional ones,
+    because SPEC §8b's "lenders require payee/amount/date/purpose to be evident"
+    is an acceptance criterion, not a styling note.
+
+44. **The budget one-pager is team-gated, not public.** SPEC §8b offers "a public
+    brand-page download if trivial", and the sheet holds nothing about any
+    franchisee — but it does hold a brand's entire standard-package price list,
+    and publishing a franchisor's pricing is their decision, not a default we
+    pick for them. The spec's real trigger is corporate, whose dashboard is
+    Session 6; until then the team exports on their behalf and opening the route
+    up is one line.
+
+45. **The total never absorbs a custom-quote item.** Standin-priced items — the
+    pylon above all — cannot be estimated before a site is known, so they are
+    counted as lines and named beneath the total rather than folded into it. A
+    total that quietly included a guess for a monument sign is precisely the
+    number a lender would rely on and nobody has quoted. Pinned in
+    `src/lib/pdf/__tests__/`, because both ways this can be wrong produce a
+    document that looks completely reasonable.
+
+### Corrected while building Session 5
+
+- **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`
+  aggregated `location_format` values and `pg` has no parser registered for that
+  type's array OID, so `formats` arrived as the raw `'{endcap,inline}'`. That is
+  worse than an error: a string still answers `.length`, so it passed the
+  emptiness check and only failed later at `.map`, in the component rather than
+  the query. Fixed by aggregating `format::text`, which pg parses natively.
+
 ### Corrected while building Session 4
 
 - **The dev database wedges if a script exits the instant it closes its pool.**
