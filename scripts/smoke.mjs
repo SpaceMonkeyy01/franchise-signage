@@ -828,6 +828,85 @@ record(
   `${budgetDownload.suggestedFilename()} · ${budgetBytes.length} bytes`,
 );
 
+// ------------------------------------------------- the §8b budgetary quote
+console.log('\nThe budgetary quote (SPEC §8b)');
+
+// The inverse gate to the one-pager: the token IS the credential here, because
+// the franchisee is the one filling in the loan application. So the check that
+// matters is that a token nobody holds opens nothing.
+const strangerPdf = await fetch(`${BASE}/api/documents/quote/not-a-real-token`, {
+  redirect: 'manual',
+});
+record(
+  'an unknown token gets no budgetary quote',
+  strangerPdf.status === 404,
+  `status ${strangerPdf.status}`,
+);
+
+// A submitted-but-unquoted request has no number yet, and a $0 lender document
+// is the failure this refusal exists to prevent. Read from SQL rather than
+// named, so it stays true whichever request the suite happened to leave there.
+const unquotedToken = await withDb(async (client) =>
+  (
+    await client.query(
+      `select r.access_token from requests r
+        where not exists (select 1 from quotes q where q.request_id = r.id)
+        limit 1`,
+    )
+  ).rows[0]?.access_token,
+);
+if (unquotedToken) {
+  const unquotedPdf = await fetch(`${BASE}/api/documents/quote/${unquotedToken}`, {
+    redirect: 'manual',
+  });
+  record(
+    'a request with no quote is refused rather than given a $0 document',
+    unquotedPdf.status === 404,
+    `status ${unquotedPdf.status}`,
+  );
+  await page.goto(`${BASE}/freshbites/request/${unquotedToken}`, { waitUntil: 'networkidle' });
+  await expectCount(
+    page,
+    'section:has(h2:text-is("Documents"))',
+    0,
+    'and the status page offers no download either',
+  );
+}
+
+// REQ-0016 is the seeded initial setup: five items, two of them standin-priced,
+// quoted at $12,900. The document must agree with the quote card above it —
+// same number, same page — because a franchisee forwards one and reads the other.
+await page.goto(`${BASE}/freshbites/request/demo-cedar-park-initial-setup`, {
+  waitUntil: 'networkidle',
+});
+await expectVisible(
+  page,
+  'section:has(h2:text-is("Documents"))',
+  'the status page offers the budgetary quote once the quote is priced',
+);
+
+// Downloaded through the browser as the franchisee does it: the PDF is built on
+// demand, so a template that throws on real data fails here and nowhere else.
+const [quoteDownload] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  page.locator('a:has-text("Download budgetary quote")').click(),
+]);
+const quoteBytes = await quoteDownload.createReadStream().then(async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+});
+record(
+  'the budgetary quote downloads as a real PDF',
+  quoteBytes.subarray(0, 5).toString() === '%PDF-' && quoteBytes.length > 1000,
+  `${quoteDownload.suggestedFilename()} · ${quoteBytes.length} bytes`,
+);
+record(
+  'it is named for the request, which is what a lender files it under',
+  quoteDownload.suggestedFilename() === 'req-0016-budgetary-quote.pdf',
+  quoteDownload.suggestedFilename(),
+);
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();

@@ -1,6 +1,6 @@
 # Where the build is
 
-Last updated: 20 Aug 2026, Session 5. Session 5 is most of the way done; what
+Last updated: 21 Aug 2026, Session 5. Session 5 is most of the way done; what
 is left is listed under "Next" below.
 
 ## Session 5 so far
@@ -19,8 +19,22 @@ is left is listed under "Next" below.
   signage number a franchisor hands a candidate before any site exists.
   Downloadable from `/admin` (see DECISIONS #44 for why it is gated there and
   not public).
+- **The §8b budgetary quote** — the second lender document, and the first one a
+  franchisee holds themselves: `src/lib/pdf/budgetary-quote.tsx`, downloaded
+  from the tokenized status page at `/api/documents/quote/{token}` once a quote
+  is priced. Built from `est_price_snapshot`, so it agrees with the quote email
+  and the status page by construction rather than by recomputation.
 
-97 smoke checks, 68 unit tests, 14 schema checks, typecheck and lint — all green.
+103 smoke checks, 84 unit tests, 14 schema checks, typecheck and lint — all green.
+
+**What the budgetary quote turned up.** The document covers a whole site, but
+the status page had only ever shown `quotes[0]` — so a request routed two ways
+(the seeded pylon override is exactly that case) showed the franchisee one
+package's total while the PDF totalled both. The page now renders one card per
+package, and the document names who is actually paid per section: Signage.com
+issues the estimate, but an external package is invoiced to the franchisee by
+the vendor directly, and a lender document that blurs that is wrong about the
+one thing it exists to state. DECISIONS #46–49.
 
 **What "proven" cost, and why it is worth knowing.** The set looked finished and
 passed every check while sending almost nothing. Two reasons, both invisible
@@ -50,10 +64,11 @@ finish.
 
 ## Next: the rest of Session 5
 
-- The three remaining §8b lender PDFs, all on `letterhead.tsx`: the **budgetary
-  quote** (franchisee-downloadable from the status page once a quote exists),
-  the **formal invoice** (internal-tail acceptance, team-triggered), and the
-  **paid receipt** (team-triggered, marked PAID with date and method).
+- The two remaining §8b lender PDFs, both on `letterhead.tsx` and both
+  team-triggered from `/admin`: the **formal invoice** (on internal-tail
+  acceptance) and the **paid receipt** (marked PAID with date and method).
+  They are siblings — same trigger surface, near-identical shape — so they
+  belong in one commit.
 - The **§8d welcome email** — deliberately last. Its entire payload is "concept
   drawings and a signage number": the DID, which is Session 8 and still blocked
   on the v13 demo, and the budget one-pager, which now exists. Built any
@@ -93,9 +108,9 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 97 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 103 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 68 unit tests — the §6 state machine, the seed pins, the §8b totals |
+| `npm test` | 84 unit tests — the §6 state machine, the seed pins, the §8b totals |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 14 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
@@ -193,7 +208,7 @@ and real uploads behind `src/lib/storage/`.
   either kind, corporate CC'd per policy.
 - The seven franchisee notifications, driven end to end on both tails.
 
-Still open in Session 5: the §8b lender PDFs and the §8d welcome email — see
+Still open in Session 5: the invoice and receipt PDFs and the §8d welcome email — see
 "Next" at the top of this file.
 
 ---

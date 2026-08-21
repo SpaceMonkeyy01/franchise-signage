@@ -201,6 +201,14 @@ export interface RequestFileRow {
 export interface QuoteRow {
   id: string;
   recipient_kind: VendorPolicy;
+  /**
+   * Who the package was addressed to, captured at send time — not read back
+   * through the contact row, which can be edited afterwards. The §8b budgetary
+   * quote names them as the payee for their own items.
+   */
+  recipient_name: string | null;
+  /** The items in THIS package. The authority on what the total covers. */
+  line_item_ids: string[];
   priced_total: string | null;
   priced_count: number;
   manual_count: number;
@@ -307,7 +315,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   );
 
   const quotes = await rows<QuoteRow>(
-    `select id, recipient_kind, priced_total, priced_count, manual_count,
+    `select id, recipient_kind, recipient_name, line_item_ids,
+            priced_total, priced_count, manual_count,
             external, tat, delivered_at, accepted_at
        from quotes where request_id = $1 order by created_at`,
     [request.id],

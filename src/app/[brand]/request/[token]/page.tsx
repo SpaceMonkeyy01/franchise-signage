@@ -143,7 +143,23 @@ export default async function RequestStatusPage({
           </section>
         )}
 
-        {quote && <QuoteCard request={request} quote={quote} token={token} />}
+        {/* One card per package. Routing (SPEC §4) can split a request between
+            Signage.com and the brand's vendor, and showing only the first left
+            the franchisee reading one half of their own number — which the §8b
+            PDF, which totals every package, would then contradict. */}
+        {request.quotes.map((packageQuote) => (
+          <QuoteCard
+            key={packageQuote.id}
+            request={request}
+            quote={packageQuote}
+            token={token}
+            split={request.quotes.length > 1}
+          />
+        ))}
+
+        {request.quotes.some((q) => q.priced_count > 0) && (
+          <LenderDocuments request={request} token={token} />
+        )}
 
         {PRODUCTION_STAGES.includes(request.status) && quote && !quote.external && (
           <ProductionProgress status={request.status} />
@@ -245,10 +261,13 @@ function QuoteCard({
   request,
   quote,
   token,
+  split,
 }: {
   request: RequestDetail;
   quote: NonNullable<RequestDetail['quotes'][number]>;
   token: string;
+  /** True when this is one of several packages, so the card says whose it is. */
+  split: boolean;
 }) {
   const accepted = quote.accepted_at !== null;
   const acceptable = !quote.external && !accepted && request.status === 'quote_ready';
@@ -257,7 +276,9 @@ function QuoteCard({
     <section className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-indigo-950">Quote</h2>
+          <h2 className="text-sm font-semibold text-indigo-950">
+            {split ? `Quote — ${quote.recipient_name ?? 'Signage.com'}` : 'Quote'}
+          </h2>
           <p className="mt-0.5 text-xs text-indigo-900/70">
             {quote.external
               ? `Quoted by ${request.brand.vendor_name ?? 'your brand’s vendor'} — ordering happens with them directly.`
@@ -297,14 +318,34 @@ function QuoteCard({
         </p>
       )}
 
-      {/* §8b: the budgetary quote PDF a lender asks for is generated in the
-          document set (Session 5). Flagged rather than faked. */}
-      {request.financing_involved && (
-        <p className="mt-3 border-t border-indigo-200 pt-2 text-[11px] text-indigo-900/70">
-          You told us a lender is funding this location. The downloadable budgetary quote, formal
-          invoice and paid receipt arrive with the document set.
-        </p>
-      )}
+    </section>
+  );
+}
+
+/**
+ * The §8b document set, as its own block rather than part of a quote card.
+ *
+ * The budgetary quote covers the whole request — every package, one total — so
+ * it cannot belong to any one card on a split request. It is offered to
+ * everyone, not only to franchisees who ticked the financing box: that answer
+ * was captured at submission and lenders turn up later, so the flag changes the
+ * wording here, never the availability.
+ */
+function LenderDocuments({ request, token }: { request: RequestDetail; token: string }) {
+  return (
+    <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+      <h2 className="text-sm font-semibold text-gray-900">Documents</h2>
+      <a
+        href={`/api/documents/quote/${token}`}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-50"
+      >
+        Download budgetary quote (PDF)
+      </a>
+      <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+        {request.financing_involved
+          ? 'You told us a lender is funding this location — this is the document they ask for during underwriting. The formal invoice follows when you accept, and the paid receipt after payment.'
+          : 'On Signage.com letterhead, with line items and totals — the format a lender or landlord asks for.'}
+      </p>
     </section>
   );
 }

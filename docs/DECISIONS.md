@@ -412,6 +412,42 @@ throwaway UI over permanent rules.
     `src/lib/pdf/__tests__/`, because both ways this can be wrong produce a
     document that looks completely reasonable.
 
+46. **The budgetary quote is the whole request, not one quote package.** SPEC §4
+    can split one request between Signage.com and the brand's approved vendor,
+    so `quotes` is a list and the status page was showing `quotes[0]`. A lender
+    is funding a site, not a package: the PDF totals every package and the
+    status page now renders one card per package, because a franchisee reading
+    $12,900 on screen and forwarding a PDF that says $19,500 is the worst
+    version of this feature. Each section names who is actually paid — the
+    letterhead says Signage.com because Signage.com issues the estimate, but on
+    an external package the vendor invoices the franchisee directly, and a
+    lender document that implies otherwise is wrong about the one thing it
+    exists to state.
+
+47. **The budgetary quote is token-gated, the exact inverse of the one-pager
+    (#44).** The token is the credential the status page already runs on, and
+    §8b puts this document in the franchisee's hands specifically because they
+    are the one filling in a loan application. It is offered whether or not they
+    ticked the financing box — that answer was captured at submission and
+    lenders turn up later, so the flag changes the wording, never the
+    availability.
+
+48. **A quoted-but-unpriced request is refused, not rendered.** Routing creates
+    the quote row before anything is priced, so the document would total $0 —
+    which reads as a real number on a lender's desk. Same refusal as the
+    one-pager's empty package. Items still with corporate, and items declined,
+    are disclosed as counts beneath the total rather than silently omitted, so
+    the figure cannot read as final when it is not.
+
+49. **Still open: the document names no borrower.** `FOR` is the location, not a
+    person or entity. `requests.requester_name` is whoever filled the form,
+    which is not necessarily the borrowing entity, and naming a borrower we
+    inferred on a loan document is the same class of error as inventing
+    `PAYEE.address`. If lenders come back asking for it, it should be captured
+    deliberately rather than derived. Same reasoning for a validity window:
+    "valid 30 days" is a commitment Signage.com has not made, so the document
+    states its issue date and says pricing is current as of it.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`
