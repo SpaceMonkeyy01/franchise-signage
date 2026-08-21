@@ -57,6 +57,11 @@ const quote = (id: string, lineItemIds: string[], overrides: Partial<QuoteRow> =
   tat: null,
   delivered_at: null,
   accepted_at: null,
+  invoice_number: null,
+  invoiced_at: null,
+  paid_at: null,
+  payment_method: null,
+  payment_reference: null,
   ...overrides,
 });
 

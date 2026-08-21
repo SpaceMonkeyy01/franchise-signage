@@ -111,6 +111,101 @@ export async function priceItemAction(
 }
 
 /**
+ * Issue the formal invoice for a package (SPEC §8b).
+ *
+ * Team-triggered, as the spec specifies, and only after acceptance — an invoice
+ * for work nobody has agreed to is not a document Signage.com should be able to
+ * produce by accident. The number is assigned here and never again: a lender
+ * files a document by its number, so regenerating it on each download would
+ * make every download a different document.
+ *
+ * Only the internal package. The brand's vendor invoices its own work, and the
+ * database refuses an invoice number on an external quote for the same reason.
+ */
+export async function issueInvoiceAction(requestId: string, quoteId: string): Promise<Result> {
+  return run(async () => {
+    const quote = await queryOne<{
+      id: string;
+      external: boolean;
+      accepted_at: string | null;
+      invoice_number: string | null;
+      manual_count: number;
+    }>(
+      `select id, external, accepted_at, invoice_number, manual_count
+         from quotes where id = $1 and request_id = $2`,
+      [quoteId, requestId],
+    );
+    if (!quote) throw new Error('That package is not on this request.');
+    if (quote.external) {
+      throw new Error('The vendor invoices their own package — Signage.com does not.');
+    }
+    if (!quote.accepted_at) throw new Error('Nothing is invoiced before the quote is accepted.');
+    if (quote.invoice_number) throw new Error('This package is already invoiced.');
+    if (quote.manual_count > 0) {
+      throw new Error('Price the custom items before invoicing — the total would be short.');
+    }
+
+    const issued = await queryOne<{ invoice_number: string; priced_total: string | null }>(
+      `update quotes
+          set invoice_number = 'INV-' || lpad(nextval('invoice_number_seq')::text, 4, '0'),
+              invoiced_at = now()
+        where id = $1
+        returning invoice_number, priced_total`,
+      [quoteId],
+    );
+
+    await logEvent(
+      requestId,
+      'invoice_issued',
+      `Invoice ${issued!.invoice_number} issued — $${Number(issued!.priced_total ?? 0).toLocaleString('en-US')}`,
+      { quoteId, invoiceNumber: issued!.invoice_number },
+    );
+  });
+}
+
+/**
+ * Record a payment against an issued invoice (SPEC §8b).
+ *
+ * No payment is processed — SPEC §11 keeps that out of MVP and this does not
+ * change it. The team writes down what the bank statement already says, and the
+ * receipt renders it. The method is free text because "check 4417" and "ACH"
+ * are both what someone will type, and an enum here would only be wrong for the
+ * method nobody anticipated.
+ */
+export async function recordPaymentAction(
+  requestId: string,
+  quoteId: string,
+  method: string,
+  reference: string,
+): Promise<Result> {
+  return run(async () => {
+    if (method.trim() === '') throw new Error('Say how it was paid — the receipt has to state it.');
+
+    const quote = await queryOne<{ invoice_number: string | null; paid_at: string | null }>(
+      `select invoice_number, paid_at from quotes where id = $1 and request_id = $2`,
+      [quoteId, requestId],
+    );
+    if (!quote) throw new Error('That package is not on this request.');
+    if (!quote.invoice_number) throw new Error('Issue the invoice before recording a payment.');
+    if (quote.paid_at) throw new Error('This invoice is already marked paid.');
+
+    await query(
+      `update quotes
+          set paid_at = now(), payment_method = $2, payment_reference = nullif($3, '')
+        where id = $1`,
+      [quoteId, method.trim(), reference.trim()],
+    );
+
+    await logEvent(
+      requestId,
+      'payment_recorded',
+      `Payment recorded against ${quote.invoice_number} — ${method.trim()}${reference.trim() ? ` · ${reference.trim()}` : ''}`,
+      { quoteId, method: method.trim(), reference: reference.trim() || null },
+    );
+  });
+}
+
+/**
  * Attach a mockup to a line item.
  *
  * Manual upload is the whole mockup story in MVP: Design Studio integration is

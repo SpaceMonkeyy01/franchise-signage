@@ -159,6 +159,26 @@ const checks: Check[] = [
     describe: (rows) => `on delete = ${rows[0]?.confdeltype ?? '(constraint missing)'}`,
   },
   {
+    // §8b: Signage.com invoices its own work only. An external package is
+    // quoted, ordered and invoiced by the brand's vendor directly (DECISIONS
+    // #46), so an invoice number on one would put Signage.com's letterhead on
+    // money that never passes through Signage.com — the one thing a lender
+    // document must not get wrong.
+    label: 'only an internal package can be invoiced, and nothing is paid unbilled',
+    sql: `select conname from pg_constraint con join pg_class c on c.oid = con.conrelid
+          where c.relname = 'quotes' and con.contype = 'c'`,
+    expect: (rows) => {
+      const names = rows.map((r) => r.conname);
+      return (
+        names.includes('quotes_only_internal_is_invoiced') &&
+        names.includes('quotes_paid_needs_invoice') &&
+        names.includes('quotes_invoice_issued_together') &&
+        names.includes('quotes_payment_recorded_together')
+      );
+    },
+    describe: (rows) => rows.map((r) => r.conname).join(', '),
+  },
+  {
     label: 'the replacement/exception invariants are enforced in the database',
     sql: `select conname from pg_constraint con join pg_class c on c.oid = con.conrelid
           where c.relname = 'line_items' and con.contype = 'c'`,

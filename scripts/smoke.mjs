@@ -739,6 +739,80 @@ record(
   Boolean(await franchiseeMail(internalId, 'franchisee_quote_accepted')),
 );
 
+// ------------------------------------------ the §8b invoice and paid receipt
+// Acceptance is the trigger SPEC §8b names for the invoice, so this belongs
+// here, between accepting and production, rather than in a section of its own.
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Issue invoice' }).click();
+await expectVisible(page, 'text=/INV-\\d{4}/', 'the team issues an invoice once the quote is accepted');
+
+const invoiceNumber = await withDb(async (client) =>
+  (await client.query('select invoice_number from quotes where request_id = $1', [internalId]))
+    .rows[0].invoice_number,
+);
+// Assigned once and never regenerated: a lender files the document by its
+// number, so a second issue must be refused rather than mint a second number.
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+record(
+  'the invoice number is issued once, not on every visit',
+  (await page.getByRole('button', { name: 'Issue invoice' }).count()) === 0,
+);
+
+const [invoicePdf] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  page.locator('a:has-text("Invoice PDF")').click(),
+]);
+record(
+  'the invoice downloads as a real PDF named for its number',
+  invoicePdf.suggestedFilename() === `${invoiceNumber.toLowerCase()}.pdf`,
+  invoicePdf.suggestedFilename(),
+);
+
+// The receipt does not exist until a payment is recorded — "marked PAID with
+// date and method" (SPEC §8b) needs a date and a method to exist first.
+const internalTokenUrl = `${BASE}/freshbites/request/${internalToken}`;
+const earlyReceipt = await fetch(
+  `${BASE}/api/documents/invoice/${internalToken}/${await withDb(async (client) =>
+    (await client.query('select id from quotes where request_id = $1', [internalId])).rows[0].id,
+  )}?kind=receipt`,
+  { redirect: 'manual' },
+);
+record(
+  'no receipt exists before a payment is recorded',
+  earlyReceipt.status === 404,
+  `status ${earlyReceipt.status}`,
+);
+
+await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+await page.locator('input[placeholder="How it was paid (ACH, check…)"]').fill('ACH');
+await page.locator('input[placeholder="Reference (optional)"]').fill('SMOKE-PAY-1');
+await page.getByRole('button', { name: 'Record payment' }).click();
+await expectVisible(page, 'text=PAID', 'recording a payment marks the invoice paid');
+
+const [receiptPdf] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  page.locator('a:has-text("Receipt PDF")').click(),
+]);
+record(
+  'the receipt downloads as a real PDF',
+  receiptPdf.suggestedFilename() === `${invoiceNumber.toLowerCase()}-receipt.pdf`,
+  receiptPdf.suggestedFilename(),
+);
+
+// The whole point of §8b: the franchisee is the one who hands these to a
+// lender, so they must be reachable from their own link without asking anyone.
+await page.goto(internalTokenUrl, { waitUntil: 'networkidle' });
+await expectVisible(
+  page,
+  `a:has-text("Invoice ${invoiceNumber}")`,
+  'the franchisee can download the invoice from their own status page',
+);
+await expectVisible(
+  page,
+  'a:has-text("Paid receipt")',
+  'and the paid receipt alongside it',
+);
+
 await page.goto(internalAdmin, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Start production' }).click();
 await expectVisible(page, 'button:has-text("Mark shipped")', 'production starts on the internal tail');
@@ -906,7 +980,7 @@ await expectVisible(
 // demand, so a template that throws on real data fails here and nowhere else.
 const [quoteDownload] = await Promise.all([
   page.waitForEvent('download', { timeout: TIMEOUT }),
-  page.locator('a:has-text("Download budgetary quote")').click(),
+  page.locator('a:has-text("Budgetary quote")').click(),
 ]);
 const quoteBytes = await quoteDownload.createReadStream().then(async (stream) => {
   const chunks = [];

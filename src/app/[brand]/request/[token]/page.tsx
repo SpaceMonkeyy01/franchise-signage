@@ -352,12 +352,37 @@ function LenderDocuments({ request, token }: { request: RequestDetail; token: st
   return (
     <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
       <h2 className="text-sm font-semibold text-gray-900">Documents</h2>
-      <a
-        href={`/api/documents/quote/${token}`}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-50"
-      >
-        Download budgetary quote (PDF)
-      </a>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <a
+          href={`/api/documents/quote/${token}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-50"
+        >
+          Budgetary quote (PDF)
+        </a>
+        {/* Issued by the team (SPEC §8b is explicit that both are
+            team-triggered), downloaded by the person who actually hands them to
+            a lender. Nothing appears here until the team has issued it. */}
+        {request.quotes
+          .filter((q) => q.invoice_number)
+          .map((q) => (
+            <span key={q.id} className="contents">
+              <a
+                href={`/api/documents/invoice/${token}/${q.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-xs font-medium text-gray-800 transition-colors hover:bg-gray-50"
+              >
+                Invoice {q.invoice_number} (PDF)
+              </a>
+              {q.paid_at && (
+                <a
+                  href={`/api/documents/invoice/${token}/${q.id}?kind=receipt`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-medium text-emerald-900 transition-colors hover:bg-emerald-50"
+                >
+                  Paid receipt (PDF)
+                </a>
+              )}
+            </span>
+          ))}
+      </div>
       <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
         {request.financing_involved
           ? 'You told us a lender is funding this location — this is the document they ask for during underwriting. The formal invoice follows when you accept, and the paid receipt after payment.'

@@ -471,6 +471,52 @@ throwaway UI over permanent rules.
     invented here. The cost of the current answer: Signage.com fabricates its
     half of a split request without a recorded franchisee acceptance.
 
+52. **The invoice and receipt cover one PACKAGE; the budgetary quote covers the
+    REQUEST.** An estimate covers a site because a lender funds a site. An
+    invoice covers what Signage.com is owed, and on a split request the vendor
+    invoices their own package directly — so the database refuses an invoice
+    number on an external quote (`quotes_only_internal_is_invoiced`). Billing
+    the pylon on Signage.com letterhead would charge the franchisee twice for
+    one sign, and the check is in the schema rather than only in the action
+    because it is the kind of mistake that survives a UI rewrite.
+
+53. **One component renders both documents.** They differ in the type, the
+    purpose, the total's label and a PAID block; a receipt is an invoice that
+    has been paid. Rendering them from one body is what guarantees the receipt
+    states the same number as the invoice it acknowledges — the only fact a
+    lender cross-checks between the two — instead of leaving them to agree by
+    coincidence.
+
+54. **Issuing is team-triggered; downloading is the franchisee's.** SPEC §8b
+    says both documents are team-triggered and they are — nothing exists until
+    the team issues the invoice and records the payment. But the person who
+    hands an invoice to a lender is the franchisee, so once issued both appear
+    on their tokenized status page beside the budgetary quote. Making them ask
+    the team to email a PDF that already exists is the friction §8b was written
+    to remove.
+
+55. **The invoice number is assigned once, from a sequence, and never
+    regenerated.** A lender files a document by its number, so a number derived
+    at render time would make every download a different document. Issuing
+    twice is refused, and the schema requires the number and its date to be set
+    together — a half-issued invoice is a document with a gap in it.
+
+56. **No payment is processed, and the receipt says so by saying nothing.**
+    SPEC §11 keeps processing out of MVP; the team records what the bank
+    statement already says (`paid_at`, free-text `payment_method`,
+    optional `payment_reference`) and the receipt renders it. Free text because
+    "check 4417" and "ACH" are both what someone will type, and an enum would
+    only be wrong for the method nobody anticipated.
+
+57. **Consequence of #51 worth stating plainly: a split request cannot be
+    invoiced at all.** The invoice trigger is acceptance, and the franchisee is
+    no longer offered acceptance on a request that also has an external
+    package — so Signage.com's half of a split request has no `accepted_at` and
+    therefore no invoice. That is not a separate bug; it is the same unresolved
+    question (#51) reaching the next document. Whatever answers #51 answers
+    this. Until then, a split request's Signage.com half is billed outside the
+    portal.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

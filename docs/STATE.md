@@ -31,7 +31,19 @@ is left is listed under "Next" below.
   click landed on a package chosen by an arbitrary tie-break. It now takes the
   quote id from the card that was clicked. DECISIONS #50–51.
 
-105 smoke checks, 84 unit tests, 14 schema checks, typecheck and lint — all green.
+- **The §8b formal invoice and paid receipt** — the last two lender documents,
+  in one component because a receipt is an invoice that has been paid:
+  `src/lib/pdf/invoice.tsx`, issued from `/admin` once a quote is accepted and
+  downloaded by the franchisee from their own status page. A new migration adds
+  the invoice number, its date, and the payment record — no payment is
+  processed; the team writes down what the bank statement says.
+
+113 smoke checks, 90 unit tests, 15 schema checks, typecheck and lint — all green.
+
+**§8b is complete: all four documents exist.** Budget one-pager (pre-site,
+format-level), budgetary quote (site-specific, underwriting), formal invoice
+(disbursement), paid receipt (proof). They share `letterhead.tsx`, and each one
+is generated from data the portal already held.
 
 **What the budgetary quote turned up.** The document covers a whole site, but
 the status page had only ever shown `quotes[0]` — so a request routed two ways
@@ -70,16 +82,20 @@ finish.
 
 ## Next: the rest of Session 5
 
-- The two remaining §8b lender PDFs, both on `letterhead.tsx` and both
-  team-triggered from `/admin`: the **formal invoice** (on internal-tail
-  acceptance) and the **paid receipt** (marked PAID with date and method).
-  They are siblings — same trigger surface, near-identical shape — so they
-  belong in one commit.
-- The **§8d welcome email** — deliberately last. Its entire payload is "concept
-  drawings and a signage number": the DID, which is Session 8 and still blocked
-  on the v13 demo, and the budget one-pager, which now exists. Built any
-  earlier it would have been an email whose main link had no destination. When
-  it lands, the DID link is the one open forward reference in it.
+- The **§8d welcome email** — deliberately last, and now the only thing left in
+  Session 5. Its entire payload is "concept drawings and a signage number": the
+  DID, which is Session 8 and still blocked on the v13 demo, and the budget
+  one-pager, which now exists. Built any earlier it would have been an email
+  whose main link had no destination. When it lands, the DID link is the one
+  open forward reference in it.
+
+**One thing to decide before Session 6**, because two features now rest on it:
+DECISIONS #51 — a request split between Signage.com and the brand's vendor has
+one status and two tails, and SPEC §6 offers the tails only as alternatives.
+Today the franchisee is not offered acceptance on such a request, which means
+Signage.com's half of it also cannot be invoiced (#57). Both follow from the
+same unanswered question; answering it once fixes both. Neither was invented
+here because a two-dimensional request state is a spec change, not a bug fix.
 
 ---
 
@@ -114,10 +130,10 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 105 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 113 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 84 unit tests — the §6 state machine, the seed pins, the §8b totals |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 14 schema checks |
+| `npm test` | 90 unit tests — the §6 state machine, the seed pins, the §8b totals |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres, 15 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead

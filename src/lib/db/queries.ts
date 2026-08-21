@@ -216,6 +216,12 @@ export interface QuoteRow {
   tat: string | null;
   delivered_at: string | null;
   accepted_at: string | null;
+  /** §8b: assigned once when the team issues the invoice, never regenerated. */
+  invoice_number: string | null;
+  invoiced_at: string | null;
+  paid_at: string | null;
+  payment_method: string | null;
+  payment_reference: string | null;
 }
 
 export interface EventRow {
@@ -317,7 +323,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   const quotes = await rows<QuoteRow>(
     `select id, recipient_kind, recipient_name, line_item_ids,
             priced_total, priced_count, manual_count,
-            external, tat, delivered_at, accepted_at
+            external, tat, delivered_at, accepted_at,
+            invoice_number, invoiced_at, paid_at, payment_method, payment_reference
        from quotes where request_id = $1 order by created_at`,
     [request.id],
   );

@@ -19,12 +19,14 @@ import {
   addNoteAction,
   attachMockupAction,
   deliverQuoteAction,
+  issueInvoiceAction,
   logExternalOrderAction,
   logExternalQuoteAction,
   logLandlordEventAction,
   milestoneAction,
   prepPackageAction,
   priceItemAction,
+  recordPaymentAction,
   routeAction,
 } from '../../actions';
 
@@ -66,6 +68,7 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
       {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       <ActionPanel request={request} act={act} />
+      <InvoicePanel request={request} act={act} />
       <ItemsPanel request={request} act={act} />
       <FilesPanel request={request} />
       <LandlordPanel request={request} act={act} />
@@ -269,6 +272,132 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
         </ul>
       )}
     </Section>
+  );
+}
+
+// ------------------------------------------------- §8b invoice and receipt
+
+/**
+ * Issue the invoice, record the payment, and hand over both documents.
+ *
+ * Only Signage.com's own packages appear here. The brand's vendor invoices its
+ * own work directly (DECISIONS #46), so an external package has nothing for
+ * this panel to do, and a disabled button would only invite someone to wonder
+ * why. The panel hides itself until something is accepted, because until then
+ * there is genuinely nothing to bill.
+ */
+function InvoicePanel({ request, act }: { request: RequestDetail; act: Act }) {
+  const billable = request.quotes.filter((quote) => !quote.external && quote.accepted_at);
+  if (billable.length === 0) return null;
+
+  return (
+    <Section title="Lender documents (§8b)">
+      <div className="space-y-4">
+        {billable.map((quote) => (
+          <InvoiceRow key={quote.id} request={request} quote={quote} act={act} />
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function InvoiceRow({
+  request,
+  quote,
+  act,
+}: {
+  request: RequestDetail;
+  quote: RequestDetail['quotes'][number];
+  act: Act;
+}) {
+  const [method, setMethod] = useState('');
+  const [reference, setReference] = useState('');
+  const base = `/api/documents/invoice/${request.access_token}/${quote.id}`;
+
+  return (
+    <div className="rounded-lg border border-gray-200 p-3">
+      <p className="text-xs text-gray-500">
+        Signage.com package · {formatPrice(quote.priced_total)} · accepted{' '}
+        {new Date(quote.accepted_at!).toLocaleDateString('en-US')}
+      </p>
+
+      {!quote.invoice_number && (
+        <div className="mt-2 space-y-2">
+          <p className="text-xs text-gray-500">
+            The number is assigned once and never regenerated — a lender files the document by it.
+          </p>
+          <Button onClick={() => act(() => issueInvoiceAction(request.id, quote.id))}>
+            Issue invoice
+          </Button>
+        </div>
+      )}
+
+      {quote.invoice_number && (
+        <div className="mt-2 space-y-2">
+          <p className="text-sm font-medium text-gray-900">
+            {quote.invoice_number}
+            {quote.paid_at && (
+              <span className="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-900">
+                PAID
+              </span>
+            )}
+          </p>
+
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={base}
+              className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50"
+            >
+              Invoice PDF
+            </a>
+            {quote.paid_at && (
+              <a
+                href={`${base}?kind=receipt`}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-800 hover:bg-gray-50"
+              >
+                Receipt PDF
+              </a>
+            )}
+          </div>
+
+          {!quote.paid_at ? (
+            <div className="space-y-2 border-t border-gray-100 pt-2">
+              {/* No payment is taken here — SPEC §11 keeps processing out of
+                  MVP. This records what the bank statement already says. */}
+              <p className="text-xs text-gray-500">
+                Record what was received. Nothing is charged here, and the receipt says so.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={method}
+                  onChange={(event) => setMethod(event.target.value)}
+                  placeholder="How it was paid (ACH, check…)"
+                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                />
+                <input
+                  value={reference}
+                  onChange={(event) => setReference(event.target.value)}
+                  placeholder="Reference (optional)"
+                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                />
+              </div>
+              <Button
+                onClick={() =>
+                  act(() => recordPaymentAction(request.id, quote.id, method, reference))
+                }
+              >
+                Record payment
+              </Button>
+            </div>
+          ) : (
+            <p className="text-xs text-emerald-800">
+              Paid {new Date(quote.paid_at).toLocaleDateString('en-US')} · {quote.payment_method}
+              {quote.payment_reference ? ` · ${quote.payment_reference}` : ''}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
