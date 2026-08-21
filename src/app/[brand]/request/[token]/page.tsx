@@ -270,7 +270,14 @@ function QuoteCard({
   split: boolean;
 }) {
   const accepted = quote.accepted_at !== null;
-  const acceptable = !quote.external && !accepted && request.status === 'quote_ready';
+  // A request with ANY external package runs the external tail end to end —
+  // which is what the team console already assumes, and the two surfaces have to
+  // agree. SPEC §6 offers the tails as alternatives and says nothing about a
+  // request that is both, so the franchisee is told who they order with rather
+  // than shown a button whose meaning nobody has decided (DECISIONS #51).
+  const mixed = request.quotes.some((q) => q.external);
+  const acceptable =
+    !mixed && !quote.external && !accepted && request.status === 'quote_ready';
 
   return (
     <section className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
@@ -297,7 +304,7 @@ function QuoteCard({
         <form
           action={async () => {
             'use server';
-            await acceptQuote(token);
+            await acceptQuote(token, quote.id);
           }}
           className="mt-3"
         >
@@ -315,6 +322,16 @@ function QuoteCard({
         <p className="mt-3 text-xs font-medium text-emerald-800">
           Accepted {new Date(quote.accepted_at!).toLocaleDateString('en-US')} — in the production
           queue.
+        </p>
+      )}
+
+      {/* Otherwise this package would sit there priced, with no button and no
+          explanation of what happens to it. */}
+      {mixed && !quote.external && !accepted && request.status === 'quote_ready' && (
+        <p className="mt-3 text-xs text-indigo-900/70">
+          This half of your signage is fulfilled by Signage.com. Because the rest is going to{' '}
+          {request.brand.vendor_name ?? 'your brand’s vendor'}, your Signage.com contact confirms
+          both with you together — there is nothing to click here.
         </p>
       )}
 

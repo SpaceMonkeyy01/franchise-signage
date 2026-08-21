@@ -448,6 +448,29 @@ throwaway UI over permanent rules.
     "valid 30 days" is a commitment Signage.com has not made, so the document
     states its issue date and says pricing is current as of it.
 
+50. **Accepting a quote names the package; it no longer guesses.**
+    `acceptQuote(token)` read the package back as `order by created_at desc
+    limit 1`. That is wrong twice over on a SPEC §4 split request: routing
+    inserts every package inside one transaction, and Postgres `now()` is
+    transaction-start time, so the rows carry an **identical** `created_at` and
+    the "latest" is an arbitrary tie-break — the franchisee's own click landed
+    on a package chosen at random. It now takes the quote id from the card that
+    was clicked, scoped by request id so a token still authorizes only its own
+    request (SPEC §10), and refuses a package already accepted.
+
+51. **A request split across two recipients runs the external tail, and the
+    franchisee is not asked to accept.** The team console already derived it
+    this way — `quotes.some(external)` — while the status page offered an Accept
+    button on the Signage.com package. The two surfaces now agree, and the
+    franchisee is told who they order with instead. **This needs a spec answer:**
+    SPEC §6 presents the two tails as alternatives and is silent on a request
+    that is both, and there is only one request-level status, so accepting the
+    internal half would move the whole request to `accepted` and strand the
+    external half's "log order placed" (which is gated on `quote_ready`). A
+    two-dimensional state is a real design change, not a bug fix, so it was not
+    invented here. The cost of the current answer: Signage.com fabricates its
+    half of a split request without a recorded franchisee acceptance.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

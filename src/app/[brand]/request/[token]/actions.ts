@@ -23,21 +23,37 @@ import type { StoredObject } from '@/lib/storage';
  * The one status-bearing action a franchisee takes directly, and only on the
  * internal tail — an external vendor's quote is accepted off-platform and the
  * team logs it.
+ *
+ * The package is named by the caller, not guessed at. It used to be read back
+ * as `order by created_at desc limit 1`, which is wrong twice over on a request
+ * SPEC §4 split across two recipients: routing inserts every package inside one
+ * transaction, and Postgres `now()` is transaction-start time, so the rows share
+ * an identical `created_at` and the "latest" is an arbitrary tie-break. A
+ * franchisee clicking Accept on the Signage.com package could land on the
+ * vendor's and be told their own quote was somebody else's to accept.
  */
-export async function acceptQuote(token: string): Promise<void> {
+export async function acceptQuote(token: string, quoteId: string): Promise<void> {
   const request = await queryOne<{ id: string; status: string }>(
     `select id, status from requests where access_token = $1`,
     [token],
   );
   if (!request) throw new Error('Unknown request');
 
-  const quote = await queryOne<{ id: string; external: boolean; priced_total: string | null }>(
-    `select id, external, priced_total from quotes
-      where request_id = $1 order by created_at desc limit 1`,
-    [request.id],
+  // Scoped by request id as well as quote id: the token authorizes this request
+  // and nothing else, so a quote id from elsewhere must not resolve (SPEC §10).
+  const quote = await queryOne<{
+    id: string;
+    external: boolean;
+    priced_total: string | null;
+    accepted_at: string | null;
+  }>(
+    `select id, external, priced_total, accepted_at from quotes
+      where id = $1 and request_id = $2`,
+    [quoteId, request.id],
   );
   if (!quote) throw new Error('There is no quote to accept yet');
   if (quote.external) throw new Error('External quotes are accepted with the vendor directly');
+  if (quote.accepted_at) throw new Error('That quote has already been accepted');
 
   await withStatusStore(async (store) => {
     await transitionRequest(store, {

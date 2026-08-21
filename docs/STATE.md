@@ -24,8 +24,14 @@ is left is listed under "Next" below.
   from the tokenized status page at `/api/documents/quote/{token}` once a quote
   is priced. Built from `est_price_snapshot`, so it agrees with the quote email
   and the status page by construction rather than by recomputation.
+- **The split-request accept bug**, found by the budgetary quote and fixed:
+  `acceptQuote` picked its package with `order by created_at desc limit 1`, but
+  routing inserts every package in one transaction and Postgres `now()` is
+  transaction-start time — so the rows share a `created_at` and the franchisee's
+  click landed on a package chosen by an arbitrary tie-break. It now takes the
+  quote id from the card that was clicked. DECISIONS #50–51.
 
-103 smoke checks, 84 unit tests, 14 schema checks, typecheck and lint — all green.
+105 smoke checks, 84 unit tests, 14 schema checks, typecheck and lint — all green.
 
 **What the budgetary quote turned up.** The document covers a whole site, but
 the status page had only ever shown `quotes[0]` — so a request routed two ways
@@ -108,7 +114,7 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 103 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 105 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 84 unit tests — the §6 state machine, the seed pins, the §8b totals |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres, 14 schema checks |

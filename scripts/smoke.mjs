@@ -592,6 +592,23 @@ await page.locator('input[placeholder="Vendor total"]').fill('9000');
 await page.getByRole('button', { name: 'Log vendor quote' }).click();
 await expectVisible(page, 'text=/Vendor quote logged/', 'the external tail logs what the vendor quoted');
 
+// The request is now `quote_ready` and holds TWO packages — one Signage.com,
+// one the brand's vendor. The console runs the external tail for the whole
+// request, and the franchisee page has to agree with it: an Accept button here
+// resolves to a quote the action refuses, so it must not be offered at all.
+await page.goto(`${BASE}/freshbites/request/${accessToken}`, { waitUntil: 'networkidle' });
+const splitAccept = await page.getByRole('button', { name: /Accept quote/i }).count();
+record(
+  'a split request offers no accept button the action would refuse',
+  splitAccept === 0,
+  `${splitAccept} button(s) offered`,
+);
+await expectVisible(
+  page,
+  'text=/ordering happens with them directly|orders with the vendor directly/',
+  'and says instead who the franchisee orders with',
+);
+
 await page.goto(admin, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Log order placed' }).click();
 await expectVisible(page, 'text=/Order logged/', 'the external order is logged, not accepted in-app');
