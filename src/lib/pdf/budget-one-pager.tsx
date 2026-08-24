@@ -18,70 +18,20 @@
 
 import { Text, View } from '@react-pdf/renderer';
 
-import type { BrandItemRow, PackageRow } from '../db/queries';
-import {
-  DocumentShell,
-  LineTable,
-  pdfMoneyRound,
-  styles,
-  type DocumentLine,
-  type PdfBrand,
-} from './letterhead';
+import { FORMAT_LABEL, totalsFor, toQuantityLines } from '../budget';
+import type { PackageRow } from '../db/queries';
+import { DocumentShell, LineTable, pdfMoneyRound, styles, type PdfBrand } from './letterhead';
 
-const FORMAT_LABEL: Record<string, string> = {
-  inline: 'Inline',
-  endcap: 'Endcap',
-  freestanding: 'Freestanding',
-};
+// The arithmetic lives in ../budget so the welcome email and the level-1 page
+// quote the same figure this sheet does, rather than a second implementation
+// that agrees until one of them is edited. Re-exported because both were part of
+// this module's surface before they moved.
+export { totalsFor, toQuantityLines, type BudgetTotals } from '../budget';
 
 export interface BudgetOnePagerProps {
   brand: PdfBrand;
   pkg: PackageRow;
   issuedAt: Date;
-}
-
-/**
- * Collapse the package's item list into quantity lines.
- *
- * `brand_packages.items` repeats an id when a format needs the item more than
- * once — an endcap takes two storefront sets because it has two elevations
- * (SPEC §3.2) — so the repetition carries the quantity and must be counted, not
- * deduplicated. Order follows first appearance, which is the catalog's
- * `sort_order`, so the sheet reads outside-in the way the packages are written.
- */
-export function toQuantityLines(items: BrandItemRow[]): DocumentLine[] {
-  const byId = new Map<string, DocumentLine>();
-  for (const item of items) {
-    const existing = byId.get(item.id);
-    if (existing) {
-      existing.quantity += 1;
-      continue;
-    }
-    byId.set(item.id, {
-      name: item.name,
-      detail: item.spec_summary,
-      quantity: 1,
-      unitPrice: item.est_price === null ? null : Number(item.est_price),
-    });
-  }
-  return [...byId.values()];
-}
-
-export interface BudgetTotals {
-  /** Summed est_price × quantity across direct-priced lines only. */
-  priced: number;
-  /** How many DISTINCT lines carry no estimate and are quoted separately. */
-  customLines: number;
-}
-
-export function totalsFor(lines: DocumentLine[]): BudgetTotals {
-  return lines.reduce<BudgetTotals>(
-    (acc, line) => {
-      if (line.unitPrice === null) return { ...acc, customLines: acc.customLines + 1 };
-      return { ...acc, priced: acc.priced + line.unitPrice * line.quantity };
-    },
-    { priced: 0, customLines: 0 },
-  );
 }
 
 export function BudgetOnePager({ brand, pkg, issuedAt }: BudgetOnePagerProps) {

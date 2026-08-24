@@ -1,9 +1,10 @@
 # Where the build is
 
-Last updated: 21 Aug 2026, Session 5. Session 5 is most of the way done; what
-is left is listed under "Next" below.
+Last updated: 24 Aug 2026. **Session 5 is complete.** Session 6 — the corporate
+dashboard (SPEC §9 interface 6) — is next, with one decision to make first; see
+"Next" below.
 
-## Session 5 so far
+## Session 5
 
 - `7590170` — per-policy vendor contacts (answers DECISIONS #20) and the vendor
   quote-package email.
@@ -38,7 +39,25 @@ is left is listed under "Next" below.
   the invoice number, its date, and the payment record — no payment is
   processed; the team writes down what the bank statement says.
 
-113 smoke checks, 90 unit tests, 15 schema checks, typecheck and lint — all green.
+- **The §8d welcome email**, and with it level 1 of the two-level access model:
+  `src/lib/email/templates/welcome.tsx`, sent the moment corporate registers a
+  franchisee's email at agreement signing. Its payload is the two things that
+  matter before there is a building — a signage number for the bank, and what
+  happens when a site appears — and ordering is not merely hidden but absent.
+  The link goes to `/{brand_slug}/welcome/{token}`, a level-1 landing page with
+  the per-format budget figures and the one-pager behind each of them.
+  Registration is performed from `/admin` (Registrations panel) until Session 6
+  gives corporate a dashboard, and the same `registerFranchisee` serves both.
+
+128 smoke checks, 99 unit tests, 16 schema checks, typecheck and lint — all green.
+
+**§8d level 1 works end to end, and it is the first thing a franchisee sees.**
+The welcome email's own destination in the spec is §8c's brand-email magic link,
+which is Session 8 — so the registration carries a token of its own, on the same
+convention as `requests.access_token`, and the DID appears as a described next
+stage rather than a dead button. DECISIONS #58–65; #58 is a §8d amendment worth
+making. The budget arithmetic moved to `src/lib/budget.ts` so the PDF, the email
+and the page quote one number rather than three that agree today.
 
 **§8b is complete: all four documents exist.** Budget one-pager (pre-site,
 format-level), budgetary quote (site-specific, underwriting), formal invoice
@@ -80,14 +99,14 @@ produced correctly. The run now mirrors its codes to
 `scripts/.smoke-leftovers.json` (gitignored) and clears the file only on a clean
 finish.
 
-## Next: the rest of Session 5
+## Next: Session 6, the corporate dashboard
 
-- The **§8d welcome email** — deliberately last, and now the only thing left in
-  Session 5. Its entire payload is "concept drawings and a signage number": the
-  DID, which is Session 8 and still blocked on the v13 demo, and the budget
-  one-pager, which now exists. Built any earlier it would have been an email
-  whose main link had no destination. When it lands, the DID link is the one
-  open forward reference in it.
+SPEC §9 interface 6 — read-only, magic-link: portfolio metrics (locations,
+installed signs, open requests, pending approvals, program spend), per-location
+compliance cards, jump-to-approvals. Two things already built belong on it
+rather than on `/admin`, and should move when it exists: the §8b budget one-pager
+export and the §8d registration panel (DECISIONS #44, #61). Both were put on the
+team queue explicitly because corporate had nowhere to stand.
 
 **One thing to decide before Session 6**, because two features now rest on it:
 DECISIONS #51 — a request split between Signage.com and the brand's vendor has
@@ -96,6 +115,11 @@ Today the franchisee is not offered acceptance on such a request, which means
 Signage.com's half of it also cannot be invoiced (#57). Both follow from the
 same unanswered question; answering it once fixes both. Neither was invented
 here because a two-dimensional request state is a spec change, not a bug fix.
+
+**The dev database needs a reset to pick up the §8d migration.** `npm run
+dev:db:reset` — the dev server skips migrations when a schema is already
+present, so an existing `.pglite/` has no `franchisee_registrations.access_token`
+and the registrations panel will fail on it.
 
 ---
 
@@ -130,10 +154,10 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 113 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 128 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 90 unit tests — the §6 state machine, the seed pins, the §8b totals |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 15 schema checks |
+| `npm test` | 99 unit tests — the §6 state machine, the seed pins, the §8b totals, the §8d welcome copy |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres, 16 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
@@ -221,7 +245,8 @@ and real uploads behind `src/lib/storage/`.
 
 ---
 
-**Session 5 — the outbound mail** (SPEC §9 interface 5), partly done:
+**Session 5 — the outbound mail, the lender documents, and level 1**
+(SPEC §9 interface 5, §8b, §8d):
 
 - Per-policy vendor contacts (`brand_vendor_contacts`), which answers DECISIONS
   #20 — the pylon's `approved_vendor` override now has an address of its own
@@ -229,9 +254,9 @@ and real uploads behind `src/lib/storage/`.
 - The vendor quote-package email: one per recipient, carrying no credential of
   either kind, corporate CC'd per policy.
 - The seven franchisee notifications, driven end to end on both tails.
-
-Still open in Session 5: the invoice and receipt PDFs and the §8d welcome email — see
-"Next" at the top of this file.
+- The four §8b lender documents: budget one-pager, budgetary quote, formal
+  invoice, paid receipt.
+- The §8d welcome email and the level-1 landing page it opens.
 
 ---
 
@@ -282,6 +307,13 @@ In `docs/DECISIONS.md`, none blocking:
    package in one sitting and a decline arrives buried if it is one of five
    messages; and **`in_production` sending nothing**, because the accept email
    already said production had started.
+
+8. Session 5's §8d calls (entries 58–65), chiefly **#58: the welcome email
+   carries a registration token, not the §8c magic link SPEC §8d names** —
+   because that link authorizes DID generation and is Session 8. §8d should be
+   amended to separate "how a franchisee reaches their page" from "what
+   authorizes a DID"; the two are one sentence in v2.1 and they are not the same
+   thing.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

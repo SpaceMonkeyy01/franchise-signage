@@ -28,6 +28,9 @@ const results = [];
 /** The location the initial-setup section creates, and then removes. */
 const SMOKE_LOCATION = 'Freshbites — Smoke Test';
 
+/** The §8d registration the welcome section creates, and then removes. */
+const SMOKE_REGISTRATION = 'smoke.franchisee@freshbites.test';
+
 /** A 1×1 PNG — the smallest thing that exercises the real upload path. */
 const PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -185,6 +188,13 @@ async function removeSmokeArtifacts(codes = []) {
         written.map((row) => row.id),
       ]);
       await client.query(`delete from locations where name = $1`, [SMOKE_LOCATION]);
+      // §8d: the registration and the welcome email it sent. `sent_emails` goes
+      // too — it has no request_id to cascade from, so it would otherwise pile
+      // up one row per run in the outbox the team reads.
+      await client.query(`delete from franchisee_registrations where email = $1`, [
+        SMOKE_REGISTRATION,
+      ]);
+      await client.query(`delete from sent_emails where to_email = $1`, [SMOKE_REGISTRATION]);
     } finally {
       await client.query(`alter table request_events enable trigger request_events_append_only`);
     }
@@ -996,6 +1006,153 @@ record(
   'it is named for the request, which is what a lender files it under',
   quoteDownload.suggestedFilename() === 'req-0016-budgetary-quote.pdf',
   quoteDownload.suggestedFilename(),
+);
+
+// ---------------------------------------- the §8d welcome email and level 1
+console.log('\nThe welcome email and level-1 access (SPEC §8d)');
+
+// Registration IS the trigger: there is no separate send step, and the check
+// that matters is that one form submission produces a real message.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+const registrations = page.locator('section:has(h2:text-is("Franchisee registrations"))');
+await registrations.locator('input[type="email"]').fill(SMOKE_REGISTRATION);
+await registrations.locator('input[type="text"]').fill('Dana Whitfield');
+await registrations.getByRole('button', { name: /Register/i }).click();
+await expectVisible(
+  page,
+  `section:has(h2:text-is("Franchisee registrations")) >> text=${SMOKE_REGISTRATION}`,
+  'registering a franchisee records them on the queue',
+);
+await expectVisible(
+  page,
+  'section:has(h2:text-is("Franchisee registrations")) >> text=welcomed',
+  'and the welcome email went out on that one action',
+);
+
+const registration = await withDb(async (client) =>
+  (
+    await client.query(
+      `select id, access_token, welcome_sent_at from franchisee_registrations where email = $1`,
+      [SMOKE_REGISTRATION],
+    )
+  ).rows[0],
+);
+const welcomeMail = await withDb(async (client) =>
+  (
+    await client.query(
+      `select to_email, subject, html, request_id from sent_emails
+        where to_email = $1 and kind = 'welcome' order by created_at desc limit 1`,
+      [SMOKE_REGISTRATION],
+    )
+  ).rows[0],
+);
+
+record(
+  'the welcome email is addressed to the registered franchisee',
+  welcomeMail?.to_email === SMOKE_REGISTRATION,
+  welcomeMail?.to_email ?? 'nothing was sent',
+);
+// The only message in the build with no request behind it — at agreement
+// signing there is no location, no lease and nothing to attach it to.
+record(
+  'it belongs to no request, because none exists at signing',
+  welcomeMail?.request_id === null,
+  String(welcomeMail?.request_id),
+);
+const welcomeLink = `${BASE}/freshbites/welcome/${registration?.access_token}`;
+record(
+  'it carries the registration link, which is their only way in',
+  (welcomeMail?.html ?? '').includes(welcomeLink),
+  registration?.access_token ? `token ${registration.access_token.slice(0, 8)}…` : 'no token',
+);
+// The seeded inline package: 8,400 + 2,900, with frosting and the entrance sign
+// quoted per site. The number in the email has to be the number in the PDF.
+record(
+  'the signage number in it is the one the budget sheet totals',
+  (welcomeMail?.html ?? '').includes('$11,300'),
+  '$11,300 inline',
+);
+// SPEC §8d: ordering stays invisible at this stage, and the DID (§8c, Session 8)
+// has no destination yet — a dead link here is the worst one in the build.
+const welcomeProse = (welcomeMail?.html ?? '').replace(/<[^>]*>/g, ' ').toLowerCase();
+record(
+  'it says nothing about ordering signs, which is months away',
+  !welcomeProse.includes('order') && !welcomeProse.includes('request signage'),
+  'ordering invisible',
+);
+record(
+  'and it links nowhere but their own page — the DID is described, not linked',
+  [...(welcomeMail?.html ?? '').matchAll(/href="([^"]+)"/g)].every((m) => m[1] === welcomeLink),
+  'one destination',
+);
+
+// The landing page itself, opened exactly as the franchisee opens it.
+await page.goto(welcomeLink, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=Your signage budget', 'the link opens their level-1 page');
+await expectCount(
+  page,
+  'section:has(h2:text-is("Your signage budget")) a[href^="/api/documents/welcome/"]',
+  3,
+  'with a budget sheet per format the brand has a package for',
+);
+// Not a disabled button: at this stage there is nothing to order, and a control
+// that cannot work teaches a franchisee that half the product is noise.
+await expectCount(page, 'a[href*="/request"]', 0, 'and no way to order signs, which is the point');
+
+const [welcomePdf] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  page.locator('a[href^="/api/documents/welcome/"]').first().click(),
+]);
+const welcomeBytes = await welcomePdf.createReadStream().then(async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+});
+record(
+  'the budget sheet downloads on their token, with no team login',
+  welcomeBytes.subarray(0, 5).toString() === '%PDF-' && welcomeBytes.length > 1000,
+  `${welcomePdf.suggestedFilename()} · ${welcomeBytes.length} bytes`,
+);
+
+// The token is the credential, so the check that matters is that a token nobody
+// holds opens nothing — the page and the document alike.
+const strangerWelcome = await fetch(`${BASE}/freshbites/welcome/not-a-real-token`, {
+  redirect: 'manual',
+});
+record(
+  'an unknown token opens no level-1 page',
+  strangerWelcome.status === 404,
+  `status ${strangerWelcome.status}`,
+);
+const strangerSheet = await fetch(`${BASE}/api/documents/welcome/not-a-real-token/inline`, {
+  redirect: 'manual',
+});
+record(
+  'and no budget sheet either',
+  strangerSheet.status === 404,
+  `status ${strangerSheet.status}`,
+);
+
+// Re-sending is the realistic support case ("they never got it"), and it must
+// NOT mint a new token — the franchisee who finds the first email later still
+// has to get in.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await registrations.getByRole('button', { name: /Resend welcome/i }).first().click();
+await page.waitForTimeout(500);
+const afterResend = await withDb(async (client) =>
+  (
+    await client.query(
+      `select access_token,
+              (select count(*) from sent_emails where to_email = $1 and kind = 'welcome') as sent
+         from franchisee_registrations where email = $1`,
+      [SMOKE_REGISTRATION],
+    )
+  ).rows[0],
+);
+record(
+  're-sending the welcome keeps the link that is already in their inbox',
+  afterResend?.access_token === registration?.access_token && Number(afterResend?.sent) === 2,
+  `${afterResend?.sent} sent, token unchanged`,
 );
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));

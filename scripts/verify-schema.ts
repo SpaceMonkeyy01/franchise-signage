@@ -130,6 +130,24 @@ const checks: Check[] = [
     describe: (rows) => rows.map((r) => r.polname).join(', '),
   },
   {
+    // SPEC §8d level 1. The DID migration locked this table to anon outright;
+    // the welcome email's landing page reads it, so the predicate is now the
+    // token. The check is that it is STILL a token — an accidental `using
+    // (true)` here would publish every franchisee's address in the pilot.
+    label: 'anon reaches a registration only through its own token',
+    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr
+          from pg_policy p join pg_class c on c.oid = p.polrelid
+          where c.relname = 'franchisee_registrations'`,
+    expect: (rows) => {
+      const anon = rows.filter((r) => !String(r.polname).startsWith('team'));
+      return (
+        anon.length > 0 &&
+        anon.every((r) => String(r.using_expr).includes('app.access_token'))
+      );
+    },
+    describe: (rows) => rows.map((r) => r.polname).join(', '),
+  },
+  {
     // DECISIONS #20: routing groups by resolved policy, so two contacts for the
     // same policy would make the recipient ambiguous — and the failure mode of
     // an ambiguous recipient is mailing one vendor's package to another.

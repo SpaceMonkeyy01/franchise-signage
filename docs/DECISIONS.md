@@ -517,6 +517,69 @@ throwaway UI over permanent rules.
     this. Until then, a split request's Signage.com half is billed outside the
     portal.
 
+58. **The welcome email's link is a registration token, not the §8c magic
+    link — a spec divergence worth naming.** SPEC §8d says the welcome email
+    carries "the brand-email magic link". That link is §8c's, it authorizes DID
+    generation, and it is Session 8. The half of the §8d payload that exists
+    today is the budget number, so `franchisee_registrations` gained an
+    `access_token` on the same convention as `requests.access_token` — opaque,
+    in the URL, the credential itself — and the email opens a level-1 landing
+    page at `/{brand_slug}/welcome/{token}`. The token is not a substitute for
+    the magic link: when §8c lands, the DID button on that page is what the
+    magic link protects, and this token still addresses the page. §8d should be
+    amended to separate "how they reach their page" from "what authorizes a
+    DID", which v2.1 collapses into one sentence.
+
+59. **The DID is described in words, with no button.** It is the other half of
+    what §8d promises and it has no destination until Session 8. A dead link in
+    the first message a franchisee ever receives is the worst 404 in the build,
+    and a disabled control is not better — it teaches someone that part of the
+    product is decoration. Both the email and the landing page say what happens
+    at LOI and tell them to speak to their brand contact. A unit test asserts
+    the email's only href is their own page.
+
+60. **Registration IS the send.** There is no "now send the welcome" step:
+    saving the row emails them. A registration nobody was told about is not
+    access, and a second button is a second thing to forget. The consequence is
+    that a repeat registration must not be an error — the realistic case is
+    corporate re-registering because the franchisee says nothing arrived — so
+    `(brand_id, email)` conflicts keep the existing row, keep the existing
+    token, and send again. Minting a new token would kill the link in the first
+    email, which is the opposite of what was asked for.
+
+61. **The team registers, and the row says so.** §8d's actor is corporate at
+    agreement signing, and their dashboard is Session 6 — so this sits on
+    `/admin` beside the §8b budget export, for the reason given in #44.
+    `registered_by` is passed as `'team'` rather than left on the column's
+    `'corporate'` default: the record should say who actually typed it, and
+    Session 6 passes `'corporate'` from the same function.
+
+62. **`welcome_sent_at` means "dispatched without a provider error", not
+    "delivered".** With no `RESEND_API_KEY` nothing is ever delivered, and a
+    timestamp that only filled in production would make the queue's "welcome
+    not sent" flag useless on this machine. A real Resend failure leaves it
+    null, which is exactly what that flag and the resend button are for.
+
+63. **A brand with no packages still gets a welcome email.** Half the payload is
+    missing and the budget block drops out, but the franchisee has just been
+    registered and told to expect something. A misconfigured brand must not turn
+    into a franchisee who heard from nobody at the one moment goodwill is
+    highest.
+
+64. **The signage number is computed in one place** — `src/lib/budget.ts`, which
+    now owns `toQuantityLines` and `totalsFor` (moved out of
+    `budget-one-pager.tsx`, which re-exports them). Three surfaces quote that
+    figure: the PDF, the welcome email, and the level-1 page. A franchisee reads
+    two of them side by side and forwards one to a lender, so they must be the
+    same arithmetic rather than three that currently agree.
+
+65. **The budget sheet has two doors, and the second one is the act of
+    registration.** `/api/documents/budget/{slug}/{format}` stays team-gated
+    (#44); `/api/documents/welcome/{token}/{format}` serves the identical
+    document to whoever holds a registration token. That is not a weaker gate —
+    corporate decided to hand this person the sheet when they registered them —
+    and the document is still not published.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

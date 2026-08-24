@@ -11,10 +11,13 @@ import { RequestStatusChip } from '@/components/StatusChip';
 import { requireTeamMember } from '@/lib/auth/team';
 import {
   getBrandsWithPackages,
+  getRegistrations,
   getRequestQueue,
   type BrandWithFormats,
   type QueueRow,
 } from '@/lib/db/queries';
+
+import { Registrations } from './Registrations';
 import type { LocationFormat, RequestStatus } from '@/lib/status/types';
 
 const INTENT_LABEL: Record<string, string> = {
@@ -74,7 +77,11 @@ export default async function AdminQueue({
 
   // The counts are for every bucket, not just the open one — an operator should
   // see that four things need prep without clicking into it.
-  const [all, brands] = await Promise.all([getRequestQueue(), getBrandsWithPackages()]);
+  const [all, brands, registrations] = await Promise.all([
+    getRequestQueue(),
+    getBrandsWithPackages(),
+    getRegistrations(),
+  ]);
   const shown = bucket.statuses
     ? all.filter((row) => bucket.statuses!.includes(row.status))
     : all;
@@ -145,6 +152,7 @@ export default async function AdminQueue({
       </div>
 
       <BrandDocuments brands={brands} />
+      <Registrations brands={brands} registrations={registrations} />
     </main>
   );
 }

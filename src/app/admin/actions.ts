@@ -19,7 +19,9 @@ import { query, queryOne } from '@/lib/db/pool';
 import { routeRequestForQuote } from '@/lib/db/routing';
 import { notifyFranchisee, type FranchiseeNotification } from '@/lib/email/franchisee';
 import { notifyQuotePackages, notifyReviewNeeded } from '@/lib/email/notify';
+import { sendWelcomeEmail } from '@/lib/email/welcome';
 import type { SubmitFailure } from '@/lib/forms';
+import { registerFranchisee } from '@/lib/registrations';
 import { prepPackage, transitionRequest, type RequestStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
 import type { StoredObject } from '@/lib/storage';
@@ -407,6 +409,41 @@ export async function addNoteAction(requestId: string, note: string): Promise<Re
   return run(async () => {
     if (!note.trim()) throw new Error('An empty note is not a note.');
     await logEvent(requestId, 'note_added', note.trim(), {});
+  });
+}
+
+// ----------------------------------------------- §8d level 1: registrations
+
+/**
+ * Register a franchisee's email, which sends the welcome email (SPEC §8d).
+ *
+ * One write, one message: registration IS the trigger. SPEC §8d's actor is
+ * corporate at agreement signing, and their dashboard is Session 6 — until then
+ * the team does it on their behalf, exactly as they export the §8b budget sheet
+ * (DECISIONS #44). `registered_by` records 'team' rather than the column's
+ * 'corporate' default so the row says who actually typed it.
+ */
+export async function registerFranchiseeAction(
+  brandId: string,
+  email: string,
+  name: string,
+): Promise<Result> {
+  return run(async () => {
+    await registerFranchisee({ brandId, email, name, registeredBy: 'team' });
+  });
+}
+
+/**
+ * Send the welcome email again.
+ *
+ * The realistic reason is "they say they never got it", so this deliberately
+ * does NOT mint a new token: the link in the original message stays live, and a
+ * franchisee who finds that email later still gets in.
+ */
+export async function resendWelcomeAction(registrationId: string): Promise<Result> {
+  return run(async () => {
+    const outcome = await sendWelcomeEmail(registrationId);
+    if (outcome.reason === 'not_found') throw new Error('That registration no longer exists.');
   });
 }
 

@@ -546,3 +546,61 @@ export function getLocationById(locationId: string): Promise<{
     [locationId],
   );
 }
+
+// ------------------------------------------- §8d franchisee registrations
+
+export interface RegistrationRow {
+  id: string;
+  brand_id: string;
+  email: string;
+  name: string | null;
+  /** Level 1's credential — the URL of the landing page, and nothing else. */
+  access_token: string;
+  welcome_sent_at: string | null;
+  created_at: string;
+}
+
+/** A registration and its brand, resolved from the link the welcome email carried. */
+export async function getRegistrationByToken(
+  token: string,
+): Promise<{ registration: RegistrationRow; brand: BrandPublic } | null> {
+  const registration = await maybeOne<RegistrationRow>(
+    `select id, brand_id, email, name, access_token, welcome_sent_at, created_at
+       from franchisee_registrations where access_token = $1`,
+    [token],
+  );
+  if (!registration) return null;
+
+  // Through the public view, as every franchisee-facing screen does: a
+  // registration must not become a way to read reviewer or vendor addresses.
+  const brand = await maybeOne<BrandPublic>(
+    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat
+       from brands_public where id = $1`,
+    [registration.brand_id],
+  );
+  return brand ? { registration, brand } : null;
+}
+
+export function getRegistrationById(id: string): Promise<RegistrationRow | null> {
+  return maybeOne<RegistrationRow>(
+    `select id, brand_id, email, name, access_token, welcome_sent_at, created_at
+       from franchisee_registrations where id = $1`,
+    [id],
+  );
+}
+
+export interface RegistrationWithBrand extends RegistrationRow {
+  brand_name: string;
+  brand_slug: string;
+}
+
+/** Everyone corporate has registered, newest first — the team's view of level 1. */
+export function getRegistrations(): Promise<RegistrationWithBrand[]> {
+  return rows<RegistrationWithBrand>(
+    `select f.id, f.brand_id, f.email, f.name, f.access_token, f.welcome_sent_at, f.created_at,
+            b.name as brand_name, b.slug as brand_slug
+       from franchisee_registrations f
+       join brands b on b.id = f.brand_id
+      order by f.created_at desc`,
+  );
+}
