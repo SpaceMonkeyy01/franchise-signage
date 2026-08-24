@@ -49,6 +49,7 @@ export function ReviewDecidedEmail(props: ReviewDecidedProps) {
         title={title}
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 

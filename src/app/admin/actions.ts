@@ -22,7 +22,7 @@ import { notifyQuotePackages, notifyReviewNeeded } from '@/lib/email/notify';
 import { sendWelcomeEmail } from '@/lib/email/welcome';
 import type { SubmitFailure } from '@/lib/forms';
 import { registerFranchisee } from '@/lib/registrations';
-import { prepPackage, transitionRequest, type RequestStatus } from '@/lib/status';
+import { prepPackage, transitionPackage, type PackageStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
 import type { StoredObject } from '@/lib/storage';
 
@@ -253,42 +253,63 @@ export async function attachMockupAction(
 
 // ---------------------------------------------------------------- internal tail
 
-/** The quote reaches the franchisee: sent_for_quote → quote_ready. */
-export async function deliverQuoteAction(requestId: string): Promise<Result> {
+// ------------------------------------------------------------ fulfillment
+// Everything after routing acts on ONE PACKAGE (SPEC §6, amended v2.2). The
+// request status is the rollup of its packages, so nothing here sets it: each
+// action moves its own package and `transitionPackage` lets the request follow.
+// That is what lets Signage.com fabricate its half of a split request while the
+// brand's vendor is still quoting theirs.
+
+/** Load one package and confirm it belongs to this request (SPEC §10). */
+async function packageOf(requestId: string, quoteId: string) {
+  const quote = await queryOne<{
+    id: string;
+    external: boolean;
+    recipient_name: string | null;
+    priced_total: string | null;
+    manual_count: number;
+  }>(
+    `select id, external, recipient_name, priced_total, manual_count
+       from quotes where id = $1 and request_id = $2`,
+    [quoteId, requestId],
+  );
+  if (!quote) throw new Error('That package is not on this request.');
+  return quote;
+}
+
+/** The quote reaches the franchisee: this package goes sent_for_quote → quote_ready. */
+export async function deliverQuoteAction(requestId: string, quoteId: string): Promise<Result> {
   return run(async () => {
-    const quotes = await query<{ priced_total: string | null; manual_count: number }>(
-      `select priced_total, manual_count from quotes where request_id = $1`,
-      [requestId],
-    );
-    if (quotes.length === 0) throw new Error('Route the request first — there is no quote.');
+    const quote = await packageOf(requestId, quoteId);
+    if (quote.external) {
+      throw new Error('An external package is quoted by the vendor — log their number instead.');
+    }
 
-    await query(`update quotes set delivered_at = now() where request_id = $1`, [requestId]);
-
-    const total = quotes.reduce((sum, quote) => sum + Number(quote.priced_total ?? 0), 0);
-    const manual = quotes.reduce((sum, quote) => sum + quote.manual_count, 0);
+    const total = Number(quote.priced_total ?? 0);
     await withStatusStore((store) =>
-      transitionRequest(store, {
+      transitionPackage(store, {
         requestId,
+        quoteId,
         to: 'quote_ready',
         actor: 'team',
         kind: 'quote_delivered',
-        summary: `Quote delivered to franchisee — $${total.toLocaleString('en-US')}${
-          manual > 0 ? ` + ${manual} custom item(s)` : ''
-        }`,
-        detail: { total, manual },
+        summary:
+          `Quote delivered to franchisee — $${total.toLocaleString('en-US')}` +
+          (quote.manual_count > 0 ? ` + ${quote.manual_count} custom item(s)` : ''),
+        detail: { total, manual: quote.manual_count },
       }),
     );
 
     // The quote is the moment the franchisee has something to decide, so this is
     // the one team action that must reach them. Sent after the transition, and a
     // failure is recorded rather than raised (src/lib/email/franchisee.tsx).
-    await notifyFranchisee(requestId, 'quote_ready');
+    await notifyFranchisee(requestId, 'quote_ready', { quoteId });
   });
 }
 
 const MILESTONES: Record<
   string,
-  { to: RequestStatus; kind: string; summary: string; notify?: FranchiseeNotification }
+  { to: PackageStatus; kind: string; summary: string; notify?: FranchiseeNotification }
 > = {
   in_production: { to: 'in_production', kind: 'production_started', summary: 'Production started' },
   shipped: { to: 'shipped', kind: 'shipped', summary: 'Shipped', notify: 'shipped' },
@@ -301,22 +322,27 @@ const MILESTONES: Record<
 };
 
 /**
- * Log a fulfillment milestone.
+ * Log a fulfillment milestone against one package.
  *
  * `completed` is the one that matters: the ONLY transition that writes
- * installed_signs, and therefore the moment this request becomes the record every
- * future request reads from.
+ * installed_signs, and it writes THIS package's items. On a split site that is
+ * the point — Signage.com's signs go on the location record when Signage.com
+ * installs them, not when a vendor weeks behind finally reports in.
  */
 export async function milestoneAction(
   requestId: string,
+  quoteId: string,
   milestone: keyof typeof MILESTONES,
 ): Promise<Result> {
   return run(async () => {
     const step = MILESTONES[milestone];
     if (!step) throw new Error('Unknown milestone.');
+    await packageOf(requestId, quoteId);
+
     await withStatusStore((store) =>
-      transitionRequest(store, {
+      transitionPackage(store, {
         requestId,
+        quoteId,
         to: step.to,
         actor: 'team',
         kind: step.kind,
@@ -327,32 +353,34 @@ export async function milestoneAction(
     // `in_production` is deliberately silent: the franchisee was already told
     // production had started when they accepted the quote, and a second email
     // saying the same thing is the kind of noise that gets a sender filtered.
-    if (step.notify) await notifyFranchisee(requestId, step.notify);
+    if (step.notify) await notifyFranchisee(requestId, step.notify, { quoteId });
   });
 }
 
 // ---------------------------------------------------------------- external tail
-// Fabrication happens off-platform, so these three log what the team was told
-// rather than driving anything. The portal's job on this tail is to stay an
-// accurate record, not to pretend it is in control.
+// Fabrication happens off-platform, so these log what the team was told rather
+// than driving anything. The portal's job on this tail is to stay an accurate
+// record, not to pretend it is in control.
 
 /** The vendor came back with a number. */
 export async function logExternalQuoteAction(
   requestId: string,
+  quoteId: string,
   total: number,
   note: string,
 ): Promise<Result> {
   return run(async () => {
     if (!Number.isFinite(total) || total < 0) throw new Error('That total is not a number.');
+    const quote = await packageOf(requestId, quoteId);
+    if (!quote.external) {
+      throw new Error('Signage.com quotes its own package — deliver it rather than logging it.');
+    }
 
-    await query(
-      `update quotes set priced_total = $2, delivered_at = now()
-        where request_id = $1 and external`,
-      [requestId, total],
-    );
+    await query(`update quotes set priced_total = $2 where id = $1`, [quoteId, total]);
     await withStatusStore((store) =>
-      transitionRequest(store, {
+      transitionPackage(store, {
         requestId,
+        quoteId,
         to: 'quote_ready',
         actor: 'team',
         kind: 'quote_delivered',
@@ -366,11 +394,21 @@ export async function logExternalQuoteAction(
 }
 
 /** The franchisee accepted with the vendor directly; the team records it. */
-export async function logExternalOrderAction(requestId: string, note: string): Promise<Result> {
+export async function logExternalOrderAction(
+  requestId: string,
+  quoteId: string,
+  note: string,
+): Promise<Result> {
   return run(async () => {
+    const quote = await packageOf(requestId, quoteId);
+    if (!quote.external) {
+      throw new Error('The franchisee accepts a Signage.com package themselves, on their own page.');
+    }
+
     await withStatusStore((store) =>
-      transitionRequest(store, {
+      transitionPackage(store, {
         requestId,
+        quoteId,
         to: 'accepted',
         actor: 'team',
         kind: 'quote_accepted',
@@ -380,9 +418,6 @@ export async function logExternalOrderAction(requestId: string, note: string): P
         detail: { external: true },
       }),
     );
-    await query(`update quotes set accepted_at = now() where request_id = $1 and external`, [
-      requestId,
-    ]);
   });
 }
 

@@ -216,6 +216,14 @@ export interface QuoteRow {
   tat: string | null;
   delivered_at: string | null;
   accepted_at: string | null;
+  /**
+   * The package's own tail (SPEC §6, amended v2.2). The first two are always
+   * null on an external package: fabrication happens off-platform, and a
+   * production date on one would claim Signage.com made a sign it never touched.
+   */
+  in_production_at: string | null;
+  shipped_at: string | null;
+  completed_at: string | null;
   /** §8b: assigned once when the team issues the invoice, never regenerated. */
   invoice_number: string | null;
   invoiced_at: string | null;
@@ -324,8 +332,12 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     `select id, recipient_kind, recipient_name, line_item_ids,
             priced_total, priced_count, manual_count,
             external, tat, delivered_at, accepted_at,
+            in_production_at, shipped_at, completed_at,
             invoice_number, invoiced_at, paid_at, payment_method, payment_reference
-       from quotes where request_id = $1 order by created_at`,
+       from quotes where request_id = $1
+      -- Signage.com's package first on a split: it is the one the franchisee can
+      -- act on, and the only one whose money passes through the portal.
+      order by external, created_at, id`,
     [request.id],
   );
 

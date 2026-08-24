@@ -57,7 +57,22 @@ function baseProps(request: RequestDetail, appUrl: string): FranchiseeEmailBase 
     locationName: request.location.name,
     requestCode: request.code,
     requestUrl: `${appUrl}/${request.brand.slug}/request/${request.access_token}`,
+    packageLabel: null,
   };
+}
+
+/**
+ * Which half of a split this message is about (SPEC §6, amended v2.2).
+ *
+ * Null on a single-package request, where naming a package would be noise —
+ * there is only one, and the franchisee has never been told the word. On a split
+ * it is the only thing that stops "shipped" from reading as "all of it shipped".
+ */
+function packageLabelFor(request: RequestDetail, quoteId: string | null): string | null {
+  if (!quoteId || request.quotes.length < 2) return null;
+  const quote = request.quotes.find((candidate) => candidate.id === quoteId);
+  if (!quote) return null;
+  return quote.recipient_name ?? (quote.external ? 'your brand’s vendor' : 'Signage.com');
 }
 
 /**
@@ -70,7 +85,7 @@ function baseProps(request: RequestDetail, appUrl: string): FranchiseeEmailBase 
 export async function notifyFranchisee(
   requestId: string,
   notification: FranchiseeNotification,
-  options: { note?: string | null } = {},
+  options: { note?: string | null; quoteId?: string | null } = {},
 ): Promise<FranchiseeNotifyOutcome> {
   const request = await getRequestById(requestId);
   if (!request) return { sent: false, reason: 'not_found' };
@@ -84,9 +99,14 @@ export async function notifyFranchisee(
   if (!contact?.requester_email) return { sent: false, reason: 'no_recipient' };
 
   const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
-  const base = { ...baseProps(request, appUrl), requesterName: contact.requester_name };
+  const quoteId = options.quoteId ?? null;
+  const base = {
+    ...baseProps(request, appUrl),
+    requesterName: contact.requester_name,
+    packageLabel: packageLabelFor(request, quoteId),
+  };
 
-  const composed = compose(notification, request, base, appUrl, options.note ?? null);
+  const composed = compose(notification, request, base, appUrl, options.note ?? null, quoteId);
   if (!composed) return { sent: false, reason: 'nothing_to_say' };
 
   const html = await render(composed.element);
@@ -123,9 +143,18 @@ function compose(
   base: FranchiseeEmailBase,
   appUrl: string,
   note: string | null,
+  quoteId: string | null,
 ): Composed | null {
   const items = request.items;
   const live = items.filter((item) => item.item_status !== 'declined');
+
+  // The package this message is about (SPEC §6, amended v2.2). Everything after
+  // routing happens to ONE package, so the numbers below are its numbers — a
+  // franchisee told "your quote is $12,900" when only half the site was quoted
+  // would be reading a total nobody produced.
+  const pkg = quoteId ? (request.quotes.find((q) => q.id === quoteId) ?? null) : null;
+  const scope = pkg ? [pkg] : request.quotes;
+  const itemsIn = (ids: string[]) => live.filter((item) => ids.includes(item.id));
 
   switch (notification) {
     case 'submitted': {
@@ -193,9 +222,9 @@ function compose(
     }
 
     case 'quote_ready': {
-      const total = request.quotes.reduce((sum, q) => sum + Number(q.priced_total ?? 0), 0);
-      const manualCount = request.quotes.reduce((sum, q) => sum + q.manual_count, 0);
-      const pricedCount = request.quotes.reduce((sum, q) => sum + q.priced_count, 0);
+      const total = scope.reduce((sum, q) => sum + Number(q.priced_total ?? 0), 0);
+      const manualCount = scope.reduce((sum, q) => sum + q.manual_count, 0);
+      const pricedCount = scope.reduce((sum, q) => sum + q.priced_count, 0);
       return {
         subject: `Your signage quote — ${request.location.name} (${request.code})`,
         element: (
@@ -204,7 +233,7 @@ function compose(
             total={total}
             pricedCount={pricedCount}
             manualCount={manualCount}
-            tat={request.quotes.find((q) => !q.external)?.tat ?? null}
+            tat={scope.find((q) => !q.external)?.tat ?? null}
             financingInvolved={request.financing_involved === true}
           />
         ),
@@ -212,17 +241,17 @@ function compose(
     }
 
     case 'quote_accepted': {
-      const total = request.quotes.reduce((sum, q) => sum + Number(q.priced_total ?? 0), 0);
+      const total = scope.reduce((sum, q) => sum + Number(q.priced_total ?? 0), 0);
       return {
         subject: `Accepted — ${request.location.name} (${request.code})`,
         element: (
           <QuoteAcceptedEmail
             {...base}
             total={total}
-            itemCount={live.length}
-            tat={request.quotes.find((q) => !q.external)?.tat ?? null}
+            itemCount={pkg ? itemsIn(pkg.line_item_ids).length : live.length}
+            tat={scope.find((q) => !q.external)?.tat ?? null}
             financingInvolved={request.financing_involved === true}
-            internal={request.quotes.some((q) => !q.external)}
+            internal={scope.some((q) => !q.external)}
           />
         ),
       };
@@ -231,19 +260,36 @@ function compose(
     case 'shipped': {
       return {
         subject: `Shipped — ${request.location.name} (${request.code})`,
-        element: <ShippedEmail {...base} itemCount={live.length} note={note} />,
+        element: (
+          <ShippedEmail
+            {...base}
+            itemCount={pkg ? itemsIn(pkg.line_item_ids).length : live.length}
+            note={note}
+          />
+        ),
       };
     }
 
     case 'installed': {
+      // On a split, one package finishing does NOT mean the site is signed — the
+      // other half may still be weeks out. Saying so would be the most visible
+      // wrong claim the system can make, because the franchisee is standing in
+      // front of the building.
+      const outstanding = request.quotes.filter(
+        (q) => q.id !== pkg?.id && q.completed_at === null,
+      ).length;
       return {
-        subject: `Installed — ${request.location.name} is signed`,
+        subject:
+          outstanding > 0
+            ? `Installed — ${base.packageLabel ?? 'part'} of ${request.location.name} is up`
+            : `Installed — ${request.location.name} is signed`,
         element: (
           <InstalledEmail
             {...base}
-            itemCount={live.length}
+            itemCount={pkg ? itemsIn(pkg.line_item_ids).length : live.length}
             locationUrl={`${appUrl}/${request.brand.slug}/location/${request.location.id}/request`}
             note={note}
+            outstandingPackages={outstanding}
           />
         ),
       };

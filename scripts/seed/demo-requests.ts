@@ -61,6 +61,17 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
       tat: string;
       deliveredAt?: string;
       acceptedAt?: string;
+      /**
+       * The package's own tail (SPEC §6, amended v2.2).
+       *
+       * Set these to match the request status above. The stage is DERIVED from
+       * these dates, so a demo request seeded at in_production whose package
+       * has no in_production_at would show the team a Start production button
+       * for work already under way.
+       */
+      inProductionAt?: string;
+      shippedAt?: string;
+      completedAt?: string;
     };
     events: Array<[string, string, string, string]>; // [timestamp, kind, actor, summary]
   }) => {
@@ -143,14 +154,15 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
         `insert into quotes
            (request_id, recipient_kind, recipient_name, recipient_email, cc_email,
             line_item_ids, priced_total, priced_count, manual_count, external, tat,
-            sent_at, delivered_at, accepted_at)
+            sent_at, delivered_at, accepted_at, in_production_at, shipped_at, completed_at)
          values ($1,$2,$3,$4,$5,
                  (select coalesce(array_agg(id), '{}') from line_items where request_id = $1),
-                 $6,$7,$8,$9,$10,$11,$12,$13)`,
+                 $6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
         [
           requestId, q.recipientKind, q.recipientName, q.recipientEmail, q.ccEmail, q.total,
           q.pricedCount, q.manualCount, q.external, q.tat,
           spec.events[0][0], q.deliveredAt ?? null, q.acceptedAt ?? null,
+          q.inProductionAt ?? null, q.shippedAt ?? null, q.completedAt ?? null,
         ],
       );
     }
@@ -250,6 +262,9 @@ export async function seedDemoRequests(db: SqlExec, brand: SeededBrand): Promise
       tat: '14 working days',
       deliveredAt: '2026-07-29T10:05:00Z',
       acceptedAt: '2026-07-29T13:40:00Z',
+      // Matches the production_started event below: the request is at
+      // in_production because its one package is.
+      inProductionAt: '2026-07-30T08:00:00Z',
     },
     events: [
       ['2026-07-28T15:02:00Z', 'request_submitted', 'franchisee',

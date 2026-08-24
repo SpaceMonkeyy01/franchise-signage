@@ -31,6 +31,7 @@ export function QuoteAcceptedEmail(props: QuoteAcceptedProps) {
         title="Accepted — we are building it"
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 

@@ -116,13 +116,14 @@ describe('request transitions (SPEC §6)', () => {
     expect(canTransition('completed', 'shipped')).toBe(false);
   });
 
-  it('splits the two tails after accepted (SPEC §4)', () => {
-    expect(canTransition('accepted', 'in_production', 'internal')).toBe(true);
-    expect(canTransition('accepted', 'completed', 'internal')).toBe(false);
-    // The external tail's fabrication happens off-platform, so it logs
-    // acceptance and lands on installed.
-    expect(canTransition('accepted', 'completed', 'external')).toBe(true);
-    expect(canTransition('accepted', 'in_production', 'external')).toBe(false);
+  it('no longer narrows by tail — a tail belongs to a package (SPEC §6 v2.2)', () => {
+    // Both edges are reachable by the ROLLUP: accepted → completed when every
+    // package is external, accepted → in_production as soon as the least
+    // advanced package is an internal one that has started. The tail check that
+    // used to live here now lives on canPackageTransition, where it means
+    // something.
+    expect(canTransition('accepted', 'in_production')).toBe(true);
+    expect(canTransition('accepted', 'completed')).toBe(true);
   });
 
   it('refuses an illegal transition loudly', async () => {

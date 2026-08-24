@@ -19,22 +19,38 @@ export interface FranchiseeEmailBase {
   requestCode: string;
   /** `/{brand_slug}/request/{access_token}` — absolute, and their only way in. */
   requestUrl: string;
+  /**
+   * Which half of a split this message is about (SPEC §6, amended v2.2).
+   *
+   * Null whenever the request has one package, which is the ordinary case —
+   * naming a package there would introduce a word the franchisee has never been
+   * told. On a split it is what stops "shipped" reading as "all of it shipped".
+   */
+  packageLabel: string | null;
 }
 
 export function Heading({
   title,
   locationName,
   requestCode,
+  packageLabel,
 }: {
   title: string;
   locationName: string;
   requestCode: string;
+  packageLabel?: string | null;
 }) {
   return (
     <>
       <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: '#111827' }}>{title}</p>
       <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
         {locationName} · {requestCode}
+        {packageLabel && (
+          <>
+            {' · '}
+            <span style={{ color: '#374151', fontWeight: 600 }}>{packageLabel}&rsquo;s part</span>
+          </>
+        )}
       </p>
     </>
   );

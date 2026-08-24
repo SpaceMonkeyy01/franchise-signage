@@ -580,6 +580,72 @@ throwaway UI over permanent rules.
     corporate decided to hand this person the sheet when they registered them —
     and the document is still not published.
 
+## Session 5a — the §6 amendment (spec v2.2)
+
+66. **#51 answered: fulfillment moved to the PACKAGE, and the request status
+    became a rollup of its packages.** SPEC §6 offered the two tails as
+    alternatives on one request status and said nothing about a request that is
+    both. Three shapes were weighed. A request-level `partially_accepted` fixes
+    acceptance only — Signage.com still could not start production while the
+    vendor half was open, and `shipped` would have had no honest meaning.
+    Splitting routing into sibling requests needs no §6 change at all, but breaks
+    the token (two links), the timeline, and the budgetary quote, which covers a
+    SITE. Package-level fulfillment was chosen because it is the pattern the spec
+    already uses one level up: approval is item-level and the request status is
+    derived from it, so fulfillment is package-level and the request status is
+    derived from that too. No second status column, nothing to reconcile.
+    Session 5 had already moved the MONEY to the package for the same reason
+    (#52); this is the lifecycle catching up.
+
+67. **The rollup rule is one line: the request sits at the stage of its least
+    advanced package.** A site is not quoted until every recipient has quoted,
+    not accepted until every package is committed, and not finished until every
+    sign is up. It is monotonic for free — a package only advances, so the
+    minimum only advances — but `isFulfillmentAdvance` enforces it anyway,
+    because that argument holds only for data the rollup itself wrote. A
+    hand-edited row or a backfilled migration must not be able to drag a
+    franchisee's request backwards through a status it already announced.
+
+68. **The tail is a property of the package, so the request-level transition
+    check stopped narrowing by it.** `canTransition` used to refuse
+    `accepted → in_production` on the external tail. Every edge is now reachable
+    by the rollup — `accepted → completed` when every package is external,
+    `accepted → in_production` as soon as the least advanced package is an
+    internal one that has started — so the tail check moved to
+    `canPackageTransition`, where it means something. §4 was amended to say this
+    outright.
+
+69. **`completed` still writes installed_signs, and now writes only its own
+    package's items.** The hard rule in CLAUDE.md is intact; the level moved. On
+    a split site that is the whole point: Signage.com's signs go on the location
+    record when Signage.com installs them, rather than waiting on a vendor who
+    may be weeks behind. The smoke suite asserts both halves of it — our sign
+    present, theirs absent, until theirs is actually up.
+
+70. **The stage is derived from dates, not stored in a column.** `delivered_at`
+    and `accepted_at` were already the idiom on `quotes`, and the invoice, the
+    receipt and the timeline are all written from those dates. A stored stage
+    could disagree with them; a derived one cannot. The ordering a status column
+    would have given for free is enforced by five check constraints instead,
+    because an out-of-order write does not error — it produces a package that
+    silently reads as shipped without ever having been accepted.
+
+71. **#57 closed by #66, with no change to the invoice action.** The gate was
+    always `quote.accepted_at`, never the request status — it simply could never
+    be satisfied on a split, because nothing could accept that package. It can
+    now, and the smoke suite issues a real invoice against Signage.com's half
+    while the vendor's half is still open.
+
+72. **The franchisee is told which half moved.** Every notification after routing
+    now belongs to one package, so the numbers in it are that package's numbers —
+    a franchisee told "your quote is $12,900" when only half the site was quoted
+    would be reading a total nobody produced. `packageLabel` is null on a
+    single-package request, which is the ordinary case: naming a package there
+    would introduce a word they have never been told. The install email goes
+    further and changes its claim outright — telling someone standing in front of
+    their own building that it is finished when it plainly is not is the most
+    visible wrong thing this system can say.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

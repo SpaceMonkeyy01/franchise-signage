@@ -13,17 +13,23 @@ import { statusChangeSummary, type RequestEventInput } from './events';
 import {
   applyChangeRequest,
   applyResubmission,
+  assertPackageTransition,
   assertTransition,
+  derivePackageStatus,
   deriveRequestStatus,
+  deriveRequestStatusFromPackages,
+  isFulfillmentAdvance,
+  packageTail,
   type DerivedRequestState,
 } from './machine';
 import { planInstalledSignWriteback, type WritebackPlan } from './writeback';
 import type {
   EventActor,
-  FulfillmentTail,
   InstalledSignState,
   LineItemState,
   LineItemStatus,
+  PackageState,
+  PackageStatus,
   RequestState,
   RequestStatus,
 } from './types';
@@ -32,8 +38,10 @@ export interface StatusStore {
   getRequest(requestId: string): Promise<RequestState | null>;
   getLineItems(requestId: string): Promise<LineItemState[]>;
   getInstalledSigns(locationId: string): Promise<InstalledSignState[]>;
-  /** Which tail the request is on, from its quotes. Null before routing. */
-  getFulfillmentTail(requestId: string): Promise<FulfillmentTail | null>;
+  /** The request's quote packages. Empty before routing (SPEC §6, v2.2). */
+  getPackages(requestId: string): Promise<PackageState[]>;
+  /** Stamp one package's stage date. The only write that moves a package. */
+  markPackage(quoteId: string, stage: PackageStatus, at: Date): Promise<void>;
 
   updateRequest(
     requestId: string,
@@ -89,7 +97,7 @@ export interface TransitionOptions {
 export interface TransitionResult {
   from: RequestStatus;
   to: RequestStatus;
-  /** Present only on the transition into `completed`. */
+  /** Present only on a PACKAGE reaching `completed` (SPEC §6, v2.2). */
   writeback?: WritebackPlan;
 }
 
@@ -103,8 +111,10 @@ export class RequestNotFoundError extends Error {
 /**
  * Move a request to `to`, writing exactly one request_event.
  *
- * The transition into `completed` also performs the installed_signs writeback —
- * the only place in the system that touches the permanent location record.
+ * Used directly for everything up to and including `sent_for_quote`. After
+ * routing the request status is a ROLLUP of its packages and nothing should call
+ * this by hand — `transitionPackage` moves a package and syncs the request from
+ * it (SPEC §6, amended v2.2).
  */
 export async function transitionRequest(
   store: StatusStore,
@@ -114,13 +124,7 @@ export async function transitionRequest(
   if (!request) throw new RequestNotFoundError(options.requestId);
 
   const from = request.status;
-  const tail = (await store.getFulfillmentTail(request.id)) ?? undefined;
-  assertTransition(from, options.to, tail);
-
-  let writeback: WritebackPlan | undefined;
-  if (options.to === 'completed') {
-    writeback = await applyWriteback(store, request);
-  }
+  assertTransition(from, options.to);
 
   await store.updateRequest(request.id, { status: options.to, ...options.patch });
   await store.insertEvent({
@@ -134,11 +138,25 @@ export async function transitionRequest(
     toStatus: options.to,
   });
 
-  return { from, to: options.to, writeback };
+  return { from, to: options.to };
 }
 
-async function applyWriteback(store: StatusStore, request: RequestState): Promise<WritebackPlan> {
-  const items = await store.getLineItems(request.id);
+/**
+ * The installed_signs writeback for ONE package reaching `completed`.
+ *
+ * Scoped to the package's own items (SPEC §6, amended v2.2): a split site's
+ * Signage.com signs go on the location record when Signage.com installs them,
+ * rather than waiting on a vendor who may be weeks behind. `completed` is still
+ * the only transition that writes this table — it is now the package's.
+ */
+async function applyWriteback(
+  store: StatusStore,
+  request: RequestState,
+  scope: readonly string[],
+): Promise<WritebackPlan> {
+  const all = await store.getLineItems(request.id);
+  const inPackage = new Set(scope);
+  const items = all.filter((item) => inPackage.has(item.id));
   const installed = await store.getInstalledSigns(request.locationId);
   const plan = planInstalledSignWriteback(request, items, installed);
 
@@ -160,6 +178,142 @@ async function applyWriteback(store: StatusStore, request: RequestState): Promis
     }
   }
   return plan;
+}
+
+// ----------------------------------------------------------- package moves
+// SPEC §6 (amended v2.2). A request split across recipients has one package per
+// recipient, each running its own tail at its own pace, and the request status
+// is the rollup. Everything after routing goes through here.
+
+export interface PackageTransitionResult {
+  quoteId: string;
+  from: PackageStatus;
+  to: PackageStatus;
+  /** Present only on `completed` — this package's items, written back. */
+  writeback?: WritebackPlan;
+  /** Set only when this package's move also moved the request. */
+  request?: TransitionResult;
+}
+
+export class PackageNotFoundError extends Error {
+  constructor(quoteId: string) {
+    super(`Quote package ${quoteId} not found on this request`);
+    this.name = 'PackageNotFoundError';
+  }
+}
+
+/**
+ * Move ONE quote package, then let the request follow.
+ *
+ * The order matters. The package moves first and writes its own event, because
+ * that is the fact — Signage.com started fabricating, the vendor's order was
+ * logged. The request status is then re-derived from every package and written
+ * only if it actually changed, so a split request records "your Signage.com
+ * signs are in production" without claiming the whole site is.
+ */
+export async function transitionPackage(
+  store: StatusStore,
+  options: {
+    requestId: string;
+    quoteId: string;
+    to: PackageStatus;
+    actor: EventActor;
+    kind?: RequestEventInput['kind'];
+    summary?: string;
+    detail?: Record<string, unknown>;
+  },
+): Promise<PackageTransitionResult> {
+  const request = await store.getRequest(options.requestId);
+  if (!request) throw new RequestNotFoundError(options.requestId);
+
+  const packages = await store.getPackages(options.requestId);
+  const pkg = packages.find((candidate) => candidate.id === options.quoteId);
+  if (!pkg) throw new PackageNotFoundError(options.quoteId);
+
+  const from = derivePackageStatus(pkg);
+  assertPackageTransition(from, options.to, packageTail(pkg));
+
+  // Before the date is stamped, so a writeback failure leaves the package where
+  // it was rather than completed-but-unrecorded.
+  let writeback: WritebackPlan | undefined;
+  if (options.to === 'completed') {
+    writeback = await applyWriteback(store, request, pkg.lineItemIds);
+  }
+
+  const at = new Date();
+  await store.markPackage(pkg.id, options.to, at);
+
+  // Named on the timeline even when only one package exists: "Package —
+  // Meridian Sign Co. shipped" reads correctly either way, and on a split it is
+  // the only thing that says which half moved.
+  const label = pkg.recipientName ?? (pkg.external ? 'the vendor' : 'Signage.com');
+  await store.insertEvent({
+    requestId: request.id,
+    kind: options.kind ?? 'package_status_changed',
+    actor: options.actor,
+    summary: options.summary ?? `${label}'s package: ${from} → ${options.to}`,
+    detail: { ...(options.detail ?? {}), quoteId: pkg.id, recipient: label, packageStatus: options.to },
+  });
+
+  const next = packages.map((candidate) =>
+    candidate.id === pkg.id ? stampedLocally(candidate, options.to, at) : candidate,
+  );
+  const rolled = deriveRequestStatusFromPackages(next);
+
+  let requestMove: TransitionResult | undefined;
+  // Only ever forwards. On well-formed data the rollup cannot regress, and on
+  // ill-formed data (a hand-edited row, a backfill) the package's own event is
+  // still written — the request simply stays where it is rather than being
+  // dragged back through a status it already announced.
+  if (rolled && isFulfillmentAdvance(request.status, rolled)) {
+    requestMove = await transitionRequest(store, {
+      requestId: request.id,
+      to: rolled,
+      actor: options.actor,
+      // The rollup is a consequence, not somebody's action, and the timeline
+      // should read that way: the package event above says who did what.
+      summary: rollupSummary(rolled, next.length),
+      detail: { rolledUpFrom: next.length, packages: next.length },
+    });
+  }
+
+  return { quoteId: pkg.id, from, to: options.to, writeback, request: requestMove };
+}
+
+/** The same stamp `markPackage` writes, applied in memory to re-derive the rollup. */
+function stampedLocally(pkg: PackageState, stage: PackageStatus, at: Date): PackageState {
+  switch (stage) {
+    case 'quote_ready':
+      return { ...pkg, deliveredAt: at };
+    case 'accepted':
+      return { ...pkg, acceptedAt: at };
+    case 'in_production':
+      return { ...pkg, inProductionAt: at };
+    case 'shipped':
+      return { ...pkg, shippedAt: at };
+    case 'completed':
+      return { ...pkg, completedAt: at };
+    default:
+      return pkg;
+  }
+}
+
+function rollupSummary(status: RequestStatus, packageCount: number): string {
+  const across = packageCount > 1 ? ` · all ${packageCount} packages` : '';
+  switch (status) {
+    case 'quote_ready':
+      return `Every package is quoted${across}`;
+    case 'accepted':
+      return `Every package is accepted${across}`;
+    case 'in_production':
+      return `In production${across}`;
+    case 'shipped':
+      return `Shipped${across}`;
+    case 'completed':
+      return `Installed — location record updated${across}`;
+    default:
+      return statusChangeSummary(status, status);
+  }
 }
 
 // ------------------------------------------------------------- named actions

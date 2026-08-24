@@ -197,6 +197,30 @@ const checks: Check[] = [
     describe: (rows) => rows.map((r) => r.conname).join(', '),
   },
   {
+    // SPEC §6, amended v2.2. The package's stage is DERIVED from these dates, so
+    // an out-of-order write does not produce an error — it produces a package
+    // that silently reads as shipped without ever having been accepted. The
+    // ordering belongs in the database for the same reason the invoice rules do.
+    label: 'a package cannot skip its own tail, and only ours has production',
+    sql: `select conname from pg_constraint con join pg_class c on c.oid = con.conrelid
+          where c.relname = 'quotes' and con.contype = 'c'`,
+    expect: (rows) => {
+      const names = rows.map((r) => r.conname);
+      return [
+        'quotes_external_has_no_production',
+        'quotes_accepted_after_delivered',
+        'quotes_production_after_accepted',
+        'quotes_shipped_after_production',
+        'quotes_completed_after_accepted',
+      ].every((name) => names.includes(name));
+    },
+    describe: (rows) =>
+      rows
+        .map((r) => String(r.conname))
+        .filter((n) => n.startsWith('quotes_') && !n.includes('invoice') && !n.includes('paid'))
+        .join(', '),
+  },
+  {
     label: 'the replacement/exception invariants are enforced in the database',
     sql: `select conname from pg_constraint con join pg_class c on c.oid = con.conrelid
           where c.relname = 'line_items' and con.contype = 'c'`,

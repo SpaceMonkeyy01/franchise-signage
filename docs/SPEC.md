@@ -1,9 +1,9 @@
-# Franchise Signage Studio — MVP Spec v2.1
+# Franchise Signage Studio — MVP Spec v2.2
 
-Version 2.1 · Supersedes v2 · Handoff document for implementation (Claude Code)
+Version 2.2 · Supersedes v2.1 · Handoff document for implementation (Claude Code)
 Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for admin) + Resend + Vercel.
 Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
-What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
+What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -85,6 +85,8 @@ Two lifecycle tails after `sent_for_quote`:
 - **Internal (Signage.com is vendor):** rich automated tail — quote_ready → accepted (franchisee button) → in_production → shipped → installed. Portal is system of record end to end.
 - **External (approved/preferred vendor):** package emailed with mockups, specs, prices where known; corporate CC'd per config. Quoting/ordering happen off-platform. Team manually logs: vendor quoted → franchisee ordered → installed. Thin but preserves the location record and brand control.
 
+The tail is a property of the PACKAGE, not of the request (§6, amended v2.2). A request split between Signage.com and a brand vendor runs both tails at once, each at its own pace; the request status is the rollup.
+
 `corporate_first` = package goes to corporate email instead of a vendor; corporate forwards manually (MVP: just a different recipient).
 
 ## 5. Core workflow objects
@@ -140,17 +142,42 @@ As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_
 | external | boolean — selects the lifecycle tail |
 | tat, sent_at, delivered_at, accepted_at | |
 
-## 6. Status machine
+## 6. Status machine (amended v2.2 — fulfillment is package-level)
+
+Three levels, each derived from the one below it. Approval lives on the item, fulfillment lives on the package, and the request status is a rollup of both — there is never a second status column to reconcile.
 
 **Item-level:** `auto_approved` (standard + like-for-like replacement) · `pending_review` (addon, exception, modify) → `approved` \| `declined` (per-item, reviewer email links). Declines never block siblings.
 
-**Request-level (derived + team-advanced):**
+**Package-level (new in v2.2).** §4 already splits one request into a quote package per recipient, and each package has its own vendor, its own tail, and its own money. Each therefore runs its own lifecycle:
 ```
-draft → submitted → [needs_review]* → approved → sent_for_quote
-   internal tail: → quote_ready → accepted → in_production → shipped → completed(installed)
-   external tail: → quote_ready(logged) → accepted(logged) → completed(installed, logged)
+  internal package: quote_ready → accepted (franchisee button) → in_production → shipped → completed
+  external package: quote_ready (logged) → accepted (logged) → completed (logged)
 ```
-`needs_review` only if any item is pending; skipped entirely when all items auto-approve (the fast lane goes submitted → approved in one step once the team preps the package). `changes_requested` branches from needs_review back via franchisee resubmission (package version increments). `completed` is the ONLY transition that writes to `installed_signs`: approved items upsert into the location record (replacement items update their target row). Every transition writes a request_event. SLA timer on needs_review per brand config.
+**A package never blocks its sibling** — the same rule §7 gives line items, one level up. Signage.com fabricates and invoices its half of a split request while the brand's vendor is still quoting theirs.
+
+**Request-level (derived, never set directly):**
+```
+draft → submitted → [needs_review]* → approved → sent_for_quote → «rollup of its packages»
+```
+Before routing the request derives from its ITEMS, exactly as before. After routing it derives from its PACKAGES, and the rule is one line: **the request sits at the stage of its least advanced package.** Ranked `sent_for_quote` < `quote_ready` < `accepted` < `in_production` < `shipped` < `completed`. A package only ever advances, so the rollup only ever advances.
+
+A split request therefore reads:
+
+| | Signage.com package | vendor package | request |
+|---|---|---|---|
+| routed | sent_for_quote | sent_for_quote | sent_for_quote |
+| both quoted | quote_ready | quote_ready | quote_ready |
+| franchisee accepts ours | **accepted** | quote_ready | quote_ready |
+| team logs their order | accepted | **accepted** | **accepted** |
+| we start fabricating | **in_production** | accepted | accepted |
+| we install ours | **completed** | accepted | accepted |
+| vendor's goes in | completed | **completed** | **completed** |
+
+`needs_review` only if any item is pending; skipped entirely when all items auto-approve (the fast lane goes submitted → approved in one step once the team preps the package). `changes_requested` branches from needs_review back via franchisee resubmission (package version increments).
+
+`completed` is still the ONLY transition that writes to `installed_signs` — it is now the PACKAGE's `completed`, and it writes only that package's approved items (replacement items update their target row). A split site's signs land on the location record as each half is installed rather than waiting for the slower vendor. Every transition, at either level, writes a request_event naming the package it moved. SLA timer on needs_review per brand config.
+
+**Why v2.2 changed this.** v2.1 offered the two tails as *alternatives* on a single request status, and said nothing about a request that is both. There is only one request-level status, so accepting the internal half moved the whole request to `accepted` and stranded the external half's "log order placed" — which is gated on `quote_ready`. The consequence was that a split request could not be accepted at all, and therefore could not be invoiced either. Moving fulfillment to the package fixes both from one place and adds no new state to reconcile.
 
 ## 7. Approval rules (the standard model)
 
@@ -268,6 +295,12 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding �
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
 
 ---
+
+## Changelog v2.1 → v2.2 (Aug 2026)
+
+- **§6: fulfillment moved from the request to the quote package**, and the request status became a rollup of its packages ("the stage of its least advanced package"). §4 has always been able to split one request across recipients; §6 offered the two tails only as alternatives, so a split request could not be accepted by the franchisee and could not be invoiced by Signage.com. Nothing new to reconcile: approval was already item-level and derived, and this is the same pattern one level up. `completed` remains the only writer of `installed_signs`, now per package.
+- **§4:** states explicitly that the tail belongs to the package, not the request.
+- **§8d:** the welcome email's link and the DID's authorization are two different things. Level 1 is reached by a registration link (`franchisee_registrations.access_token`); the §8c brand-email magic link authorizes DID generation and gates that button, not the page. v2.1 collapsed both into "carrying the brand-email magic link".
 
 ## Changelog v2 → v2.1 (Aug 2026)
 

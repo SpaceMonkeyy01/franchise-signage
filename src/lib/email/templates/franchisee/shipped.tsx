@@ -28,6 +28,7 @@ export function ShippedEmail(props: ShippedProps) {
         title={one ? 'Your sign has shipped' : 'Your signs have shipped'}
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 

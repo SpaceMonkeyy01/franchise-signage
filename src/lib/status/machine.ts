@@ -12,6 +12,8 @@ import type {
   LineItemOrigin,
   LineItemState,
   LineItemStatus,
+  PackageState,
+  PackageStatus,
   RequestStatus,
   VendorPolicy,
 } from './types';
@@ -21,10 +23,12 @@ import type {
 /**
  * Legal request-level transitions.
  *
- * Two tails diverge after `accepted` (SPEC §4): the internal tail runs
- * accepted → in_production → shipped → completed, while the external tail logs
- * accepted and jumps straight to completed because fabrication happens
- * off-platform. Both are listed here; `assertTransition` narrows by tail.
+ * The tail no longer narrows these (SPEC §6, amended v2.2): a tail belongs to a
+ * PACKAGE, and a request split across two recipients runs both at once. Every
+ * edge below is reachable by the rollup — `accepted → completed` when every
+ * package is external, `accepted → in_production` as soon as the slowest
+ * package is an internal one that has started. The tail check lives on
+ * `assertPackageTransition`, where it means something.
  */
 export const REQUEST_TRANSITIONS: Readonly<Record<RequestStatus, readonly RequestStatus[]>> = {
   draft: ['submitted'],
@@ -43,44 +47,157 @@ export const REQUEST_TRANSITIONS: Readonly<Record<RequestStatus, readonly Reques
   completed: [],
 };
 
-/** Transitions only the external tail may take. */
-const EXTERNAL_ONLY: ReadonlySet<string> = new Set(['accepted->completed']);
-/** Transitions only the internal tail may take. */
-const INTERNAL_ONLY: ReadonlySet<string> = new Set(['accepted->in_production']);
-
-export function canTransition(
-  from: RequestStatus,
-  to: RequestStatus,
-  tail?: FulfillmentTail,
-): boolean {
-  if (!REQUEST_TRANSITIONS[from].includes(to)) return false;
-  const edge = `${from}->${to}`;
-  if (tail === 'internal' && EXTERNAL_ONLY.has(edge)) return false;
-  if (tail === 'external' && INTERNAL_ONLY.has(edge)) return false;
-  return true;
+export function canTransition(from: RequestStatus, to: RequestStatus): boolean {
+  return REQUEST_TRANSITIONS[from].includes(to);
 }
 
 export class InvalidTransitionError extends Error {
   constructor(
     readonly from: RequestStatus,
     readonly to: RequestStatus,
-    readonly tail?: FulfillmentTail,
   ) {
     super(
       `Illegal request transition ${from} → ${to}` +
-        (tail ? ` on the ${tail} tail` : '') +
         `. Legal next states: ${REQUEST_TRANSITIONS[from].join(', ') || '(terminal)'}`,
     );
     this.name = 'InvalidTransitionError';
   }
 }
 
-export function assertTransition(
-  from: RequestStatus,
-  to: RequestStatus,
-  tail?: FulfillmentTail,
+export function assertTransition(from: RequestStatus, to: RequestStatus): void {
+  if (!canTransition(from, to)) throw new InvalidTransitionError(from, to);
+}
+
+// ------------------------------------------------------ package transitions
+// SPEC §6 (amended v2.2). This is where the two tails actually diverge, and it
+// is the only place the distinction is enforced.
+
+/**
+ * Legal package-level transitions.
+ *
+ * `sent_for_quote` is the state a package is born in — routed, emailed, waiting
+ * for a number. Everything after it is one recipient's lifecycle.
+ */
+export const PACKAGE_TRANSITIONS: Readonly<Record<PackageStatus, readonly PackageStatus[]>> = {
+  sent_for_quote: ['quote_ready'],
+  quote_ready: ['accepted'],
+  // The fork: internal fabricates in-portal, external is logged as installed
+  // once the vendor says so.
+  accepted: ['in_production', 'completed'],
+  in_production: ['shipped'],
+  shipped: ['completed'],
+  completed: [],
+};
+
+/** Edges only the external tail may take. */
+const EXTERNAL_ONLY: ReadonlySet<string> = new Set(['accepted->completed']);
+/** Edges only the internal tail may take. */
+const INTERNAL_ONLY: ReadonlySet<string> = new Set([
+  'accepted->in_production',
+  'in_production->shipped',
+  'shipped->completed',
+]);
+
+export function canPackageTransition(
+  from: PackageStatus,
+  to: PackageStatus,
+  tail: FulfillmentTail,
+): boolean {
+  if (!PACKAGE_TRANSITIONS[from].includes(to)) return false;
+  const edge = `${from}->${to}`;
+  if (tail === 'internal' && EXTERNAL_ONLY.has(edge)) return false;
+  if (tail === 'external' && INTERNAL_ONLY.has(edge)) return false;
+  return true;
+}
+
+export class InvalidPackageTransitionError extends Error {
+  constructor(
+    readonly from: PackageStatus,
+    readonly to: PackageStatus,
+    readonly tail: FulfillmentTail,
+  ) {
+    super(
+      `Illegal package transition ${from} → ${to} on the ${tail} tail. ` +
+        `Legal next states: ${PACKAGE_TRANSITIONS[from].join(', ') || '(terminal)'}`,
+    );
+    this.name = 'InvalidPackageTransitionError';
+  }
+}
+
+export function assertPackageTransition(
+  from: PackageStatus,
+  to: PackageStatus,
+  tail: FulfillmentTail,
 ): void {
-  if (!canTransition(from, to, tail)) throw new InvalidTransitionError(from, to, tail);
+  if (!canPackageTransition(from, to, tail)) {
+    throw new InvalidPackageTransitionError(from, to, tail);
+  }
+}
+
+export function packageTail(pkg: Pick<PackageState, 'external'>): FulfillmentTail {
+  return pkg.external ? 'external' : 'internal';
+}
+
+/**
+ * Where one package has reached, from its own dates.
+ *
+ * Read newest-first: the latest date that is set IS the stage. Derived rather
+ * than stored so it can never contradict the dates the timeline, the invoice
+ * and the receipt are all written from.
+ */
+export function derivePackageStatus(pkg: PackageState): PackageStatus {
+  if (pkg.completedAt) return 'completed';
+  if (pkg.shippedAt) return 'shipped';
+  if (pkg.inProductionAt) return 'in_production';
+  if (pkg.acceptedAt) return 'accepted';
+  if (pkg.deliveredAt) return 'quote_ready';
+  return 'sent_for_quote';
+}
+
+/** The rank SPEC §6 orders the rollup by. Index is the stage's position. */
+const PACKAGE_RANK: readonly PackageStatus[] = [
+  'sent_for_quote',
+  'quote_ready',
+  'accepted',
+  'in_production',
+  'shipped',
+  'completed',
+];
+
+/**
+ * Is `to` further down the fulfillment tail than `from`?
+ *
+ * The rollup is monotonic only because packages are: each one advances, so the
+ * minimum advances. That holds for data the rollup itself wrote, and this is the
+ * guard for data it did not — a hand-edited row, a backfilled migration, a
+ * status that drifted. Rather than trust the claim, refuse to write a rollup
+ * that would move a request backwards.
+ *
+ * A status not on the tail at all (draft … approved) ranks below every stage,
+ * because everything after routing is an advance on it.
+ */
+export function isFulfillmentAdvance(from: RequestStatus, to: RequestStatus): boolean {
+  return PACKAGE_RANK.indexOf(to as PackageStatus) > PACKAGE_RANK.indexOf(from as PackageStatus);
+}
+
+/**
+ * The request's status, rolled up from its packages (SPEC §6, amended v2.2).
+ *
+ * One rule: **the request sits at the stage of its least advanced package.** A
+ * site is not quoted until every recipient has quoted, not accepted until every
+ * package is committed, and not finished until every sign is up. Because a
+ * package only ever advances, the minimum only ever advances — the rollup can
+ * never move a request backwards.
+ *
+ * Returns null before routing, when the request has no packages and derives
+ * from its items instead.
+ */
+export function deriveRequestStatusFromPackages(
+  packages: readonly PackageState[],
+): RequestStatus | null {
+  if (packages.length === 0) return null;
+  const ranks = packages.map((pkg) => PACKAGE_RANK.indexOf(derivePackageStatus(pkg)));
+  return PACKAGE_RANK[Math.min(...ranks)] as RequestStatus;
 }
 
 // ------------------------------------------------------------ approval rules

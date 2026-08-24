@@ -4,10 +4,11 @@
 import type { RequestEventInput } from '../events';
 import type { StatusStore } from '../transition';
 import type {
-  FulfillmentTail,
   InstalledSignState,
   LineItemState,
   LineItemStatus,
+  PackageState,
+  PackageStatus,
   RequestState,
 } from '../types';
 
@@ -15,13 +16,15 @@ export interface MemoryStoreSeed {
   request: RequestState;
   lineItems: LineItemState[];
   installedSigns?: InstalledSignState[];
-  tail?: FulfillmentTail | null;
+  /** Quote packages (SPEC §6, v2.2). Empty means the request is not yet routed. */
+  packages?: PackageState[];
 }
 
 export interface MemoryStore extends StatusStore {
   request: RequestState;
   lineItems: LineItemState[];
   installedSigns: InstalledSignState[];
+  packages: PackageState[];
   events: RequestEventInput[];
   /** lineItemId → the reviewer's note, so decisions are assertable. */
   reviewNotes: Map<string, string | null>;
@@ -42,6 +45,7 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
     request: { ...seed.request },
     lineItems: seed.lineItems.map((i) => ({ ...i })),
     installedSigns: (seed.installedSigns ?? []).map((s) => ({ ...s })),
+    packages: (seed.packages ?? []).map((p) => ({ ...p })),
     events: [],
     reviewNotes: new Map(),
     changeRequests: [],
@@ -56,8 +60,18 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
     async getInstalledSigns(locationId) {
       return store.installedSigns.filter((s) => s.locationId === locationId).map((s) => ({ ...s }));
     },
-    async getFulfillmentTail() {
-      return seed.tail ?? null;
+    async getPackages() {
+      return store.packages.map((p) => ({ ...p }));
+    },
+    async markPackage(quoteId: string, stage: PackageStatus, at: Date) {
+      const pkg = store.packages.find((p) => p.id === quoteId);
+      if (!pkg) throw new Error(`No package ${quoteId}`);
+      if (stage === 'quote_ready') pkg.deliveredAt = at;
+      else if (stage === 'accepted') pkg.acceptedAt = at;
+      else if (stage === 'in_production') pkg.inProductionAt = at;
+      else if (stage === 'shipped') pkg.shippedAt = at;
+      else if (stage === 'completed') pkg.completedAt = at;
+      else throw new Error(`No package date corresponds to ${stage}.`);
     },
     async updateRequest(_requestId, patch) {
       if (patch.status !== undefined) store.request.status = patch.status;
@@ -131,6 +145,27 @@ export function request(overrides: Partial<RequestState> = {}): RequestState {
     intent: 'initial_setup',
     status: 'submitted',
     packageVersion: 1,
+    ...overrides,
+  };
+}
+
+/**
+ * A quote package (SPEC 6, amended v2.2).
+ *
+ * Defaults to the Signage.com half of the seeded split - internal, delivered,
+ * waiting on the franchisee - because that is the package every fulfillment
+ * test starts from.
+ */
+export function pkg(overrides: Partial<PackageState> & Pick<PackageState, 'id'>): PackageState {
+  return {
+    recipientName: 'Signage.com Manufacturing',
+    external: false,
+    deliveredAt: new Date('2026-08-01T12:00:00Z'),
+    acceptedAt: null,
+    inProductionAt: null,
+    shippedAt: null,
+    completedAt: null,
+    lineItemIds: [],
     ...overrides,
   };
 }

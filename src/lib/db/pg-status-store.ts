@@ -8,12 +8,28 @@ import { query, transaction } from './pool';
 import type { RequestEventInput } from '../status/events';
 import type { StatusStore } from '../status/transition';
 import type {
-  FulfillmentTail,
   InstalledSignState,
   LineItemState,
   LineItemStatus,
+  PackageState,
+  PackageStatus,
   RequestState,
 } from '../status/types';
+
+/** SPEC §6 package stages, and the column each one stamps. */
+const PACKAGE_STAGE_COLUMN: Partial<Record<PackageStatus, string>> = {
+  quote_ready: 'delivered_at',
+  accepted: 'accepted_at',
+  in_production: 'in_production_at',
+  shipped: 'shipped_at',
+  completed: 'completed_at',
+};
+
+/** pg returns timestamptz as Date, but a bare driver or a view may hand back text. */
+function asDate(value: Date | string | null): Date | null {
+  if (value === null) return null;
+  return value instanceof Date ? value : new Date(value);
+}
 
 export function createPgStatusStore(
   exec: { query: <T>(text: string, params?: unknown[]) => Promise<T[]> } = {
@@ -94,15 +110,45 @@ export function createPgStatusStore(
       }));
     },
 
-    async getFulfillmentTail(requestId): Promise<FulfillmentTail | null> {
-      const rows = await exec.query<{ external: boolean }>(
-        `select external from quotes where request_id = $1`,
+    async getPackages(requestId): Promise<PackageState[]> {
+      const rows = await exec.query<{
+        id: string;
+        recipient_name: string | null;
+        external: boolean;
+        line_item_ids: string[];
+        delivered_at: Date | string | null;
+        accepted_at: Date | string | null;
+        in_production_at: Date | string | null;
+        shipped_at: Date | string | null;
+        completed_at: Date | string | null;
+      }>(
+        `select id, recipient_name, external, line_item_ids,
+                delivered_at, accepted_at, in_production_at, shipped_at, completed_at
+           from quotes where request_id = $1 order by external, created_at, id`,
         [requestId],
       );
-      if (rows.length === 0) return null;
-      // Only fully-internal requests run the automated tail; any external
-      // package means milestones are logged by hand (SPEC §4).
-      return rows.every((q) => !q.external) ? 'internal' : 'external';
+      return rows.map((row) => ({
+        id: row.id,
+        recipientName: row.recipient_name,
+        external: row.external,
+        lineItemIds: row.line_item_ids ?? [],
+        deliveredAt: asDate(row.delivered_at),
+        acceptedAt: asDate(row.accepted_at),
+        inProductionAt: asDate(row.in_production_at),
+        shippedAt: asDate(row.shipped_at),
+        completedAt: asDate(row.completed_at),
+      }));
+    },
+
+    async markPackage(quoteId, stage, at) {
+      const column = PACKAGE_STAGE_COLUMN[stage];
+      // `sent_for_quote` is the state a package is born in — there is no date to
+      // write for it, and a caller asking for one has misunderstood the machine.
+      if (!column) throw new Error(`No package date corresponds to ${stage}.`);
+      await exec.query(`update quotes set ${column} = $2 where id = $1`, [
+        quoteId,
+        at.toISOString(),
+      ]);
     },
 
     async updateRequest(requestId, patch) {

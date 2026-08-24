@@ -14,23 +14,27 @@ import { createPgStatusStore, withStatusStore } from '@/lib/db/pg-status-store';
 import { notifyReviewNeeded } from '@/lib/email/notify';
 import { query, queryOne, transaction } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
-import { resubmitRequest, transitionRequest } from '@/lib/status';
+import { resubmitRequest, transitionPackage } from '@/lib/status';
 import type { StoredObject } from '@/lib/storage';
 
 /**
- * Accept a quote (SPEC §9 interface 1).
+ * Accept ONE quote package (SPEC §9 interface 1, §6 amended v2.2).
  *
- * The one status-bearing action a franchisee takes directly, and only on the
- * internal tail — an external vendor's quote is accepted off-platform and the
- * team logs it.
+ * The one status-bearing action a franchisee takes directly, and only on an
+ * internal package — an external vendor's quote is accepted off-platform and
+ * the team logs it.
  *
  * The package is named by the caller, not guessed at. It used to be read back
  * as `order by created_at desc limit 1`, which is wrong twice over on a request
  * SPEC §4 split across two recipients: routing inserts every package inside one
  * transaction, and Postgres `now()` is transaction-start time, so the rows share
- * an identical `created_at` and the "latest" is an arbitrary tie-break. A
- * franchisee clicking Accept on the Signage.com package could land on the
- * vendor's and be told their own quote was somebody else's to accept.
+ * an identical `created_at` and the "latest" is an arbitrary tie-break.
+ *
+ * And this now MOVES only that package. Before v2.2 the request carried the
+ * single fulfillment status, so accepting Signage.com's half would have dragged
+ * the whole request to `accepted` and stranded the vendor half's "log order
+ * placed", which is gated on quote_ready — which is why a split request was not
+ * offered acceptance at all (DECISIONS #51). The request follows as the rollup.
  */
 export async function acceptQuote(token: string, quoteId: string): Promise<void> {
   const request = await queryOne<{ id: string; status: string }>(
@@ -56,22 +60,21 @@ export async function acceptQuote(token: string, quoteId: string): Promise<void>
   if (quote.accepted_at) throw new Error('That quote has already been accepted');
 
   await withStatusStore(async (store) => {
-    await transitionRequest(store, {
+    await transitionPackage(store, {
       requestId: request.id,
+      quoteId: quote.id,
       to: 'accepted',
       actor: 'franchisee',
       kind: 'quote_accepted',
       summary: 'Quote accepted by franchisee',
-      detail: { quoteId: quote.id, total: quote.priced_total },
+      detail: { total: quote.priced_total },
     });
   });
-
-  await query(`update quotes set accepted_at = now() where id = $1`, [quote.id]);
 
   // Their own click, so this confirms rather than informs — but it is also the
   // record of what they committed to, and where §8b a formal invoice becomes
   // available. Worth an email for both reasons.
-  await notifyFranchisee(request.id, 'quote_accepted');
+  await notifyFranchisee(request.id, 'quote_accepted', { quoteId: quote.id });
 
   revalidatePath(`/[brand]/request/[token]`, 'page');
 }

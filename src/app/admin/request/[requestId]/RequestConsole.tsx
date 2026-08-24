@@ -13,6 +13,7 @@ import { PhotoUpload } from '@/components/PhotoUpload';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
+import { PACKAGE_STAGE_LABEL, packageName, quoteStage } from '@/lib/packages';
 import { fileUrl } from '@/lib/storage/url';
 
 import {
@@ -81,13 +82,9 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
 
 function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
   const [criteria, setCriteria] = useState<'yes' | 'no' | 'not_provided'>('not_provided');
-  const [externalTotal, setExternalTotal] = useState('');
-  const [note, setNote] = useState('');
 
-  // Which tail this request is on is a property of its quotes (SPEC §4): any
-  // external package means fabrication happens off-platform and the team logs
-  // milestones by hand instead of driving them.
-  const external = request.quotes.length > 0 && request.quotes.some((quote) => quote.external);
+  // No tail is resolved here any more: a tail belongs to a PACKAGE (SPEC §6,
+  // amended v2.2), and each one carries its own controls in PackageChain below.
   const hasLandlordExhibit = request.files.some((file) => file.kind === 'landlord_criteria');
 
   return (
@@ -150,128 +147,179 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
         </div>
       )}
 
-      {request.status === 'sent_for_quote' && !external && (
+      {/* After routing every action belongs to a PACKAGE (SPEC §6, amended
+          v2.2), so the chain becomes one card per recipient. On the pilot's
+          usual single-package request this reads exactly as it did; on a split
+          it is the difference between fulfilling Signage.com's half and waiting
+          on a vendor who has not answered. */}
+      {request.quotes.length > 0 && (
         <div className="space-y-3">
-          <p className="text-xs text-gray-500">
-            Internal tail — price any custom items below first, then send the quote to the
-            franchisee.
-          </p>
-          <Button onClick={() => act(() => deliverQuoteAction(request.id))}>
-            Deliver quote to franchisee
-          </Button>
+          {request.quotes.length > 1 && (
+            <p className="text-xs text-gray-500">
+              This request split into {request.quotes.length} packages. Each runs its own tail at
+              its own pace; the request status above is the least advanced of them.
+            </p>
+          )}
+          {request.quotes.map((quote) => (
+            <PackageChain key={quote.id} request={request} quote={quote} act={act} />
+          ))}
         </div>
       )}
+    </Section>
+  );
+}
 
-      {request.status === 'sent_for_quote' && external && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">
-            External tail — the vendor quotes off-platform. Log what they came back with.
-          </p>
-          <div className="flex flex-wrap items-center gap-2">
-            <input
-              value={externalTotal}
-              onChange={(event) => setExternalTotal(event.target.value)}
-              placeholder="Vendor total"
-              inputMode="decimal"
-              className="w-32 rounded border border-gray-300 px-2 py-1 text-sm"
-            />
+/**
+ * One package's action chain.
+ *
+ * Only the move that is legal for THIS package right now is offered — the same
+ * rule the request-level panel above follows, applied where the two tails
+ * actually diverge. The stage comes from the package's own dates, so this panel
+ * and the §6 machine cannot disagree about what has happened.
+ */
+function PackageChain({
+  request,
+  quote,
+  act,
+}: {
+  request: RequestDetail;
+  quote: RequestDetail['quotes'][number];
+  act: Act;
+}) {
+  const [externalTotal, setExternalTotal] = useState('');
+  const [note, setNote] = useState('');
+
+  const stage = quoteStage(quote);
+  const name = packageName(quote, request.brand.vendor_name);
+  const items = request.items.filter((item) => quote.line_item_ids.includes(item.id));
+
+  return (
+    // data-recipient is a handle for the smoke suite: on a split there are two
+    // of every button on this screen, and "click Mark installed" has to be able
+    // to mean a particular package rather than whichever one is first.
+    <div className="rounded-lg border border-gray-200 p-3" data-recipient={name}>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="text-sm font-semibold text-gray-900">{name}</span>
+        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+          {PACKAGE_STAGE_LABEL[stage]}
+        </span>
+        <span className="text-xs text-gray-400">
+          {quote.external ? 'external tail' : 'Signage.com fulfils'} · {items.length} item(s) ·{' '}
+          {formatPrice(quote.priced_total)}
+          {quote.manual_count > 0 && ` · ${quote.manual_count} custom`}
+        </span>
+      </div>
+
+      <div className="mt-2">
+        {stage === 'sent_for_quote' && !quote.external && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              Price any custom items below first, then send this package&rsquo;s quote.
+            </p>
+            <Button onClick={() => act(() => deliverQuoteAction(request.id, quote.id))}>
+              Deliver quote to franchisee
+            </Button>
+          </div>
+        )}
+
+        {stage === 'sent_for_quote' && quote.external && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              {name} quotes off-platform. Log what they came back with.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                value={externalTotal}
+                onChange={(event) => setExternalTotal(event.target.value)}
+                placeholder="Vendor total"
+                inputMode="decimal"
+                className="w-32 rounded border border-gray-300 px-2 py-1 text-sm"
+              />
+              <input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Reference / note"
+                className="min-w-40 flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+              />
+              <Button
+                onClick={() =>
+                  act(() =>
+                    logExternalQuoteAction(request.id, quote.id, Number(externalTotal), note),
+                  )
+                }
+              >
+                Log vendor quote
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {stage === 'quote_ready' && !quote.external && (
+          <Waiting>
+            With the franchisee — they accept this package on their own status page, which starts
+            production on it.
+          </Waiting>
+        )}
+
+        {stage === 'quote_ready' && quote.external && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              The franchisee orders with {name} directly. Log it when they confirm.
+            </p>
             <input
               value={note}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="Reference / note"
-              className="min-w-40 flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+              placeholder="PO / reference"
+              className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
             />
-            <Button
-              onClick={() =>
-                act(() => logExternalQuoteAction(request.id, Number(externalTotal), note))
-              }
-            >
-              Log vendor quote
+            <Button onClick={() => act(() => logExternalOrderAction(request.id, quote.id, note))}>
+              Log order placed
             </Button>
           </div>
-        </div>
-      )}
+        )}
 
-      {request.status === 'quote_ready' && !external && (
-        <Waiting>
-          With the franchisee — they accept on their own status page, which starts production.
-        </Waiting>
-      )}
-
-      {request.status === 'quote_ready' && external && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">
-            The franchisee orders with the vendor directly. Log it when they confirm.
-          </p>
-          <input
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            placeholder="PO / reference"
-            className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-          />
-          <Button onClick={() => act(() => logExternalOrderAction(request.id, note))}>
-            Log order placed
-          </Button>
-        </div>
-      )}
-
-      {request.status === 'accepted' && (
-        <div className="space-y-2">
-          {external ? (
-            <>
+        {stage === 'accepted' &&
+          (quote.external ? (
+            <div className="space-y-2">
               <p className="text-xs text-gray-500">
-                External tail: no production stages to drive — the vendor fabricates and installs,
-                and this is the milestone that matters.
+                No production stages on this tail — {name} fabricates and installs, and this is the
+                milestone that matters.
               </p>
-              <Button onClick={() => act(() => milestoneAction(request.id, 'completed'))}>
+              <Button onClick={() => act(() => milestoneAction(request.id, quote.id, 'completed'))}>
                 Mark installed
               </Button>
-            </>
+            </div>
           ) : (
-            <Button onClick={() => act(() => milestoneAction(request.id, 'in_production'))}>
+            <Button onClick={() => act(() => milestoneAction(request.id, quote.id, 'in_production'))}>
               Start production
             </Button>
-          )}
-        </div>
-      )}
-
-      {request.status === 'in_production' && (
-        <Button onClick={() => act(() => milestoneAction(request.id, 'shipped'))}>
-          Mark shipped
-        </Button>
-      )}
-
-      {request.status === 'shipped' && (
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">
-            The only transition that writes installed_signs. After it, this location&rsquo;s record
-            carries these signs and every future request against them is a lookup.
-          </p>
-          <Button onClick={() => act(() => milestoneAction(request.id, 'completed'))}>
-            Mark installed
-          </Button>
-        </div>
-      )}
-
-      {request.status === 'completed' && (
-        <Waiting>Installed. The location record was updated on this transition.</Waiting>
-      )}
-
-      {request.quotes.length > 0 && (
-        <ul className="mt-3 space-y-1 border-t border-gray-100 pt-3 text-xs text-gray-600">
-          {request.quotes.map((quote) => (
-            <li key={quote.id}>
-              <span className="font-medium">{quote.recipient_kind.replace(/_/g, ' ')}</span> ·{' '}
-              {formatPrice(quote.priced_total)} · {quote.priced_count} priced
-              {quote.manual_count > 0 && ` · ${quote.manual_count} custom`}
-              {quote.external ? ' · external tail' : ' · Signage.com fulfils'}
-              {quote.delivered_at && ' · delivered'}
-              {quote.accepted_at && ' · accepted'}
-            </li>
           ))}
-        </ul>
-      )}
-    </Section>
+
+        {stage === 'in_production' && (
+          <Button onClick={() => act(() => milestoneAction(request.id, quote.id, 'shipped'))}>
+            Mark shipped
+          </Button>
+        )}
+
+        {stage === 'shipped' && (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-500">
+              The only transition that writes installed_signs, and it writes this package&rsquo;s
+              items. After it, those signs are on the location record for good.
+            </p>
+            <Button onClick={() => act(() => milestoneAction(request.id, quote.id, 'completed'))}>
+              Mark installed
+            </Button>
+          </div>
+        )}
+
+        {stage === 'completed' && (
+          <Waiting>
+            Installed. {items.length} sign(s) went onto the location record on this transition.
+          </Waiting>
+        )}
+      </div>
+    </div>
   );
 }
 

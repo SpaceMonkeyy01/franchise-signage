@@ -28,6 +28,7 @@ export function ChangesRequestedEmail(props: ChangesRequestedProps) {
         title={count === 1 ? 'One sign needs a change' : `${count} signs need a change`}
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 

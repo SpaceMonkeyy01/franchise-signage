@@ -532,9 +532,9 @@ await page.getByRole('button', { name: 'Route for quote' }).click();
 // becomes TWO packages (SPEC §4) — the case the Freshbites seed exists to prove.
 await expectCount(
   page,
-  'section:has(h2:text-is("Next step")) li',
+  'section:has(h2:text-is("Next step")) [data-recipient]',
   2,
-  'routing splits the request into two vendor packages',
+  'routing splits the request into two vendor packages, each with its own chain',
 );
 
 // The split is only worth anything if the two packages reach two COMPANIES
@@ -596,36 +596,150 @@ await page.goto(admin, { waitUntil: 'networkidle' });
 await page.locator('input[type=file]').first().setInputFiles({ name: 'mockup.png', mimeType: 'image/png', buffer: PIXEL_PNG });
 await expectVisible(page, 'text=/Mockup attached to/', 'the team can attach a mockup per item');
 
-// The external tail: the vendor quotes and orders off-platform, the team logs it.
+// The §4 split, run BOTH tails at once (SPEC §6, amended v2.2).
+//
+// This request holds the pylon, which the brand overrides to its approved
+// vendor, and the Neon Leaf, which does not — so routing produced two packages
+// with two recipients and two lifecycles. Until v2.2 the request carried a
+// single fulfillment status, so the franchisee was offered no accept button at
+// all and Signage.com's half could never be invoiced (DECISIONS #51, #57). What
+// follows is that whole storyline, and it is the reason the spec changed.
+const ourCard = '[data-recipient="Signage.com Manufacturing"]';
+const theirCard = '[data-recipient="Meridian Sign Co."]';
+const requestStatus = async () =>
+  withDb(async (client) =>
+    (await client.query('select status from requests where id = $1', [lifecycleId])).rows[0].status,
+  );
+const packageStages = async () =>
+  withDb(async (client) =>
+    (
+      await client.query(
+        `select recipient_name, delivered_at, accepted_at, in_production_at, shipped_at, completed_at
+           from quotes where request_id = $1 order by external`,
+        [lifecycleId],
+      )
+    ).rows,
+  );
+
+// The vendor quotes off-platform; the team logs it against THEIR package.
 await page.goto(admin, { waitUntil: 'networkidle' });
-await page.locator('input[placeholder="Vendor total"]').fill('9000');
-await page.getByRole('button', { name: 'Log vendor quote' }).click();
+await page.locator(`${theirCard} input[placeholder="Vendor total"]`).fill('9000');
+await page.locator(theirCard).getByRole('button', { name: 'Log vendor quote' }).click();
 await expectVisible(page, 'text=/Vendor quote logged/', 'the external tail logs what the vendor quoted');
 
-// The request is now `quote_ready` and holds TWO packages — one Signage.com,
-// one the brand's vendor. The console runs the external tail for the whole
-// request, and the franchisee page has to agree with it: an Accept button here
-// resolves to a quote the action refuses, so it must not be offered at all.
-await page.goto(`${BASE}/freshbites/request/${accessToken}`, { waitUntil: 'networkidle' });
-const splitAccept = await page.getByRole('button', { name: /Accept quote/i }).count();
+// One package quoted is not a quoted request: the rollup waits for the slowest.
 record(
-  'a split request offers no accept button the action would refuse',
-  splitAccept === 0,
-  `${splitAccept} button(s) offered`,
+  'one package quoted does not move the request — the rollup waits',
+  (await requestStatus()) === 'sent_for_quote',
+  await requestStatus(),
+);
+
+// Now Signage.com delivers its own.
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(ourCard).getByRole('button', { name: 'Deliver quote to franchisee' }).click();
+await expectVisible(page, 'text=/Quote delivered to franchisee/', 'Signage.com delivers its own package');
+record(
+  'with both quoted, the request rolls up to quote_ready',
+  (await requestStatus()) === 'quote_ready',
+  await requestStatus(),
+);
+
+// The franchisee's page. Before v2.2 this offered nothing at all.
+await page.goto(`${BASE}/freshbites/request/${accessToken}`, { waitUntil: 'networkidle' });
+await expectCount(
+  page,
+  `${ourCard} button:has-text("Accept quote")`,
+  1,
+  'the franchisee CAN accept the Signage.com half of a split request',
+);
+await expectCount(
+  page,
+  `${theirCard} button:has-text("Accept quote")`,
+  0,
+  'and cannot accept the vendor half, which is ordered with them directly',
 );
 await expectVisible(
   page,
-  'text=/ordering happens with them directly|orders with the vendor directly/',
-  'and says instead who the franchisee orders with',
+  'text=/ordering happens with them directly|order this part with/',
+  'the vendor card says who to order with instead',
 );
 
-await page.goto(admin, { waitUntil: 'networkidle' });
-await page.getByRole('button', { name: 'Log order placed' }).click();
-await expectVisible(page, 'text=/Order logged/', 'the external order is logged, not accepted in-app');
+await page.locator(ourCard).getByRole('button', { name: /Accept quote/i }).click();
+await expectVisible(page, 'text=Quote accepted', 'accepting moves that package');
+record(
+  'accepting one half leaves the REQUEST at quote_ready — the vendor half is untouched',
+  (await requestStatus()) === 'quote_ready',
+  await requestStatus(),
+);
+const afterAccept = await packageStages();
+record(
+  'and exactly one package is accepted',
+  afterAccept.filter((row) => row.accepted_at !== null).length === 1,
+  afterAccept.map((r) => `${r.recipient_name}:${r.accepted_at ? 'accepted' : 'open'}`).join(' · '),
+);
 
+// DECISIONS #57, closed: the invoice gate is the PACKAGE's acceptance, so
+// Signage.com can bill its own half while the vendor's is still open.
 await page.goto(admin, { waitUntil: 'networkidle' });
-await page.getByRole('button', { name: 'Mark installed' }).click();
-await expectVisible(page, 'text=/Installed — location record updated/', 'the request completes');
+await page.getByRole('button', { name: 'Issue invoice' }).first().click();
+await expectVisible(
+  page,
+  'text=/INV-\\d{4}/',
+  'Signage.com can invoice its half of a split request (DECISIONS #57)',
+);
+
+// The vendor's order comes in, and only now is the whole site committed.
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(theirCard).getByRole('button', { name: 'Log order placed' }).click();
+await expectVisible(page, 'text=/Order logged/', 'the external order is logged, not accepted in-app');
+record(
+  'with both packages committed, the request rolls up to accepted',
+  (await requestStatus()) === 'accepted',
+  await requestStatus(),
+);
+
+// Signage.com fabricates and installs its half while the vendor is still out.
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(ourCard).getByRole('button', { name: 'Start production' }).click();
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(ourCard).getByRole('button', { name: 'Mark shipped' }).click();
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(ourCard).getByRole('button', { name: 'Mark installed' }).click();
+await expectVisible(page, 'text=/Installed — location record updated/', 'Signage.com installs its half');
+record(
+  'the request is NOT complete — the vendor half is still out',
+  (await requestStatus()) === 'accepted',
+  await requestStatus(),
+);
+
+// The writeback is scoped to the package: our sign is on the record, theirs is
+// not, because theirs is not on the building.
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=Freshbites Neon Leaf', 'our installed sign is on the location record');
+await expectCount(
+  page,
+  'text=Freshbites Road Sign',
+  0,
+  'and the vendor’s is not — it has not been installed yet',
+);
+
+// The vendor finally reports in.
+await page.goto(admin, { waitUntil: 'networkidle' });
+await page.locator(theirCard).getByRole('button', { name: 'Mark installed' }).click();
+// Wait for the write, not for the click: the status below is read straight
+// from SQL, which does not auto-wait the way a locator assertion does. Waiting
+// on the button to GO rather than on text — `text=Installed` matches the
+// "Mark installed" button itself, so it was satisfied before the click landed.
+await expectGone(
+  page,
+  `${theirCard} button:has-text("Mark installed")`,
+  'the vendor package has no milestone left to log',
+);
+record(
+  'the last package completes the request',
+  (await requestStatus()) === 'completed',
+  await requestStatus(),
+);
 
 // The point of the whole system: the location record grew.
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });

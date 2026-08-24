@@ -36,6 +36,7 @@ export function QuoteReadyEmail(props: QuoteReadyProps) {
         title="Your quote is ready"
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 

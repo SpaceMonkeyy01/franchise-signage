@@ -1,8 +1,40 @@
 # Where the build is
 
-Last updated: 24 Aug 2026. **Session 5 is complete.** Session 6 — the corporate
-dashboard (SPEC §9 interface 6) — is next, with one decision to make first; see
-"Next" below.
+Last updated: 24 Aug 2026. **Session 5 is complete, and SPEC §6 has been amended
+(spec v2.2).** Session 6 — the corporate dashboard (SPEC §9 interface 6) — is
+next, and nothing now blocks it.
+
+## The §6 amendment: fulfillment is package-level
+
+DECISIONS #51 and #57 are answered and built. §4 has always been able to split
+one request across recipients, but §6 offered the two tails only as
+alternatives on a single request status — so a split request could be neither
+accepted by the franchisee nor invoiced by Signage.com.
+
+Fulfillment now belongs to the **quote package**, and the request status is a
+rollup of its packages: **the request sits at the stage of its least advanced
+package.** That is the pattern the spec already used one level up — approval is
+item-level and the request status derives from it — so nothing new has to be
+reconciled and there is no second status column.
+
+- `quotes` gained `in_production_at`, `shipped_at`, `completed_at`, with five
+  check constraints enforcing the order and one keeping production off the
+  external tail. The stage is DERIVED from those dates, so it cannot disagree
+  with the invoice, the receipt or the timeline, which are written from them.
+- `transitionPackage` moves one package, writes its event, and lets the request
+  follow — forwards only, guarded by `isFulfillmentAdvance`.
+- `completed` still writes `installed_signs` and now writes only that package's
+  items, so a split site's Signage.com signs land on the location record when
+  Signage.com installs them.
+- Both consoles became per-package: one action card per recipient on `/admin`,
+  and an Accept button on the Signage.com card of the franchisee's status page.
+- Every notification after routing carries that package's own numbers, and the
+  install email stops claiming the site is finished when half of it is not.
+
+The seeded split request (the pylon's `approved_vendor` override) is driven end
+to end by the smoke suite: quote both halves, accept ours, **invoice ours while
+theirs is still open**, install ours, and watch the location record grow by our
+sign alone until the vendor finally reports in. DECISIONS #66–72.
 
 ## Session 5
 
@@ -49,7 +81,7 @@ dashboard (SPEC §9 interface 6) — is next, with one decision to make first; s
   Registration is performed from `/admin` (Registrations panel) until Session 6
   gives corporate a dashboard, and the same `registerFranchisee` serves both.
 
-128 smoke checks, 99 unit tests, 16 schema checks, typecheck and lint — all green.
+142 smoke checks, 113 unit tests, 17 schema checks, typecheck and lint — all green.
 
 **§8d level 1 works end to end, and it is the first thing a franchisee sees.**
 The welcome email's own destination in the spec is §8c's brand-email magic link,
@@ -108,15 +140,12 @@ rather than on `/admin`, and should move when it exists: the §8b budget one-pag
 export and the §8d registration panel (DECISIONS #44, #61). Both were put on the
 team queue explicitly because corporate had nowhere to stand.
 
-**One thing to decide before Session 6**, because two features now rest on it:
-DECISIONS #51 — a request split between Signage.com and the brand's vendor has
-one status and two tails, and SPEC §6 offers the tails only as alternatives.
-Today the franchisee is not offered acceptance on such a request, which means
-Signage.com's half of it also cannot be invoiced (#57). Both follow from the
-same unanswered question; answering it once fixes both. Neither was invented
-here because a two-dimensional request state is a spec change, not a bug fix.
+**Nothing blocks Session 6.** DECISIONS #51 and #57 — the split-request
+question that two features rested on — are answered by the §6 amendment above
+and built. Program spend on the new dashboard should read per package, since
+that is now where acceptance and invoicing live.
 
-**The dev database needs a reset to pick up the §8d migration.** `npm run
+**The dev database needs a reset to pick up the §8d and §6 migrations.** `npm run
 dev:db:reset` — the dev server skips migrations when a schema is already
 present, so an existing `.pglite/` has no `franchisee_registrations.access_token`
 and the registrations panel will fail on it.
@@ -154,10 +183,10 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 128 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 142 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 99 unit tests — the §6 state machine, the seed pins, the §8b totals, the §8d welcome copy |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 16 schema checks |
+| `npm test` | 113 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres, 17 schema checks |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
@@ -257,6 +286,8 @@ and real uploads behind `src/lib/storage/`.
 - The four §8b lender documents: budget one-pager, budgetary quote, formal
   invoice, paid receipt.
 - The §8d welcome email and the level-1 landing page it opens.
+- The §6 amendment (spec v2.2): package-level fulfillment, and with it the
+  split-request acceptance and invoice that DECISIONS #51/#57 had blocked.
 
 ---
 
@@ -308,7 +339,12 @@ In `docs/DECISIONS.md`, none blocking:
    messages; and **`in_production` sending nothing**, because the accept email
    already said production had started.
 
-8. Session 5's §8d calls (entries 58–65), chiefly **#58: the welcome email
+8. Session 5a's §6 amendment (entries 66–72). Built, not merely proposed:
+   `docs/SPEC.md` is now **v2.2** and §6/§4 read accordingly. Worth your review
+   as the contract change it is, chiefly **#66 — fulfillment is package-level
+   and the request status is a rollup** — and **#68**, which drops the
+   request-level tail check because a tail belongs to a package.
+9. Session 5's §8d calls (entries 58–65), chiefly **#58: the welcome email
    carries a registration token, not the §8c magic link SPEC §8d names** —
    because that link authorizes DID generation and is Session 8. §8d should be
    amended to separate "how a franchisee reaches their page" from "what

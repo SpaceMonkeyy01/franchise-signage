@@ -52,8 +52,28 @@ export type ReplaceReason = 'damaged' | 'worn' | 'vandalized';
 
 export type EventActor = 'franchisee' | 'team' | 'reviewer' | 'corporate' | 'system';
 
-/** Which lifecycle tail a request runs down after sent_for_quote (SPEC §4). */
+/**
+ * Which lifecycle tail a PACKAGE runs down after sent_for_quote (SPEC §4).
+ *
+ * A property of the package, not of the request: a request split across two
+ * recipients runs both at once, each at its own pace (SPEC §6, amended v2.2).
+ */
 export type FulfillmentTail = 'internal' | 'external';
+
+/**
+ * Where one quote package has reached (SPEC §6, amended v2.2).
+ *
+ * The same vocabulary as the request's own tail, one level down, because the
+ * request status is now the rollup of these. Derived from the package's
+ * timestamps rather than stored — see derivePackageStatus.
+ */
+export type PackageStatus =
+  | 'sent_for_quote'
+  | 'quote_ready'
+  | 'accepted'
+  | 'in_production'
+  | 'shipped'
+  | 'completed';
 
 // ---------------------------------------------------------------- domain rows
 // Minimal shapes — only the fields the state machine actually reads, so the
@@ -84,6 +104,28 @@ export interface LineItemState {
   /** Set only on replacement items: the installed sign being replaced. */
   replacesSignId: string | null;
   estPriceSnapshot: number | null;
+}
+
+/**
+ * One quote package, as the status machine sees it.
+ *
+ * Dates rather than a status column: `delivered_at` and `accepted_at` were
+ * already the idiom on `quotes`, and the documents and the timeline are written
+ * from those dates — a stored stage could disagree with them, a derived one
+ * cannot.
+ */
+export interface PackageState {
+  id: string;
+  /** The recipient, for a timeline that says which half moved. */
+  recipientName: string | null;
+  external: boolean;
+  deliveredAt: Date | null;
+  acceptedAt: Date | null;
+  inProductionAt: Date | null;
+  shippedAt: Date | null;
+  completedAt: Date | null;
+  /** Which items are in this package — the writeback scope on completion. */
+  lineItemIds: string[];
 }
 
 export interface RequestState {

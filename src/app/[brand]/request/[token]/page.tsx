@@ -12,6 +12,7 @@ import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
+import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import type { RequestStatus } from '@/lib/status/types';
 import { fileUrl } from '@/lib/storage';
 
@@ -54,6 +55,9 @@ export default async function RequestStatusPage({
   if (!request || request.brand.slug !== slug) notFound();
 
   const quote = request.quotes[0] ?? null;
+  // Signage.com's own package, if this request has one. The only tail with
+  // production stages to draw — an external vendor works off-platform.
+  const internalPackage = request.quotes.find((candidate) => !candidate.external) ?? null;
   const changed = new Set(request.change_request?.line_item_ids ?? []);
   // The editable set is the items that actually reopened, not the ids the
   // change request named: a reviewer can flag an item and the franchisee can
@@ -161,8 +165,12 @@ export default async function RequestStatusPage({
           <LenderDocuments request={request} token={token} />
         )}
 
-        {PRODUCTION_STAGES.includes(request.status) && quote && !quote.external && (
-          <ProductionProgress status={request.status} />
+        {/* The bar tracks the SIGNAGE.COM package, not the request (SPEC §6,
+            amended v2.2). On a split the request sits at the least advanced
+            package, so drawing the bar from it would show a franchisee "accepted"
+            while their storefront letters were already shipped. */}
+        {internalPackage && PRODUCTION_STAGES.includes(quoteStage(internalPackage)) && (
+          <ProductionProgress status={quoteStage(internalPackage)} />
         )}
 
         <Timeline request={request} />
@@ -269,18 +277,20 @@ function QuoteCard({
   /** True when this is one of several packages, so the card says whose it is. */
   split: boolean;
 }) {
+  // Each package runs its own tail now (SPEC §6, amended v2.2), so this card
+  // reads that package's own stage rather than the request's. Before v2.2 a
+  // request with any external package was treated as external end to end and
+  // the franchisee was offered no button at all — the acceptance simply had
+  // nowhere to go (DECISIONS #51). It has one now: this package.
+  const stage = quoteStage(quote);
   const accepted = quote.accepted_at !== null;
-  // A request with ANY external package runs the external tail end to end —
-  // which is what the team console already assumes, and the two surfaces have to
-  // agree. SPEC §6 offers the tails as alternatives and says nothing about a
-  // request that is both, so the franchisee is told who they order with rather
-  // than shown a button whose meaning nobody has decided (DECISIONS #51).
-  const mixed = request.quotes.some((q) => q.external);
-  const acceptable =
-    !mixed && !quote.external && !accepted && request.status === 'quote_ready';
+  const acceptable = !quote.external && stage === 'quote_ready';
 
   return (
-    <section className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4">
+    <section
+      className="mt-6 rounded-xl border border-indigo-200 bg-indigo-50/60 p-4"
+      data-recipient={quote.recipient_name ?? (quote.external ? 'vendor' : 'Signage.com')}
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold text-indigo-950">
@@ -320,21 +330,22 @@ function QuoteCard({
 
       {accepted && (
         <p className="mt-3 text-xs font-medium text-emerald-800">
-          Accepted {new Date(quote.accepted_at!).toLocaleDateString('en-US')} — in the production
-          queue.
+          Accepted {new Date(quote.accepted_at!).toLocaleDateString('en-US')} ·{' '}
+          {PACKAGE_STAGE_LABEL[stage].toLowerCase()}
+          {stage === 'completed' ? ' — on your location record.' : '.'}
         </p>
       )}
 
-      {/* Otherwise this package would sit there priced, with no button and no
-          explanation of what happens to it. */}
-      {mixed && !quote.external && !accepted && request.status === 'quote_ready' && (
+      {/* An external package is ordered with the vendor, so it never gets a
+          button — but it must still say what is happening to it, or it sits
+          there priced and unexplained. */}
+      {quote.external && !accepted && (
         <p className="mt-3 text-xs text-indigo-900/70">
-          This half of your signage is fulfilled by Signage.com. Because the rest is going to{' '}
-          {request.brand.vendor_name ?? 'your brand’s vendor'}, your Signage.com contact confirms
-          both with you together — there is nothing to click here.
+          You order this part with{' '}
+          {quote.recipient_name ?? request.brand.vendor_name ?? 'your brand’s vendor'} directly.
+          Your Signage.com contact can walk you through it; nothing here needs clicking.
         </p>
       )}
-
     </section>
   );
 }

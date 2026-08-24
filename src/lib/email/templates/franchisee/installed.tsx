@@ -15,24 +15,44 @@ export interface InstalledProps extends FranchiseeEmailBase {
   /** Where the permanent record now lives — the location, not this request. */
   locationUrl: string;
   note: string | null;
+  /**
+   * Packages on this request still outstanding (SPEC §6, amended v2.2).
+   *
+   * Non-zero means one half of a split site is up and the other is not. Telling
+   * someone standing in front of their own building that it is finished when it
+   * plainly is not is the most visible wrong claim this system can make.
+   */
+  outstandingPackages: number;
 }
 
 export function InstalledEmail(props: InstalledProps) {
+  const partial = props.outstandingPackages > 0;
+
   return (
     <EmailLayout
       brand={props.brand}
-      preview={`Installed — ${props.locationName} is signed`}
+      preview={
+        partial
+          ? `Installed — part of ${props.locationName} is up`
+          : `Installed — ${props.locationName} is signed`
+      }
     >
       <Heading
-        title="Installed"
+        title={partial ? 'Installed — this part' : 'Installed'}
         locationName={props.locationName}
         requestCode={props.requestCode}
+        packageLabel={props.packageLabel}
       />
       <Greeting name={props.requesterName} />
 
       <p style={{ margin: '0 0 12px', fontSize: 14, color: '#374151' }}>
         {props.itemCount === 1 ? 'Your sign is' : `All ${props.itemCount} signs are`} up at{' '}
-        {props.locationName}. That closes this request.
+        {props.locationName}.{' '}
+        {partial
+          ? `The rest of your signage is with ${
+              props.outstandingPackages === 1 ? 'another supplier' : 'your other suppliers'
+            }, and is not up yet — we will tell you when it is.`
+          : 'That closes this request.'}
       </p>
 
       {props.note && (
