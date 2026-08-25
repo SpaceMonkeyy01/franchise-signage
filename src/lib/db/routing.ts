@@ -6,9 +6,9 @@
 // stays with Signage.com, which is exactly the case the seed exists to prove.
 //
 // This is the routing half of Session 5. What it deliberately does NOT do is
-// send anything: `quotes.sent_at` is stamped, but composing and mailing the
-// vendor package is Session 5's job. Nothing here is throwaway — the temporary
-// console (src/app/dev) calls it, and so will the real team queue.
+// send anything: `quotes.sent_at` is stamped, and composing and mailing the
+// vendor package is `notifyQuotePackages`, called after this commits — a mail
+// failure must not unroute a request.
 
 import { createPgStatusStore } from './pg-status-store';
 import { transaction } from './pool';

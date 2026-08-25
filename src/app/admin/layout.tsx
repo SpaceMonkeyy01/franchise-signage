@@ -37,6 +37,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           {member && (
             <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
+              {/* The outbox is a support tool, not a daily one — findable from
+                  every screen, and never competing with the queue for attention. */}
+              <Link href="/admin/outbox" className="text-gray-300 underline-offset-2 hover:underline">
+                Outbox
+              </Link>
               <span>{member.name ?? member.email}</span>
               <form action={signOut}>
                 <button type="submit" className="text-gray-300 underline-offset-2 hover:underline">

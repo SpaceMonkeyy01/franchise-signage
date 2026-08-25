@@ -8,23 +8,22 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { requireTeamMember } from '@/lib/auth/team';
 import { getEmail } from '@/lib/email/send';
-
-import { assertDevConsole } from '../../guard';
 
 export default async function DevMailItem({
   params,
 }: {
   params: Promise<{ emailId: string }>;
 }) {
-  assertDevConsole();
+  await requireTeamMember();
   const { emailId } = await params;
   const email = await getEmail(emailId);
   if (!email) notFound();
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
-      <Link href="/dev" className="text-sm text-gray-500 underline-offset-2 hover:underline">
+      <Link href="/admin/outbox" className="text-sm text-gray-500 underline-offset-2 hover:underline">
         ← Outbox
       </Link>
 

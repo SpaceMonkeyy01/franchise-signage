@@ -3,7 +3,7 @@
 // The only outbound message in the build with no request behind it, which is the
 // whole point of §8d: at agreement signing there is no location, no lease and no
 // request — only a person and a brand. `sent_emails.request_id` is therefore
-// null here, and the outbox at /dev is the one place it can be read back.
+// null here, and the outbox at /admin/outbox is the one place it can be read back.
 //
 // Sent AS THE BRAND, like every other franchisee-facing message: this arrives
 // days after they signed with their franchisor and weeks before they have heard

@@ -402,12 +402,12 @@ await expectGone(page, 'h2:has-text("Update this item and resubmit")', 'the chan
 await expectVisible(page, 'text=Resubmitted with changes', 'the resubmission wrote its event');
 
 // ------------------------------------------------------- the operator console
-// /admin is the Signage.com team's real screen (Session 3); /dev is what is
-// left of the temporary console — the corporate reviewer, until Session 4 sends
-// their approval email. Together they close the loop, and this section is what
-// proves it: submit -> prep -> corporate -> route -> price -> deliver -> accept
-// -> install -> the location record grows.
-console.log('\nThe operator console (/admin) and the reviewer stand-in (/dev)');
+// /admin is the Signage.com team's real screen (Session 3), and the reviewer
+// acts from the approval email — read here through /admin/outbox, which is the
+// record of everything the system sent. Together they close the loop, and this
+// section is what proves it: submit -> prep -> corporate -> route -> price ->
+// deliver -> accept -> install -> the location record grows.
+console.log('\nThe operator console (/admin) and the approval email');
 
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 await expectVisible(page, 'h1:has-text("Signage.com team")', '/admin refuses anyone who is not signed in');
@@ -467,7 +467,7 @@ const approvalEmail = await withDb(async (client) =>
 );
 record('preparing the package sent the approval email', Boolean(approvalEmail));
 
-await page.goto(`${BASE}/dev/mail/${approvalEmail.id}`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/outbox/${approvalEmail.id}`, { waitUntil: 'networkidle' });
 const emailFrame = page.frameLocator('iframe');
 const approveHref = await emailFrame.locator('a:has-text("Approve")').first().getAttribute('href');
 record('the email carries a per-item approval link', /\/review\/.+item=/.test(approveHref ?? ''));
@@ -516,7 +516,7 @@ const reReview = await withDb(async (client) =>
 record('resubmission sent the re-review email', Boolean(reReview));
 
 // Decide everything from the fresh link.
-await page.goto(`${BASE}/dev/mail/${reReview.id}`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/outbox/${reReview.id}`, { waitUntil: 'networkidle' });
 const freshHref = await page
   .frameLocator('iframe')
   .locator('a:has-text("Approve")')
@@ -817,7 +817,7 @@ const internalReview = await withDb(async (client) =>
     )
   ).rows[0],
 );
-await page.goto(`${BASE}/dev/mail/${internalReview.id}`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/outbox/${internalReview.id}`, { waitUntil: 'networkidle' });
 const internalApprove = await page
   .frameLocator('iframe')
   .locator('a:has-text("Approve")')
@@ -1549,6 +1549,25 @@ record(
   deadLink.status === 404 && deadBody.includes('That link did not open anything'),
   `status ${deadLink.status}`,
 );
+
+// ------------------------------------------------------------- the outbox
+// It renders whole emails, and those emails carry live credentials: a
+// reviewer's signed approval link, a franchisee's status token, a corporate
+// dashboard link. It sat behind an environment flag until Session 6c; the
+// check that matters is that it is now behind the allowlist instead.
+const outboxSignedOut = await fetch(`${BASE}/admin/outbox`, { redirect: 'manual' });
+const outboxBody = outboxSignedOut.status < 300 ? await outboxSignedOut.text() : '';
+record(
+  'the outbox is not readable without signing in',
+  outboxSignedOut.status >= 300 || !outboxBody.includes('Sent messages'),
+  `status ${outboxSignedOut.status}`,
+);
+// Signed in, it is a working support tool — reached from the console chrome
+// rather than by knowing a URL.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: 'Outbox' }).click();
+await page.waitForLoadState('networkidle');
+await expectVisible(page, 'h1:text-is("Sent messages")', 'and is one click from the queue when you are');
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 

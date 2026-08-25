@@ -126,7 +126,7 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
           item(s) awaiting a decision. The approval email has gone to the brand&rsquo;s reviewer
           with a link that expires in seven days; the SLA timer chases it after the brand&rsquo;s
           review window. With no mail provider configured, the message is in the outbox at{' '}
-          <code className="rounded bg-gray-100 px-1">/dev</code>.
+          <code className="rounded bg-gray-100 px-1">/admin/outbox</code>.
         </Waiting>
       )}
 

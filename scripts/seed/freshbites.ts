@@ -46,7 +46,7 @@ export const brand = {
  * — so routing splits the request into two packages, and until this existed the
  * second one had no address but the first one's. The `approved_vendor` row here
  * is what makes that split real: two packages, two companies, two emails you can
- * read side by side in `/dev`.
+ * read side by side in the outbox.
  *
  * `signage_com` is deliberately NOT listed: it is the brand's own policy, so it
  * resolves through brands.vendor_name/vendor_email, which is the fallback path

@@ -1,7 +1,7 @@
 // Sending corporate their dashboard link (SPEC §9 interface 6).
 //
 // Like the welcome email, this has no request behind it — `sent_emails.
-// request_id` is null and /dev is where it can be read back. Unlike every other
+// request_id` is null and /admin/outbox is where it can be read back. Unlike every
 // message in the build, the recipient asked for it a moment ago, so the send is
 // synchronous with a page they are watching.
 //

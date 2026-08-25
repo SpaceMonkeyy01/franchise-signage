@@ -1,32 +1,30 @@
 // The outbox — every message the system has sent (or would have).
 //
-// TEMPORARY, and the last thing left at /dev. The reviewer stand-in that used to
-// live here is gone: Session 4 replaced it with the real thing, an approval
-// email carrying signed single-use links to /review/{token}. With no Resend key
-// configured, those emails are recorded rather than delivered — so this page is
-// how you read them, and how you click the links a reviewer would click.
+// It lived at /dev until Session 6c, behind an environment flag rather than a
+// login, because it began life as the reviewer stand-in and was expected to be
+// deleted. Session 4 deleted that half and left the question: does the outbox
+// earn its place? It does — "what exactly did we send them, and when" has a
+// right answer, and this is the only place holding it — so it moved here, where
+// the URL says who it is for and the team allowlist decides.
 //
-// Once mail is really being sent, this becomes a support tool rather than a
-// stand-in: "what exactly did we send them, and when" is a question with a right
-// answer. Keep it if it earns its place; it is guarded either way.
+// The flag was never the right guard. This page renders whole emails, and those
+// emails carry live credentials: a reviewer's signed approval link, a
+// franchisee's status token, a corporate dashboard link. Anyone who set
+// DEV_CONSOLE=1 in production to look at something would have published every
+// one of them. An allowlist is what a page like that needs — the same one that
+// decides who may approve a package or mark a sign installed.
+//
+// (`force-dynamic` is inherited from src/app/admin/layout.tsx, which the whole
+// segment needs anyway. A prerendered outbox would be a snapshot of build-time
+// mail, served forever.)
 
 import Link from 'next/link';
 
+import { requireTeamMember } from '@/lib/auth/team';
 import { emailProvider, recentEmails } from '@/lib/email/send';
 
-import { assertDevConsole } from './guard';
-
-/**
- * Dynamic for a different reason than /admin: this page IS its data.
- *
- * A prerendered outbox is a snapshot of whatever mail existed when the build
- * ran, served forever afterwards — which for the one screen whose entire job is
- * "what did we send, and when" is worse than not having it.
- */
-export const dynamic = 'force-dynamic';
-
-export default async function DevOutbox() {
-  assertDevConsole();
+export default async function Outbox() {
+  await requireTeamMember();
   const emails = await recentEmails(30);
   const provider = emailProvider();
 
@@ -56,7 +54,7 @@ export default async function DevOutbox() {
         {emails.map((email) => (
           <Link
             key={email.id}
-            href={`/dev/mail/${email.id}`}
+            href={`/admin/outbox/${email.id}`}
             className="block rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2">

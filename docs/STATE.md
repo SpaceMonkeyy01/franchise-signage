@@ -13,6 +13,9 @@ did not — PGlite has real roles, and RLS is enforced against any role that doe
 not own the table. `npm run db:verify` now runs 20 behavioural checks as `anon`
 and `authenticated` (DECISIONS #84–89).
 
+**The outbox is behind the allowlist**, not an environment flag — it renders
+whole emails, and those emails carry live approval links (#97).
+
 **And the Supabase path is now runnable rather than described.** The Storage
 driver is written, `npm run migrate` applies the schema to a real Postgres (the
 one thing no path could do before), and `docs/SUPABASE.md` turns the four
@@ -100,9 +103,8 @@ Neither can start on what is in the repo today:
    than it was this morning.
 2. **A real Resend key**, so that the mail path runs once against a provider
    rather than an outbox.
-3. **The `/dev` outbox's future** — Session 4 left it as "keep it if it earns
-   its place, and put it behind `/admin` if it does". It is still unauthenticated
-   and still guarded only by `assertDevConsole`.
+3. ~~**The `/dev` outbox's future.**~~ Answered in Session 6c: it earned its
+   place and moved to `/admin/outbox`, behind the team allowlist (#97).
 
 ## The §6 amendment: fulfillment is package-level
 
@@ -261,7 +263,7 @@ npm run dev          # starts the dev database AND the web server
 | Signage.com team | http://localhost:3000/admin | allowlisted team email |
 | Corporate reviewer | from a link in the approval email | no login, ever |
 | Corporate dashboard | http://localhost:3000/freshbites/corporate | magic link to `brand@freshbites.com` |
-| Outbox (dev) | http://localhost:3000/dev | what would have been emailed |
+| Outbox | http://localhost:3000/admin/outbox | what was (or would have been) emailed; team sign-in |
 
 Sign in to `/admin` as `team@signage.com` — with no Supabase project configured
 the login screen is a picker over `team_members`, which is a stand-in for a
@@ -286,7 +288,7 @@ Postgres wire protocol, and the app connects with `pg`. Point `DATABASE_URL` at
 a Supabase connection string and the identical SQL runs there.
 
 **No mail is delivered.** With no `RESEND_API_KEY`, every message is rendered
-and recorded in `sent_emails` instead of being sent, and `/dev` is how you read
+and recorded in `sent_emails` instead of being sent, and `/admin/outbox` is how you read
 it — including clicking the approval links a reviewer would click. Set the key
 and the same code sends through Resend.
 
@@ -362,7 +364,7 @@ and real uploads behind `src/lib/storage/`.
   and a daily Vercel cron. `remind` re-asks, `escalate` writes to the secondary
   reviewer or corporate, `auto_forward` records the brand's policy and tells the
   team to confirm — **nothing is ever approved by a clock**.
-- `/dev` is now the outbox: every message the system sent or would have sent.
+- `/dev` became the outbox: every message the system sent or would have sent.
   The reviewer stand-in that lived there is deleted — the real links replaced it.
   The outbox itself stays useful once mail is live ("what exactly did we send
   them"), but it is still guarded and still unauthenticated: keep it only if it
@@ -419,6 +421,13 @@ and real uploads behind `src/lib/storage/`.
   Tested against a bare Postgres carrying only what Supabase supplies — 11
   applied, re-run clean, `npm run seed` then ran against it.
 - `docs/SUPABASE.md`: the runbook for the four things written and never run.
+
+**Session 6c — the outbox** (SPEC §10):
+
+- `/dev` → `/admin/outbox`, behind the team allowlist rather than an environment
+  flag. It renders whole emails, and those emails carry live credentials; the
+  flag would have published all of them to anyone who set it in production
+  (#97). Linked from the admin header, and two smoke checks on the gate.
 
 ---
 

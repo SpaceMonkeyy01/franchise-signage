@@ -147,7 +147,7 @@ welcome email is the right one to send first: it is the first thing a franchisee
 ever sees, and it is the only message with no request behind it, so nothing else
 is disturbed if it goes wrong.
 
-Everything sent is still recorded in `sent_emails` and readable at `/dev` —
+Everything sent is still recorded in `sent_emails` and readable at `/admin/outbox` —
 that does not change when a provider is configured.
 
 ---

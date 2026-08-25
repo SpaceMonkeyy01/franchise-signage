@@ -25,10 +25,10 @@ Four windows, one per participant, is the fastest way to run this:
 | Franchisee | http://localhost:3000/freshbites | No login, ever. Tokenized links. |
 | Team | http://localhost:3000/admin | Sign in as `team@signage.com`. |
 | Corporate | http://localhost:3000/freshbites/corporate | No login. Magic link. |
-| Outbox | http://localhost:3000/dev | Every message that was or would be sent. |
+| Outbox | http://localhost:3000/admin/outbox | Every message that was or would be sent. Team sign-in required. |
 
 **No mail is delivered.** With no `RESEND_API_KEY` every message is rendered and
-recorded instead of sent, and `/dev` is where you read it — including clicking
+recorded instead of sent, and `/admin/outbox` is where you read it — including clicking
 the links a reviewer would click. That is the intended way to run this pass.
 
 > Anything that talks SQL directly must connect, work and disconnect: the dev
@@ -43,16 +43,16 @@ Corporate registers a franchisee at agreement signing. This is the front door.
 
 1. **Corporate → Franchisee registrations.** You need a dashboard link first:
    at `/freshbites/corporate`, enter `brand@freshbites.com` (the brand's
-   configured reviewer) and press **Email me a link**. Open `/dev`, find
+   configured reviewer) and press **Email me a link**. Open `/admin/outbox`, find
    *Your Freshbites signage dashboard*, and follow the link inside it.
    - ✅ The page says it is read-only and names who opened it.
    - ✅ An address that is *not* on file gets the identical "check your inbox"
      message and no email. Try `nobody@example.com` and confirm nothing appears
-     in `/dev`.
+     in `/admin/outbox`.
 2. In **Franchisee registrations**, register any address (`you@example.com` is
    fine) and press **Register & welcome**.
    - ✅ The row appears marked `welcomed`, immediately — saving *is* the send.
-   - ✅ `/dev` holds a **welcome** email, from *Freshbites*, not Signage.com.
+   - ✅ `/admin/outbox` holds a **welcome** email, from *Freshbites*, not Signage.com.
    - ✅ It contains a signage number and says nothing about ordering signs.
    - ✅ Its only link is the franchisee's own page.
 3. Follow that link.
@@ -74,7 +74,7 @@ Corporate registers a franchisee at agreement signing. This is the front door.
    - ✅ Answer **yes** to the financing question (§8b) — it is the norm.
    - ✅ The review step totals only priced items and names the vendor policy.
 5. Submit, and keep the status-page URL. That token is their whole credential.
-   - ✅ `/dev` holds a **submitted** confirmation addressed to the requester.
+   - ✅ `/admin/outbox` holds a **submitted** confirmation addressed to the requester.
    - ✅ The status page shows per-item status, prices and vendor chips.
 
 ## 3 · The team prepares it (§9 interface 2)
@@ -87,11 +87,11 @@ Corporate registers a franchisee at agreement signing. This is the front door.
      exception go to corporate.
    - ✅ The landlord-criteria check is offered, and tracked rather than enforced.
    - ✅ The status moves to `needs_review` and an approval email appears in
-     `/dev`.
+     `/admin/outbox`.
 
 ## 4 · Corporate decides (§9 interface 3, §7)
 
-8. Open the approval email in `/dev`.
+8. Open the approval email in `/admin/outbox`.
    - ✅ It leads with how many items are proceeding **without** corporate.
    - ✅ One card per pending item: spec, origin, vendor, price, exception text.
 9. Click **Request changes** on one item.
@@ -114,7 +114,7 @@ Corporate registers a franchisee at agreement signing. This is the front door.
 12. Back on the status page, the flagged item is reopened for editing with
     corporate's note attached.
     - ✅ Edit and resubmit. The package version increments.
-    - ✅ `/dev` holds a **re-review** email, and the previous approval link is
+    - ✅ `/admin/outbox` holds a **re-review** email, and the previous approval link is
       now dead — open it and confirm it says so.
 13. Approve the resubmitted item from the new email.
     - ✅ The request reaches `approved`.
@@ -125,13 +125,13 @@ Corporate registers a franchisee at agreement signing. This is the front door.
     - ✅ Freshbites routes to Signage.com by default, but the **pylon** carries
       an `approved_vendor` override — so this request splits into **two**
       packages with two recipients.
-    - ✅ `/dev` holds one vendor email per recipient. Neither mentions the
+    - ✅ `/admin/outbox` holds one vendor email per recipient. Neither mentions the
       other, and neither carries a credential of any kind.
     - ✅ Corporate is CC'd per the brand's policy.
     - ✅ The franchisee's status page shows **one card per package**.
 15. Price and deliver the Signage.com package (standin-priced items are priced
     by hand — the banner says so).
-    - ✅ `/dev` holds a **quote ready** email carrying that package's numbers,
+    - ✅ `/admin/outbox` holds a **quote ready** email carrying that package's numbers,
       not the request's.
 16. **Franchisee → Accept** on the Signage.com card.
     - ✅ Only that package moves. The vendor's half is untouched.

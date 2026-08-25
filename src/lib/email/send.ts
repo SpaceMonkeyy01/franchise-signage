@@ -4,7 +4,7 @@
 // team-auth provider are: Resend when RESEND_API_KEY is configured, and the
 // OUTBOX when it is not — which records the message and delivers nothing. There
 // is no Resend key on this machine (docs/STATE.md), so the outbox is what runs,
-// and /dev/mail reads it back.
+// and /admin/outbox reads it back.
 //
 // Every message is written to `sent_emails` either way, BEFORE the send is
 // attempted and updated after. Mail that a provider accepted and then dropped is
@@ -103,7 +103,7 @@ export interface SentEmailRow {
   created_at: string;
 }
 
-/** The outbox, newest first — what /dev/mail renders. */
+/** The outbox, newest first — what /admin/outbox renders. */
 export function recentEmails(limit = 25): Promise<SentEmailRow[]> {
   return query<SentEmailRow>(
     `select id, request_id, kind, to_email, cc_email, subject, html, provider, error, created_at

@@ -424,8 +424,9 @@ export interface QueueRow {
  * Every request, newest first — the operator's queue.
  *
  * Not token-scoped, because this is the Signage.com side: the team sees all
- * brands. The temporary console (src/app/dev) is the only caller today; the real
- * queue in Session 3 sits behind Supabase Auth and the team_members allowlist.
+ * brands. That is safe only because of where it is called from — /admin, behind
+ * Supabase Auth and the team_members allowlist, which is checked on every
+ * request. Never reach for this from a token-scoped surface.
  */
 export function getRequestQueue(statuses?: readonly RequestStatus[]): Promise<QueueRow[]> {
   return rows<QueueRow>(

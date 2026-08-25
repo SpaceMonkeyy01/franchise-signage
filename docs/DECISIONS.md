@@ -877,6 +877,38 @@ throwaway UI over permanent rules.
     is being applied by the platform rather than by our WHERE clauses, and the
     deactivate-a-team-member check that proves the allowlist half of `/admin`.
 
+## Session 6c — the outbox earns its place
+
+97. **The outbox moved from `/dev` to `/admin/outbox`, behind the allowlist.**
+    Session 4 left the question open in as many words: "keep it only if it earns
+    its place, and put it behind `/admin` if it does." It earns it — "what
+    exactly did we send them, and when" has a right answer and this is the only
+    place holding it — so the answer is both halves at once.
+
+    The environment flag it had been living behind was never the right guard.
+    `DEV_CONSOLE=1` was written when `/dev` was the temporary operator console
+    and expected to be deleted; what survived is a page that renders WHOLE
+    EMAILS, and those emails carry live credentials — a reviewer's signed
+    approval link, a franchisee's status token, a corporate dashboard link.
+    Anyone who set that flag in production to look at one thing would have
+    published every one of them. The allowlist that decides who may approve a
+    package is the right guard for a page that can read the approvals.
+
+    The path moved rather than just the guard, because `/dev` promises a
+    development tool and this is a support tool. It now inherits the operator
+    chrome, the `force-dynamic` the segment already needed, and a link in the
+    admin header — findable from every screen, never competing with the queue.
+    Two smoke checks: signed out it shows nothing, signed in it is one click
+    from the queue. Confirmed by removing the guard and watching the first fail.
+
+98. **Two comments that had been stale since Session 4 went with it.**
+    `getRequestQueue` and `routeRequestForQuote` both said the temporary console
+    at `src/app/dev` was their only caller; that console was deleted in Session
+    4 and `/admin` had been calling both ever since. `getRequestQueue`'s comment
+    mattered more than tidiness — it explains why the query is deliberately NOT
+    token-scoped, and the sentence justifying that pointed at a caller which no
+    longer existed. It now names the guard that actually makes it safe.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`
