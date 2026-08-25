@@ -758,6 +758,65 @@ throwaway UI over permanent rules.
     addresses. The schema check that `brands_public` exposes no contact emails
     still passes, and still means what it says.
 
+## Session 6a — the RLS behaviour tests
+
+84. **The largest untested assumption did not need Docker.** Every session since
+    the first has recorded the same gap in the same words: the app connects as
+    the table owner, an owner does not consult RLS, so the policies are verified
+    as valid SQL and never as behaviour — and behavioural tests were said to
+    need a Supabase project or Docker. That was wrong, and it was wrong from
+    Session 1. **PGlite is real Postgres.** It has real roles, and RLS is
+    enforced against any role that does not own the table. The harness had
+    already been creating `anon`, `authenticated` and `service_role` for the
+    policies to reference; nothing had ever tried *being* one.
+
+85. **What is genuinely absent is the INPUTS, not the policies.** GoTrue mints
+    no JWT here and PostgREST forwards no `x-access-token` header. Neither is
+    part of a policy — they are values a policy reads, and both already have a
+    documented fallback: `app.access_token()` falls back to a session GUC (which
+    the migration wrote for "server-side code and tests" a year before there
+    were any tests), and `auth.jwt()` is a stub whose only job is to return
+    claims. The stub now returns whatever the session put in `app.test_jwt`,
+    which is what lets a test be a particular signed-in person. So the suite
+    exercises the real policies with supplied inputs, and the day a real
+    Supabase project exists the same assertions should be re-run through it —
+    what would be new then is GoTrue and PostgREST, not the rules.
+
+86. **The suite proves it can fail before it is trusted.** A green access-control
+    suite is worthless unless something makes it red, so both policies were
+    deliberately weakened and the run watched. Opening the corporate policy from
+    `brand_id = app.corporate_brand()` to `app.corporate_brand() is not null`
+    tripped 2 checks; opening `requests_token_read` to `using (true)` tripped 8.
+    Then both were restored. A suite that has never been seen to fail is a suite
+    nobody has tested.
+
+87. **The shape checks were giving false assurance, and this is how we found
+    out.** With `requests_token_read` opened to `using (true)` — every request in
+    the database readable by anybody presenting nothing — the schema phase still
+    printed `ok  anon reaches requests only through a token policy`. It asked
+    whether *some* policy on `requests` mentioned `app.access_token`, and the
+    sibling UPDATE policy did, so `.some()` was satisfied while the SELECT policy
+    was wide open. It now asks whether **every** anon policy names a credential,
+    and is renamed to say so. The lesson generalises: a check written as "does
+    the safe thing exist?" passes for as long as the safe thing exists *beside*
+    the unsafe one.
+
+88. **Two of everything, and the ids captured while seeding.** A single brand can
+    only prove a token reads its own row; proving it reads nothing else needs a
+    second brand, a second location and a second franchisee. The first draft of
+    the cross-brand checks identified "Beta's rows" by joining `brands` — which
+    is precisely what anon is forbidden to do, so they failed with `permission
+    denied for table brands` rather than with an answer. The fixture now captures
+    the brand id as the owner and the checks filter on `brand_id` directly. A
+    test that trips over the thing it is testing reports the wrong result.
+
+89. **The suite gets its own database.** The schema phase mutates rows and the
+    storyline phase drives a request to `completed`. "Can this credential see
+    that row" is not a question worth asking about someone else's leftovers, so
+    `runRlsChecks` builds a second throwaway instance from the same migrations
+    (`scripts/pglite-harness.ts`, extracted for the purpose) and seeds a fixture
+    it fully controls.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

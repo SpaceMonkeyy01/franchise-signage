@@ -7,33 +7,25 @@
 // compiled to WASM, so a migration that applies here is valid SQL against the
 // same engine version family Supabase runs.
 //
-// What it does NOT cover: the Supabase platform pieces PGlite has no notion of —
-// the real `auth` schema, GoTrue, Storage, and how PostgREST populates
-// `request.headers`. Those are stubbed below, so RLS policies are checked for
-// validity, not for behaviour. Behavioural RLS tests belong in an integration
-// suite once Docker is available.
-
-import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+// Three phases, in order of what they can prove:
+//
+//   1. SHAPE     — tables, columns, constraints, and the policies' existence.
+//   2. STORYLINE — the demo's own path through the invariants, as data.
+//   3. BEHAVIOUR — ./rls-behaviour.ts: whether the policies actually stop
+//                  anyone, run as the anon and authenticated roles rather than
+//                  as the owner. This used to be described here as needing
+//                  Docker. It does not: PGlite has real roles, and RLS is
+//                  enforced against a role that does not own the table.
+//
+// What is still NOT covered: GoTrue and PostgREST themselves. Nothing here
+// mints a real JWT or forwards a real `x-access-token` header — those are
+// inputs to the policies, supplied directly by the tests, and the day a real
+// Supabase project exists the same assertions should be re-run through it.
 
 import { PGlite } from '@electric-sql/pglite';
-// Supabase ships pgcrypto enabled; PGlite needs it loaded explicitly. The
-// migrations use it for requests.access_token defaults (gen_random_bytes).
-import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 
-const MIGRATIONS_DIR = join(__dirname, '..', 'supabase', 'migrations');
-
-// Supabase provides these; PGlite does not.
-const PLATFORM_STUB = `
-  create role anon;
-  create role authenticated;
-  create role service_role;
-  create schema if not exists auth;
-  -- Real Supabase reads the verified JWT. The stub returns an empty claim set,
-  -- which is enough for the policy expressions to type-check.
-  create or replace function auth.jwt() returns jsonb
-    language sql stable as $$ select '{}'::jsonb $$;
-`;
+import { freshDatabase } from './pglite-harness';
+import { runRlsChecks } from './rls-behaviour';
 
 interface Check {
   label: string;
@@ -118,16 +110,27 @@ const checks: Check[] = [
       rows.length === 0 ? 'all enabled' : `missing on: ${rows.map((r) => r.relname).join(', ')}`,
   },
   {
-    label: 'anon reaches requests only through a token policy',
+    // EVERY anon policy, not merely one of them. This check used to ask whether
+    // *a* token policy existed, which stayed green while `requests_token_read`
+    // was opened to `using (true)` — the sibling update policy still mentioned
+    // the token, and `.some()` was satisfied. The behavioural suite caught that;
+    // this now catches it too, one phase earlier.
+    label: 'every anon policy on requests names a credential',
     sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr
           from pg_policy p join pg_class c on c.oid = p.polrelid
           where c.relname = 'requests'`,
-    expect: (rows) =>
-      rows.some(
-        (r) =>
-          String(r.polname).includes('token') && String(r.using_expr).includes('app.access_token'),
-      ),
-    describe: (rows) => rows.map((r) => r.polname).join(', '),
+    expect: (rows) => {
+      const anon = rows.filter((r) => !String(r.polname).startsWith('team'));
+      return (
+        anon.length > 0 &&
+        anon.every(
+          (r) =>
+            String(r.using_expr).includes('app.access_token') ||
+            String(r.using_expr).includes('app.corporate_brand'),
+        )
+      );
+    },
+    describe: (rows) => rows.map((r) => `${r.polname}: ${r.using_expr}`).join(' | '),
   },
   {
     // SPEC §8d level 1. The DID migration locked this table to anon outright;
@@ -397,22 +400,7 @@ async function smokeTest(db: PGlite): Promise<string[]> {
 }
 
 async function main() {
-  const db = new PGlite({ extensions: { pgcrypto } });
-  await db.exec(PLATFORM_STUB);
-
-  const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
-  if (files.length === 0) throw new Error('No migrations found');
-
-  for (const file of files) {
-    const sql = readFileSync(join(MIGRATIONS_DIR, file), 'utf8');
-    try {
-      await db.exec(sql);
-      console.log(`  applied  ${file}`);
-    } catch (error) {
-      console.error(`  FAILED   ${file}`);
-      throw error;
-    }
-  }
+  const { db, applied } = await freshDatabase({ log: true });
 
   console.log('');
   let failures = 0;
@@ -433,13 +421,25 @@ async function main() {
 
   await db.close();
 
-  const total = failures + smokeFailures.length;
+  // Phase 3 runs against its own database — see runRlsChecks.
+  console.log('\n  SPEC §10 — what each credential can actually reach\n');
+  const rlsResults = await runRlsChecks();
+  let rlsFailures = 0;
+  for (const result of rlsResults) {
+    if (result.failure) rlsFailures += 1;
+    console.log(`  ${result.failure ? 'FAIL' : 'ok  '}  ${result.label}`);
+    if (result.failure) console.log(`          got: ${result.failure}`);
+  }
+
+  const total = failures + smokeFailures.length + rlsFailures;
   if (total > 0) {
     console.error(`\n${total} schema check(s) failed.`);
     process.exitCode = 1;
   } else {
     console.log(
-      `\n${files.length} migrations applied, ${checks.length + 1} checks passed.`,
+      `\n${applied.length} migrations applied, ` +
+        `${checks.length + 1 + rlsResults.length} checks passed ` +
+        `(${rlsResults.length} of them behavioural).`,
     );
   }
 }

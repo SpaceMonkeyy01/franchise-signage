@@ -1,9 +1,17 @@
 # Where the build is
 
-Last updated: 25 Aug 2026. **Session 6 is complete.** Every interface SPEC §9
-lists for MVP now exists except Design Studio (Session 7, still blocked on the
-integration decisions) and the DID generator (Session 8, still blocked on the
-v13 flow demo). All five participants can be demonstrated end to end.
+Last updated: 25 Aug 2026. **Session 6 is complete, and the RLS gap is closed.**
+Every interface SPEC §9 lists for MVP now exists except Design Studio (Session 7,
+still blocked on the integration decisions) and the DID generator (Session 8,
+still blocked on the v13 flow demo). All five participants can be demonstrated
+end to end.
+
+**The policies are now tested as behaviour, not just as valid SQL.** That had
+been recorded as the largest untested assumption in the build since Session 1,
+on the understanding that testing it needed Docker or a Supabase project. It
+did not — PGlite has real roles, and RLS is enforced against any role that does
+not own the table. `npm run db:verify` now runs 20 behavioural checks as `anon`
+and `authenticated` (DECISIONS #84–89).
 
 ## Session 6 — the corporate dashboard, and a hardening pass
 
@@ -79,10 +87,11 @@ Neither can start on what is in the repo today:
 
 **What could be done meanwhile**, in rough order of value:
 
-1. **A Supabase project**, which would unblock the four largest untested
-   assumptions at once: the RLS behaviour tests, the Auth path, the Storage
-   driver, and the seed against a real database. This is the biggest gap in the
-   build and has been since Session 1.
+1. **A Supabase project**, which would unblock what is left of the untested
+   assumptions: the Auth path, the Storage driver, the seed against a real
+   database, and re-running the RLS suite through GoTrue and PostgREST rather
+   than through supplied inputs. Still the biggest gap, though a smaller one
+   than it was this morning.
 2. **A real Resend key**, so that the mail path runs once against a provider
    rather than an outbox.
 3. **The `/dev` outbox's future** — Session 4 left it as "keep it if it earns
@@ -260,7 +269,7 @@ login, not a login (see below).
 | `npm run smoke` | drive the real flows in a browser — 165 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 113 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 19 schema checks |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres — 39 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
@@ -383,21 +392,30 @@ and real uploads behind `src/lib/storage/`.
 - `error.tsx`, `global-error.tsx`, `not-found.tsx`, and one `loading.tsx`.
 - `docs/QA.md`, and a production build that succeeds for the first time.
 
+**Session 6a — the RLS behaviour tests** (SPEC §10):
+
+- `scripts/pglite-harness.ts`, extracted so two suites can each have their own
+  throwaway database from the same migrations.
+- `scripts/rls-behaviour.ts`: 20 checks as `anon` and `authenticated` against a
+  two-brand fixture, covering the franchisee token, the corporate link, and the
+  team allowlist. Proven to go red by deliberately weakening two policies.
+- A schema check that had been passing while the policy it guarded was wide
+  open, found by exactly that exercise and tightened (#87).
+
 ---
 
 ## Owed, and worth clearing early
 
-- **No behavioural RLS tests.** The policies are verified as valid SQL, never as
-  behaviour: the dev database connects as the table owner, so RLS is present but
-  never consulted. Token scoping rests on the WHERE clauses in
-  `src/lib/db/queries.ts` and the ownership checks in each server action.
-  **The first time a real Supabase project exists, test that anon cannot read
-  another location's rows** — and, since Session 6, that a corporate link cannot
-  read another BRAND's. Still the largest untested assumption in the build.
-  `app.corporate_brand()` is a second anon-reachable predicate, and the only
-  thing standing between one franchisor's link and another franchisor's program.
-  The read-only half of that claim IS tested (`verify-schema` refuses any
-  non-SELECT policy scoped by it); the brand-scoping half is not.
+- **~~No behavioural RLS tests.~~ Closed.** `scripts/rls-behaviour.ts` runs 20
+  checks as the `anon` and `authenticated` roles against a two-brand fixture:
+  a franchisee's token reaches their own request and nothing else, a corporate
+  link reaches one brand's program and cannot write to any of it, expired and
+  revoked links open nothing, and a deactivated team member is locked out at
+  once. Both policies were deliberately weakened to confirm the suite goes red
+  (#86). What is still missing is **GoTrue and PostgREST themselves** — nothing
+  here mints a real JWT or forwards a real `x-access-token` header, so the tests
+  supply both directly. Re-run the same assertions through a real project when
+  one exists; what will be new then is the plumbing, not the rules.
 - **No mail has ever actually been sent.** The Resend path in
   `src/lib/email/send.ts` is written and unexercised; everything so far has gone
   to the outbox. The templates, links, triggers and SLA around it are exercised

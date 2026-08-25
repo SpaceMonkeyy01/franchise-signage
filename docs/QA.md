@@ -6,7 +6,7 @@ document and email the program produces along the way. Run it before showing the
 product to anyone, and after any change that touches status, routing, or mail.
 
 **Time:** about 25 minutes end to end. **Automated equivalent:** `npm run smoke`
-(164 checks) covers most assertions but sees none of the layout, copy, or
+(165 checks) covers most assertions but sees none of the layout, copy, or
 timing — which is exactly what this pass is for.
 
 ---
@@ -197,10 +197,13 @@ Corporate registers a franchisee at agreement signing. This is the front door.
 Each of these is a known gap, not an oversight — `docs/STATE.md` keeps the
 current list:
 
-- **RLS is never exercised.** The dev database connects as the table owner, so
-  policies are present but never consulted. Token scoping rests on the WHERE
-  clauses in `src/lib/db/queries.ts`. The first real Supabase project must test
-  that anon cannot read another location's rows.
+- **RLS is exercised, but not through Supabase's own plumbing.** The dev
+  database connects as the table owner, so nothing you click above consults a
+  policy. `npm run db:verify` does: 20 behavioural checks run as the `anon` and
+  `authenticated` roles and ask whether one credential can reach what belongs to
+  another. What they cannot exercise is GoTrue and PostgREST — no real JWT is
+  minted and no real `x-access-token` header is forwarded, so the tests supply
+  both directly. Re-run them through a real project when one exists.
 - **No mail has ever been delivered.** Everything above goes to the outbox.
 - **The Supabase Auth path has never run**, and neither has the seed against a
   real project.
