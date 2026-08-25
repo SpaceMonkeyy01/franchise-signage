@@ -13,6 +13,12 @@ did not — PGlite has real roles, and RLS is enforced against any role that doe
 not own the table. `npm run db:verify` now runs 20 behavioural checks as `anon`
 and `authenticated` (DECISIONS #84–89).
 
+**And the Supabase path is now runnable rather than described.** The Storage
+driver is written, `npm run migrate` applies the schema to a real Postgres (the
+one thing no path could do before), and `docs/SUPABASE.md` turns the four
+written-and-never-run items into a 30-minute checklist with the exact commands
+(#90–96).
+
 ## Session 6 — the corporate dashboard, and a hardening pass
 
 **The dashboard** (SPEC §9 interface 6) lives at `/{brand_slug}/corporate/{token}`,
@@ -271,6 +277,7 @@ login, not a login (see below).
 | `npm test` | 113 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres — 39 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
+| `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
@@ -402,6 +409,17 @@ and real uploads behind `src/lib/storage/`.
 - A schema check that had been passing while the policy it guarded was wide
   open, found by exactly that exercise and tightened (#87).
 
+**Session 6b — the Supabase path** (SPEC §5.5, §10):
+
+- The Supabase Storage driver, private bucket, service role, reads still through
+  `/api/files`. Nine tests against a stubbed bucket pin the three failures that
+  would otherwise be silent, and were checked by breaking the error mapping.
+- `scripts/migrate.ts` and `npm run migrate`: a ledger table, one transaction per
+  file, and a refusal to guess at a database whose schema arrived another way.
+  Tested against a bare Postgres carrying only what Supabase supplies — 11
+  applied, re-run clean, `npm run seed` then ran against it.
+- `docs/SUPABASE.md`: the runbook for the four things written and never run.
+
 ---
 
 ## Owed, and worth clearing early
@@ -424,9 +442,20 @@ and real uploads behind `src/lib/storage/`.
   cookie here; the magic-link send and session read in `src/lib/auth/team.ts` are
   written against an API nothing on this machine has called. The allowlist half —
   the part that actually decides access — is exercised by the smoke suite.
-- **The seed has never run against Supabase**, only against the dev database.
-- **The Supabase Storage driver is unwritten** — local disk only.
-- **`src/lib/supabase/clients.ts` and `src/lib/env.ts` are still unused.**
+- **The seed has never run against Supabase.** It HAS now run against a bare
+  Postgres carrying the roles and `auth.jwt()` that Supabase supplies, via
+  `npm run migrate` then `npm run seed` — so the SQL is exercised and what is
+  left untested is the service, not the statements.
+- **~~The Supabase Storage driver is unwritten.~~ Written, and unexercised
+  against a real bucket.** Its logic is covered by nine tests against a stub;
+  what no test can cover here is whether the bucket exists and the key works.
+  `docs/SUPABASE.md` step 4 is the ten-minute check.
+- **`src/lib/supabase/clients.ts` and `src/lib/env.ts` are still unused.** The
+  Storage driver deliberately did not adopt them: `serverEnv()` validates the
+  whole configuration at once, and storing a file must not require a Resend key
+  (#93). They stay written-for-later.
+
+All four are now steps in `docs/SUPABASE.md` rather than paragraphs here.
 
 ## Decisions waiting on you
 

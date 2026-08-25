@@ -59,6 +59,8 @@ dev-web.log
 
 # Uploaded files (the local stand-in for the Supabase Storage bucket)
 .storage/
+# The storage tests point LOCAL_STORAGE_DIR here rather than at the real one.
+.storage-test/
 
 # Throwaway screenshots from driving the app
 .tmp-shots/

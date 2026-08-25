@@ -817,6 +817,66 @@ throwaway UI over permanent rules.
     (`scripts/pglite-harness.ts`, extracted for the purpose) and seeds a fixture
     it fully controls.
 
+## Session 6b — the Supabase path, written down and made runnable
+
+90. **The Storage bucket is private, and reads keep going through
+    `/api/files`.** A public bucket would have been one line less code and would
+    have turned every stored path into a permanent anonymous URL — for a
+    photograph of a franchisee's building, and for the lease exhibit sitting
+    beside it in the same table. The driver reads through the service role
+    instead, and `fileUrl()` still points at the app's own route, which is the
+    one place a rule can be added later. Signed URLs remain available as a
+    change to a single file, which is what that route's header promised in
+    Session 2.
+
+91. **No fallback in either direction.** Setting `SUPABASE_STORAGE_BUCKET`
+    selects Supabase; unsetting it selects local disk; neither silently
+    substitutes the other. That was already true when the Supabase branch was a
+    deliberate `throw`, and it stays true now that the branch works: a
+    deployment whose bucket name is wrong must fail loudly rather than write a
+    lease exhibit to a container filesystem that the next deploy discards.
+
+92. **An upload Storage refused must never return quietly.** `putUpload` returns
+    a `storagePath` and the `request_files` row is written from it afterwards, so
+    a swallowed error is a photo the franchisee believes they sent and nobody can
+    open. Similarly, a broken bucket must NOT read as a missing object: a 404
+    becomes `null` (which `/api/files` turns into a 404), and every other error
+    throws. Both states end in an empty page and only one of them is our mistake.
+    Pinned in `src/lib/storage/__tests__/supabase-driver.test.ts`, which was then
+    checked by breaking the error mapping and watching the right test go red.
+
+93. **The driver reads its two variables directly, not through `serverEnv()`.**
+    That validator demands the whole configuration at once, Resend key included.
+    Storing a file must not require a mail provider to be configured, and a
+    validator that insisted would make this throw for the wrong reason — the
+    same argument `src/lib/email/sender.ts` already makes for rendering an email
+    into the outbox.
+
+94. **`npm run migrate` exists, because nothing could apply migrations to a real
+    database.** The dev server applies them to `.pglite/` and `db:verify`
+    applies them to a throwaway; a Supabase project could only be built by
+    installing and linking the Supabase CLI. "Point `DATABASE_URL` at Supabase
+    and the same SQL runs there" has been in the seed's header since Session 1
+    and was not actually reachable. It is now: a ledger table, one transaction
+    per file, and the whole thing tested against a bare Postgres carrying only
+    the roles and `auth.jwt()` that Supabase supplies — 11 applied, re-run
+    reports nothing to do, and `npm run seed` then runs against it.
+
+95. **A schema with no ledger is refused, not attempted.** Pointed at the dev
+    database — which applied its own migrations and never recorded them — the
+    runner cannot tell what still needs applying, and re-running migration 1
+    against existing types produces a rollback and an error that explains
+    nothing. It now says what happened and offers `--baseline`, which records
+    the history without executing it.
+
+96. **`docs/SUPABASE.md` is a runbook, not a description.** The four things
+    written-and-never-run — the seed against a real project, the Auth path,
+    Resend, and RLS through PostgREST — were each recorded as an owed item in
+    prose, which is how they stayed owed for five sessions. They are now numbered
+    steps with the exact commands, including the two `curl` calls that prove RLS
+    is being applied by the platform rather than by our WHERE clauses, and the
+    deactivate-a-team-member check that proves the allowlist half of `/admin`.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

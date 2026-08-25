@@ -1,7 +1,7 @@
 // File storage behind one interface.
 //
 // SPEC §5.5 stores files as a `storage_path` inside a Supabase Storage bucket.
-// There is no Supabase project on this machine yet (docs/STATE.md), so the dev
+// There is no Supabase project on this machine (docs/STATE.md), so the dev
 // driver writes the same paths to the local filesystem. Nothing above this file
 // knows which driver it is talking to: a request_files row is a path either way,
 // and switching is a matter of setting SUPABASE_STORAGE_BUCKET.
@@ -13,6 +13,11 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/** Only the storage half of the client is used here. */
+type SupabaseStorageClient = Pick<SupabaseClient, 'storage'>;
 
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -88,17 +93,118 @@ interface StorageDriver {
   get(storagePath: string): Promise<{ body: Buffer; contentType: string } | null>;
 }
 
+/**
+ * Which driver is in play, and why it is never guessed.
+ *
+ * Setting SUPABASE_STORAGE_BUCKET selects Supabase; unsetting it selects local
+ * disk. There is no fallback in either direction, and that is deliberate: a
+ * deployment whose bucket is misconfigured must fail loudly rather than write a
+ * franchisee's site photo to a container filesystem that is discarded on the
+ * next deploy. Losing a lease exhibit silently is worse than not booting.
+ */
 function driver(): StorageDriver {
-  if (process.env.SUPABASE_STORAGE_BUCKET) {
-    // Deliberately a hard failure rather than a silent fallback to local disk:
-    // files written to a container's filesystem in production are lost, and
-    // losing a franchisee's site photo silently is worse than not booting.
+  return process.env.SUPABASE_STORAGE_BUCKET ? supabaseDriver : localDriver;
+}
+
+/**
+ * Supabase Storage, through the service role.
+ *
+ * Service role rather than the anon key, and the bucket is PRIVATE. The
+ * alternative — a public bucket — would make every stored path a permanent
+ * anonymous URL for a photograph of a franchisee's building and, worse, for the
+ * lease exhibit that sits beside it in the same table. Reads therefore keep
+ * going through /api/files, which is the one place that can be given a rule
+ * later; see that route's header.
+ *
+ * Authorization happens above this layer, as it does for every other
+ * service-role caller in the build (src/lib/supabase/clients.ts): by the time a
+ * put() runs, a server action has already resolved the token that permits it.
+ */
+const supabaseDriver: StorageDriver = {
+  async put(storagePath, body, contentType) {
+    const { client, bucket } = await storageClient();
+    const { error } = await client.storage.from(bucket).upload(storagePath, body, {
+      contentType,
+      // The path carries a fresh UUID, so a collision means something is wrong
+      // rather than something is being replaced. Overwriting silently is how a
+      // photo goes missing without an error anywhere.
+      upsert: false,
+    });
+    if (error) {
+      throw new Error(`Supabase Storage refused the upload: ${error.message}`);
+    }
+  },
+
+  async get(storagePath) {
+    const { client, bucket } = await storageClient();
+    const { data, error } = await client.storage.from(bucket).download(storagePath);
+    // A missing object and a broken bucket are different answers: null means
+    // "no such file", which /api/files turns into a 404, and anything else
+    // should surface rather than be reported as a missing photo.
+    if (error) {
+      if (isNotFound(error)) return null;
+      throw new Error(`Supabase Storage could not read ${storagePath}: ${error.message}`);
+    }
+    if (!data) return null;
+
+    return {
+      body: Buffer.from(await data.arrayBuffer()),
+      // The bucket echoes what put() stored; the extension is the fallback, and
+      // agrees with it because both come from the same allowlist.
+      contentType: data.type || contentTypeFor(storagePath),
+    };
+  },
+};
+
+/**
+ * The storage client, built once.
+ *
+ * Imported dynamically so that a local-disk deployment never loads
+ * supabase-js at all, the same way src/lib/email/send.ts defers Resend.
+ *
+ * It reads the two variables it needs directly rather than through
+ * `serverEnv()`, which validates the whole configuration at once: storing a
+ * file must not require a Resend key to be present, and a validator that
+ * demands one would make this throw for the wrong reason.
+ */
+let cachedStorage: { client: SupabaseStorageClient; bucket: string } | null = null;
+
+async function storageClient(): Promise<{ client: SupabaseStorageClient; bucket: string }> {
+  if (cachedStorage) return cachedStorage;
+
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const missing = [
+    !bucket && 'SUPABASE_STORAGE_BUCKET',
+    !url && 'NEXT_PUBLIC_SUPABASE_URL',
+    !serviceRole && 'SUPABASE_SERVICE_ROLE_KEY',
+  ].filter(Boolean);
+  if (missing.length > 0) {
     throw new Error(
-      'SUPABASE_STORAGE_BUCKET is set but the Supabase Storage driver is not built yet ' +
-        '(docs/STATE.md). Unset it to use local file storage.',
+      `Supabase Storage is selected but ${missing.join(' and ')} ${
+        missing.length === 1 ? 'is' : 'are'
+      } not set. Unset SUPABASE_STORAGE_BUCKET to use local file storage instead.`,
     );
   }
-  return localDriver;
+
+  const { createClient } = await import('@supabase/supabase-js');
+  cachedStorage = {
+    client: createClient(url!, serviceRole!, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    }),
+    bucket: bucket!,
+  };
+  return cachedStorage;
+}
+
+/** Storage reports a missing object as a 404 rather than as a typed error. */
+function isNotFound(error: { message: string; status?: number }): boolean {
+  return (
+    error.status === 404 ||
+    /not[_ ]?found/i.test(error.message) ||
+    /does not exist/i.test(error.message)
+  );
 }
 
 /**

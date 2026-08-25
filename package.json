@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "db:verify": "tsx scripts/verify-schema.ts",
+    "migrate": "tsx scripts/migrate.ts",
     "seed": "tsx scripts/seed.ts",
     "dev:db": "tsx scripts/dev-db-server.ts",
     "dev:web": "next dev",
