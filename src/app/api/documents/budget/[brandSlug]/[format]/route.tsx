@@ -1,13 +1,19 @@
 // The budget one-pager download (SPEC §8b).
 //
-// Gated on the team allowlist rather than opened up. SPEC §8b offers "a public
-// brand-page download if trivial", and the sheet holds nothing about any
-// franchisee — but it does hold a brand's whole standard-package price list,
-// and publishing a franchisor's pricing is their call to make, not ours to
-// assume. The spec's actual trigger is corporate, whose dashboard is Session 6;
-// until it exists the team exports on their behalf, and opening this route up
-// is a one-line change once a brand says yes.
+// Two callers, one document. SPEC §8b offers "a public brand-page download if
+// trivial", and the sheet holds nothing about any franchisee — but it does hold
+// a brand's whole standard-package price list, and publishing a franchisor's
+// pricing is their call to make, not ours to assume (DECISIONS #44). So it
+// stays behind a credential, and there are now two that count:
+//
+//   · the team allowlist, for exporting on a brand's behalf;
+//   · a corporate dashboard token for THIS brand — §8b's actual actor, whose
+//     dashboard arrived in Session 6.
+//
+// The token is checked against the brand in the URL, so one franchisor's link
+// cannot fetch another's price list.
 
+import { corporateSession } from '@/lib/corporate/session';
 import { getBrandBySlug, getPackageForFormat } from '@/lib/db/queries';
 import { getTeamMember } from '@/lib/auth/team';
 import { BudgetOnePager } from '@/lib/pdf/budget-one-pager';
@@ -21,14 +27,13 @@ function isFormat(value: string): value is LocationFormat {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ brandSlug: string; format: string }> },
 ) {
-  const member = await getTeamMember();
-  if (!member) return new Response('Not found', { status: 404 });
-
   const { brandSlug, format } = await params;
   if (!isFormat(format)) return new Response('Unknown location format', { status: 400 });
+
+  if (!(await mayExport(request, brandSlug))) return new Response('Not found', { status: 404 });
 
   const brand = await getBrandBySlug(brandSlug);
   if (!brand) return new Response('Not found', { status: 404 });
@@ -57,4 +62,21 @@ export async function GET(
       'content-disposition': `attachment; filename="${filename}"`,
     },
   });
+}
+
+/**
+ * Either credential will do, and neither is inferred from the other.
+ *
+ * A team member may export any brand's sheet — that is what the allowlist means
+ * (see the RLS header: membership IS the scope). A corporate token may export
+ * exactly one brand's, and `corporateSession` is what enforces the match.
+ */
+async function mayExport(request: Request, brandSlug: string): Promise<boolean> {
+  if (await getTeamMember()) return true;
+
+  const token = new URL(request.url).searchParams.get('token');
+  if (!token) return false;
+
+  const session = await corporateSession(brandSlug, token);
+  return session.ok;
 }

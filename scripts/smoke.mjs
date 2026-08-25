@@ -30,6 +30,10 @@ const SMOKE_LOCATION = 'Freshbites — Smoke Test';
 
 /** The §8d registration the welcome section creates, and then removes. */
 const SMOKE_REGISTRATION = 'smoke.franchisee@freshbites.test';
+/** Registered from the corporate dashboard rather than the team queue (§8d). */
+const SMOKE_CORPORATE_REGISTRATION = 'smoke.corporate@freshbites.test';
+/** The brand's configured reviewer address — the only kind that may hold a link. */
+const BRAND_REVIEWER = 'brand@freshbites.com';
 
 /** A 1×1 PNG — the smallest thing that exercises the real upload path. */
 const PIXEL_PNG = Buffer.from(
@@ -191,10 +195,17 @@ async function removeSmokeArtifacts(codes = []) {
       // §8d: the registration and the welcome email it sent. `sent_emails` goes
       // too — it has no request_id to cascade from, so it would otherwise pile
       // up one row per run in the outbox the team reads.
-      await client.query(`delete from franchisee_registrations where email = $1`, [
-        SMOKE_REGISTRATION,
+      await client.query(`delete from franchisee_registrations where email = any($1)`, [
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
       ]);
-      await client.query(`delete from sent_emails where to_email = $1`, [SMOKE_REGISTRATION]);
+      await client.query(`delete from sent_emails where to_email = any($1)`, [
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+      ]);
+      // §9 interface 6: the dashboard links this run minted, and the mail that
+      // carried them. Both would otherwise accumulate one per run against a
+      // real address in the outbox the team reads.
+      await client.query(`delete from corporate_links where email = $1`, [BRAND_REVIEWER]);
+      await client.query(`delete from sent_emails where kind = 'corporate_dashboard_link'`);
     } finally {
       await client.query(`alter table request_events enable trigger request_events_append_only`);
     }
@@ -1267,6 +1278,260 @@ record(
   're-sending the welcome keeps the link that is already in their inbox',
   afterResend?.access_token === registration?.access_token && Number(afterResend?.sent) === 2,
   `${afterResend?.sent} sent, token unchanged`,
+);
+
+// --------------------------------------------- the corporate dashboard (§9.6)
+// SPEC §10 gives corporate one sentence — "magic link" — so the checks here are
+// about what that link is allowed to be: brand-wide, read-only, and impossible
+// to obtain by typing someone else's address into a public form.
+
+await page.goto(`${BASE}/freshbites/corporate`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=Signage program dashboard', 'the corporate entry page loads');
+
+// An address nobody configured. The page must say exactly what it says to a
+// real reviewer — otherwise the form enumerates a franchisor's staff.
+await page.locator('#corporate-email').fill('stranger@example.com');
+await page.getByRole('button', { name: /Email me a link/i }).click();
+await expectVisible(page, 'text=Check stranger@example.com', 'an unknown address is acknowledged');
+const strangerLinks = await withDb(async (client) =>
+  Number(
+    (
+      await client.query(`select count(*) as n from corporate_links where email = $1`, [
+        'stranger@example.com',
+      ])
+    ).rows[0].n,
+  ),
+);
+record('but no link is minted for it', strangerLinks === 0, `${strangerLinks} links`);
+
+await page.getByRole('button', { name: /Try another address/i }).click();
+await page.locator('#corporate-email').fill(BRAND_REVIEWER);
+await page.getByRole('button', { name: /Email me a link/i }).click();
+await expectVisible(page, `text=Check ${BRAND_REVIEWER}`, 'and so is the brand reviewer');
+
+const dashboardMail = await withDb(async (client) =>
+  (
+    await client.query(
+      `select to_email, request_id, html from sent_emails
+        where kind = 'corporate_dashboard_link' order by created_at desc limit 1`,
+    )
+  ).rows[0],
+);
+record(
+  'the dashboard link goes to the address configured on the brand',
+  dashboardMail?.to_email === BRAND_REVIEWER,
+  dashboardMail?.to_email ?? 'nothing was sent',
+);
+const dashboardHref = (dashboardMail?.html ?? '').match(/href="([^"]*\/corporate\/[^"]*)"/)?.[1];
+record(
+  'and the email carries it as the whole credential',
+  Boolean(dashboardHref),
+  dashboardHref ? `${dashboardHref.slice(0, 48)}…` : 'no link in the message',
+);
+// Hashed at rest for the same reason a reviewer's token is: a database dump
+// must not be a set of working credentials.
+const storedToken = await withDb(async (client) =>
+  (
+    await client.query(
+      `select token_hash from corporate_links where email = $1 order by created_at desc limit 1`,
+      [BRAND_REVIEWER],
+    )
+  ).rows[0]?.token_hash,
+);
+record(
+  'the token is stored hashed, never in the clear',
+  Boolean(storedToken) && !dashboardHref?.includes(storedToken),
+  `${String(storedToken).slice(0, 12)}…`,
+);
+
+await page.goto(dashboardHref, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=Brand control across all locations', 'the link opens the dashboard');
+
+// The metrics are the franchisor's whole read of the program, so they are
+// checked against the database rather than against themselves.
+const portfolio = await withDb(async (client) =>
+  (
+    await client.query(
+      `select
+         (select count(*) from locations where brand_id = b.id) as locations,
+         (select count(*) from installed_signs s join locations l on l.id = s.location_id
+           where l.brand_id = b.id) as installed,
+         (select count(*) from requests where brand_id = b.id and status <> 'completed') as open,
+         (select count(*) from line_items li join requests r on r.id = li.request_id
+           where r.brand_id = b.id and li.item_status = 'pending_review') as pending
+       from brands b where b.slug = 'freshbites'`,
+    )
+  ).rows[0],
+);
+const tiles = await page.locator('main .grid > div').allInnerTexts();
+const tileFor = (label) => tiles.find((text) => text.includes(label))?.split('\n')[0];
+record(
+  'the metrics row counts what the database holds',
+  tileFor('Locations') === String(portfolio.locations) &&
+    tileFor('Installed signs') === String(portfolio.installed) &&
+    tileFor('Open requests') === String(portfolio.open) &&
+    tileFor('Awaiting approval') === String(portfolio.pending),
+  `${portfolio.locations} loc · ${portfolio.installed} signs · ${portfolio.open} open · ${portfolio.pending} pending`,
+);
+// Per PACKAGE, not per request (SPEC §6 as amended): a split request has one
+// accepted half and one still open, and the request-level number is either
+// double or nothing.
+const committed = await withDb(async (client) =>
+  (
+    await client.query(
+      `select coalesce(sum(q.priced_total), 0) as total from quotes q
+         join requests r on r.id = q.request_id
+        where r.brand_id = (select id from brands where slug = 'freshbites')
+          and q.accepted_at is not null`,
+    )
+  ).rows[0].total,
+);
+const committedLabel = `$${Math.round(Number(committed)).toLocaleString('en-US')}`;
+record(
+  'program spend is the accepted packages, priced per package',
+  tileFor('Program spend') === committedLabel,
+  `${tileFor('Program spend')} vs ${committedLabel}`,
+);
+
+// The §8b sheet and the §8d registration, in the hands of the actor SPEC names
+// for them — they lived on /admin only because corporate had nowhere to stand.
+const [corporatePdf] = await Promise.all([
+  page.waitForEvent('download', { timeout: TIMEOUT }),
+  page.locator('a[href^="/api/documents/budget/"]').first().click(),
+]);
+const corporateBytes = await corporatePdf.createReadStream().then(async (stream) => {
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  return Buffer.concat(chunks);
+});
+record(
+  'the budget sheet downloads on the dashboard link, with no team login',
+  corporateBytes.subarray(0, 5).toString() === '%PDF-' && corporateBytes.length > 1000,
+  `${corporatePdf.suggestedFilename()} · ${corporateBytes.length} bytes`,
+);
+
+const corporateRegistrations = page.locator('section:has(h2:text-is("Franchisee registrations"))');
+await corporateRegistrations.locator('input[type="email"]').fill(SMOKE_CORPORATE_REGISTRATION);
+await corporateRegistrations.getByRole('button', { name: /Register/i }).click();
+await expectVisible(
+  page,
+  `section:has(h2:text-is("Franchisee registrations")) >> text=${SMOKE_CORPORATE_REGISTRATION}`,
+  'corporate can register a franchisee themselves',
+);
+const corporateRow = await withDb(async (client) =>
+  (
+    await client.query(
+      `select registered_by,
+              (select count(*) from sent_emails where to_email = $1 and kind = 'welcome') as sent
+         from franchisee_registrations where email = $1`,
+      [SMOKE_CORPORATE_REGISTRATION],
+    )
+  ).rows[0],
+);
+// The whole difference from the team's copy of this panel, and the point of
+// §8d: the record says who actually typed it (DECISIONS #61).
+record(
+  'and the record says corporate did it, not the team',
+  corporateRow?.registered_by === 'corporate' && Number(corporateRow?.sent) === 1,
+  `${corporateRow?.registered_by} · ${corporateRow?.sent} welcome sent`,
+);
+
+// The approvals view: everything the reviewer sees, and no way to decide from
+// it. A thirty-day multi-use bookmark must not be able to approve signage
+// (DECISIONS #75).
+await page.getByRole('link', { name: /^Approvals/ }).click();
+await page.waitForLoadState('networkidle');
+await expectVisible(
+  page,
+  'text=This is what your reviewer is looking at',
+  'the approvals view opens',
+);
+await expectCount(
+  page,
+  'main article',
+  Number(portfolio.pending),
+  'listing every item waiting on corporate',
+);
+const decideControls = await page
+  .locator(
+    'button:has-text("Approve"), button:has-text("Decline"), button:has-text("Request changes")',
+  )
+  .count();
+record(
+  'and offering no way to decide from a read-only link',
+  decideControls === 0,
+  `${decideControls} decision controls`,
+);
+
+// The one thing it can do about an approval: send the email again, to the
+// address already on the brand. Re-minting kills the previous link, which is
+// the existing rule for a re-review.
+const beforeResend = await withDb(async (client) =>
+  Number(
+    (await client.query(`select count(*) as n from sent_emails where kind = 'review_requested'`))
+      .rows[0].n,
+  ),
+);
+await page
+  .getByRole('button', { name: /Send the approval email again/i })
+  .first()
+  .click();
+await expectVisible(
+  page,
+  'text=The new message replaces the previous link',
+  'it can re-send the approval email',
+);
+const afterResendApproval = await withDb(async (client) =>
+  (
+    await client.query(
+      `select count(*) as n,
+              (select to_email from sent_emails where kind = 'review_requested'
+                order by created_at desc limit 1) as recipient
+         from sent_emails where kind = 'review_requested'`,
+    )
+  ).rows[0],
+);
+record(
+  'which goes to the brand reviewer and nobody else',
+  Number(afterResendApproval.n) === beforeResend + 1 &&
+    afterResendApproval.recipient === BRAND_REVIEWER,
+  `${afterResendApproval.n} sent, last to ${afterResendApproval.recipient}`,
+);
+
+// A dead link is the normal end of a bookmark's life, so it gets a page rather
+// than a 404 — and the page has to be able to say WHY.
+await withDb(async (client) =>
+  client.query(
+    `update corporate_links set expires_at = now() - interval '1 day' where email = $1`,
+    [BRAND_REVIEWER],
+  ),
+);
+await page.goto(dashboardHref, { waitUntil: 'networkidle' });
+await expectVisible(
+  page,
+  'text=That link has expired',
+  'an expired link says so, and offers a new one',
+);
+await expectCount(
+  page,
+  'text=Brand control across all locations',
+  0,
+  'and shows none of the program',
+);
+
+await page.goto(`${BASE}/freshbites/corporate/not-a-real-token`, { waitUntil: 'networkidle' });
+await expectVisible(page, "text=We can't open that link", 'an unknown token opens nothing');
+
+// The sheet is a brand's whole price list; the token is what gates it, and an
+// expired one is no longer a credential.
+const expiredSheet = await fetch(
+  `${BASE}/api/documents/budget/freshbites/inline?token=${dashboardHref.split('/').pop()}`,
+  { redirect: 'manual' },
+);
+record(
+  'and an expired link fetches no budget sheet either',
+  expiredSheet.status === 404,
+  `status ${expiredSheet.status}`,
 );
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));

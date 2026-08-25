@@ -30,12 +30,19 @@ export interface BrandPublic {
   vendor_policy: VendorPolicy;
   vendor_name: string | null;
   default_tat: string | null;
+  /**
+   * Whether routed packages copy corporate (SPEC §3.1). A policy fact, not an
+   * address — the franchisee is already told it in the routing note, and
+   * corporate's vendor-policy card states it back to them.
+   */
+  corporate_cc: boolean;
 }
 
 /** The co-branded entry page. Reads the view, never the row — no contact emails. */
 export function getBrandBySlug(slug: string): Promise<BrandPublic | null> {
   return maybeOne<BrandPublic>(
-    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat
+    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat,
+            corporate_cc
        from brands_public where slug = $1`,
     [slug],
   );
@@ -586,7 +593,8 @@ export async function getRegistrationByToken(
   // Through the public view, as every franchisee-facing screen does: a
   // registration must not become a way to read reviewer or vendor addresses.
   const brand = await maybeOne<BrandPublic>(
-    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat
+    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat,
+            corporate_cc
        from brands_public where id = $1`,
     [registration.brand_id],
   );
@@ -614,5 +622,196 @@ export function getRegistrations(): Promise<RegistrationWithBrand[]> {
        from franchisee_registrations f
        join brands b on b.id = f.brand_id
       order by f.created_at desc`,
+  );
+}
+
+// ------------------------------------------------------- corporate dashboard
+// SPEC §9 interface 6. Brand-wide and read-only: every query here is scoped by
+// brand_id, which is what the corporate link authorises, and none of them
+// returns a franchisee's access token — corporate oversees the program, they do
+// not act inside a franchisee's request.
+
+export interface PortfolioMetrics {
+  locations: number;
+  installedSigns: number;
+  openRequests: number;
+  /** Line items sitting in `pending_review` — the number the banner counts. */
+  pendingApprovals: number;
+  /**
+   * Money the program has committed: the priced total of every package the
+   * franchisee (internal tail) or the team (external) has accepted.
+   *
+   * Per PACKAGE, not per request (SPEC §6, amended v2.2) — a split request may
+   * have one accepted half and one still out for a number, and counting the
+   * request would either double it or lose it. Custom-quote items are excluded
+   * for the reason DECISIONS #45 gives: a total that quietly includes a guess
+   * at a pylon is the number someone plans against.
+   */
+  committedSpend: number;
+  /** Priced and delivered, not yet accepted. Context under the spend figure. */
+  quotedNotAccepted: number;
+  /** Accepted packages carrying items nobody has priced yet. */
+  customQuoteLines: number;
+}
+
+export interface PortfolioLocation {
+  id: string;
+  code: string;
+  name: string;
+  address: LocationAddress;
+  format: LocationFormat;
+  opening_date: string | null;
+  installed_count: number;
+  /** How many items the brand's standard package for this format holds. */
+  package_size: number;
+  /**
+   * Days until opening, negative once past — computed by the database.
+   *
+   * The card wants "opens in 12 days", which needs a now. Postgres has one and
+   * a rendering component should not: the clock is not a pure input, and the
+   * database's answer is the same one every other date on the page was derived
+   * from.
+   */
+  days_to_opening: number | null;
+  oldest_install: string | null;
+  open_requests: Array<{ id: string; code: string; status: RequestStatus; pending_count: number }>;
+}
+
+export interface Portfolio {
+  metrics: PortfolioMetrics;
+  locations: PortfolioLocation[];
+}
+
+const OPEN_REQUEST_SQL = `status <> 'completed'`;
+
+export async function getPortfolio(brandId: string): Promise<Portfolio> {
+  const [counts, spend, locations] = await Promise.all([
+    maybeOne<{
+      locations: string;
+      installed_signs: string;
+      open_requests: string;
+      pending_approvals: string;
+    }>(
+      `select
+         (select count(*) from locations where brand_id = $1) as locations,
+         (select count(*) from installed_signs s
+            join locations l on l.id = s.location_id
+           where l.brand_id = $1) as installed_signs,
+         (select count(*) from requests where brand_id = $1 and ${OPEN_REQUEST_SQL})
+           as open_requests,
+         (select count(*) from line_items li
+            join requests r on r.id = li.request_id
+           where r.brand_id = $1 and li.item_status = 'pending_review') as pending_approvals`,
+      [brandId],
+    ),
+    maybeOne<{ committed: string; quoted: string; custom_lines: string }>(
+      `select
+         coalesce(sum(q.priced_total) filter (where q.accepted_at is not null), 0) as committed,
+         coalesce(
+           sum(q.priced_total) filter (where q.accepted_at is null and q.delivered_at is not null),
+           0
+         ) as quoted,
+         coalesce(sum(q.manual_count) filter (where q.accepted_at is not null), 0) as custom_lines
+       from quotes q
+       join requests r on r.id = q.request_id
+      where r.brand_id = $1`,
+      [brandId],
+    ),
+    rows<Omit<PortfolioLocation, 'open_requests'>>(
+      `select l.id, l.code, l.name, l.address, l.format, l.opening_date,
+              (l.opening_date - current_date) as days_to_opening,
+              (select count(*) from installed_signs s where s.location_id = l.id)
+                as installed_count,
+              -- The package's own length, duplicates included: an endcap's two
+              -- elevations mean two sets of letters, and a "4 of 5 installed"
+              -- card that counted them once would read complete while a whole
+              -- elevation is bare (SPEC §3.2).
+              coalesce((
+                select jsonb_array_length(p.items) from brand_packages p
+                 where p.brand_id = l.brand_id and p.format = l.format
+              ), 0) as package_size,
+              (select min(s.installed_at)::text from installed_signs s where s.location_id = l.id)
+                as oldest_install
+         from locations l
+        where l.brand_id = $1
+        order by l.opening_date nulls last, l.name`,
+      [brandId],
+    ),
+  ]);
+
+  const open = await rows<{
+    id: string;
+    code: string;
+    status: RequestStatus;
+    location_id: string;
+    pending_count: string;
+  }>(
+    `select r.id, r.code, r.status, r.location_id,
+            (select count(*) from line_items li
+              where li.request_id = r.id and li.item_status = 'pending_review') as pending_count
+       from requests r
+      where r.brand_id = $1 and r.${OPEN_REQUEST_SQL}
+      order by r.created_at`,
+    [brandId],
+  );
+
+  return {
+    metrics: {
+      locations: Number(counts?.locations ?? 0),
+      installedSigns: Number(counts?.installed_signs ?? 0),
+      openRequests: Number(counts?.open_requests ?? 0),
+      pendingApprovals: Number(counts?.pending_approvals ?? 0),
+      committedSpend: Number(spend?.committed ?? 0),
+      quotedNotAccepted: Number(spend?.quoted ?? 0),
+      customQuoteLines: Number(spend?.custom_lines ?? 0),
+    },
+    locations: locations.map((location) => ({
+      ...location,
+      installed_count: Number(location.installed_count),
+      package_size: Number(location.package_size),
+      days_to_opening:
+        location.days_to_opening === null ? null : Number(location.days_to_opening),
+      open_requests: open
+        .filter((request) => request.location_id === location.id)
+        .map(({ id, code, status, pending_count }) => ({
+          id,
+          code,
+          status,
+          pending_count: Number(pending_count),
+        })),
+    })),
+  };
+}
+
+/**
+ * Every request with something waiting on corporate, oldest first.
+ *
+ * Returns ids only. The approvals view renders each through `getRequestById`,
+ * which is the same detail the reviewer's own page is built from — one shape of
+ * a line item across the whole product, rather than a second one that drifts.
+ */
+export async function getPendingApprovalRequestIds(brandId: string): Promise<string[]> {
+  const found = await rows<{ id: string }>(
+    `select r.id, min(r.submitted_at) as submitted
+       from requests r
+       join line_items li on li.request_id = r.id
+      where r.brand_id = $1 and li.item_status = 'pending_review'
+      group by r.id
+      order by submitted nulls last`,
+    [brandId],
+  );
+  return found.map((row) => row.id);
+}
+
+/** Level 1 for one brand (SPEC §8d) — corporate's own registrations. */
+export function getRegistrationsForBrand(brandId: string): Promise<RegistrationWithBrand[]> {
+  return rows<RegistrationWithBrand>(
+    `select f.id, f.brand_id, f.email, f.name, f.access_token, f.welcome_sent_at, f.created_at,
+            b.name as brand_name, b.slug as brand_slug
+       from franchisee_registrations f
+       join brands b on b.id = f.brand_id
+      where f.brand_id = $1
+      order by f.created_at desc`,
+    [brandId],
   );
 }

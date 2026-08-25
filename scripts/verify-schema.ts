@@ -131,10 +131,11 @@ const checks: Check[] = [
   },
   {
     // SPEC §8d level 1. The DID migration locked this table to anon outright;
-    // the welcome email's landing page reads it, so the predicate is now the
-    // token. The check is that it is STILL a token — an accidental `using
-    // (true)` here would publish every franchisee's address in the pilot.
-    label: 'anon reaches a registration only through its own token',
+    // two credentials now read it — the registration's own token (the welcome
+    // email's landing page) and a corporate link for the brand (Session 6). The
+    // check is that it is still one of THOSE — an accidental `using (true)`
+    // here would publish every franchisee's address in the pilot.
+    label: 'anon reaches a registration only through a credential',
     sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr
           from pg_policy p join pg_class c on c.oid = p.polrelid
           where c.relname = 'franchisee_registrations'`,
@@ -142,10 +143,53 @@ const checks: Check[] = [
       const anon = rows.filter((r) => !String(r.polname).startsWith('team'));
       return (
         anon.length > 0 &&
-        anon.every((r) => String(r.using_expr).includes('app.access_token'))
+        anon.every(
+          (r) =>
+            String(r.using_expr).includes('app.access_token') ||
+            String(r.using_expr).includes('app.corporate_brand'),
+        )
       );
     },
     describe: (rows) => rows.map((r) => r.polname).join(', '),
+  },
+  {
+    // SPEC §9 interface 6 and DECISIONS #75. The corporate dashboard's whole
+    // safety argument is that its link can only READ: it is long-lived and
+    // multi-use, which is exactly what an approval credential must not be. That
+    // claim is worth more as a constraint than as a comment, so: no policy
+    // scoped by app.corporate_brand() may be anything but SELECT.
+    label: 'a corporate link can only read',
+    sql: `select polname, polcmd, pg_get_expr(polqual, polrelid) as using_expr,
+                 pg_get_expr(polwithcheck, polrelid) as check_expr
+          from pg_policy p join pg_class c on c.oid = p.polrelid`,
+    expect: (rows) =>
+      rows
+        .filter(
+          (r) =>
+            String(r.using_expr ?? '').includes('corporate_brand') ||
+            String(r.check_expr ?? '').includes('corporate_brand'),
+        )
+        // 'r' is SELECT in pg_policy.polcmd.
+        .every((r) => r.polcmd === 'r'),
+    describe: (rows) =>
+      rows
+        .filter((r) => String(r.using_expr ?? '').includes('corporate_brand'))
+        .map((r) => `${r.polname}:${r.polcmd}`)
+        .join(', ') || '(none)',
+  },
+  {
+    // The links table itself is resolved server-side and never read by anon: a
+    // policy letting a token find its own row would invite enumeration of the
+    // rest, and answers nothing the session helper does not already know.
+    label: 'corporate_links is closed to anon',
+    sql: `select polname, polroles::text as roles, pg_get_expr(polqual, polrelid) as using_expr
+          from pg_policy p join pg_class c on c.oid = p.polrelid
+          where c.relname = 'corporate_links'`,
+    expect: (rows) => {
+      const anon = rows.filter((r) => String(r.polname).includes('no_anon'));
+      return anon.length === 1 && anon.every((r) => String(r.using_expr).trim() === 'false');
+    },
+    describe: (rows) => rows.map((r) => `${r.polname}=${r.using_expr}`).join(', ') || '(none)',
   },
   {
     // DECISIONS #20: routing groups by resolved policy, so two contacts for the

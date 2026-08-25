@@ -150,7 +150,12 @@ export async function notifyReviewNeeded(requestId: string): Promise<NotifyOutco
     ],
   );
 
-  return { sent: result.delivered, result };
+    // `sent` means dispatched without a provider error, not delivered — the same
+  // reading `welcome_sent_at` takes (DECISIONS #62). With no RESEND_API_KEY
+  // nothing is ever delivered, so the delivery flag would report every message
+  // in this build as a failure; `result` still carries it for a caller that
+  // wants the stronger claim.
+  return { sent: !result.error, result };
 }
 
 /**
@@ -261,7 +266,7 @@ export async function notifyQuotePackages(
       );
     }
 
-    outcomes.push({ sent: result.delivered, result });
+    outcomes.push({ sent: !result.error, result });
   }
 
   return outcomes;
