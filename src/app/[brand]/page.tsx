@@ -45,11 +45,22 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
           </p>
         </div>
 
-        <div className="space-y-5">
-          {locations.map((location) => (
-            <LocationCard key={location.id} brandSlug={slug} location={location} />
-          ))}
-        </div>
+        {locations.length === 0 ? (
+          // The first thing a franchisee with a signed lease and no history
+          // sees. "You have no locations" states the obvious back at them; what
+          // they need to know is that the next screen is the only form they
+          // will ever fill in for this building.
+          <p className="rounded-xl border border-gray-200 bg-white px-4 py-6 text-center text-sm leading-relaxed text-gray-600">
+            Nothing here yet. Set up your first location below — after that, every replacement and
+            addition is picked from what is already on your building.
+          </p>
+        ) : (
+          <div className="space-y-5">
+            {locations.map((location) => (
+              <LocationCard key={location.id} brandSlug={slug} location={location} />
+            ))}
+          </div>
+        )}
 
         <Link
           href={`/${slug}/setup`}

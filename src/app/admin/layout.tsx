@@ -10,6 +10,21 @@ import { getTeamMember } from '@/lib/auth/team';
 
 import { signOut } from './login/actions';
 
+/**
+ * Never prerendered, at any point, for any reason.
+ *
+ * `/admin` is decided per request by who is holding the cookie, so a build-time
+ * render of it is meaningless — and `authProvider()` says so out loud: with
+ * NODE_ENV=production and no Supabase project it throws rather than quietly
+ * falling back to the dev cookie. Prerendering therefore FAILED THE BUILD, which
+ * is the correct behaviour from that guard and the wrong question to have asked
+ * it. Forcing the segment dynamic asks the right one.
+ *
+ * It applies to the whole segment, the login screen included: that page calls
+ * the same provider to decide which sign-in to render.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const member = await getTeamMember();
 

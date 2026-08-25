@@ -1,8 +1,93 @@
 # Where the build is
 
-Last updated: 24 Aug 2026. **Session 5 is complete, and SPEC §6 has been amended
-(spec v2.2).** Session 6 — the corporate dashboard (SPEC §9 interface 6) — is
-next, and nothing now blocks it.
+Last updated: 25 Aug 2026. **Session 6 is complete.** Every interface SPEC §9
+lists for MVP now exists except Design Studio (Session 7, still blocked on the
+integration decisions) and the DID generator (Session 8, still blocked on the
+v13 flow demo). All five participants can be demonstrated end to end.
+
+## Session 6 — the corporate dashboard, and a hardening pass
+
+**The dashboard** (SPEC §9 interface 6) lives at `/{brand_slug}/corporate/{token}`,
+opened by a magic link a franchisor asks for at `/{brand_slug}/corporate`. Only
+an address already configured on the brand — its reviewer, secondary reviewer or
+corporate contact — can be issued one, and the form says the same sentence
+whether or not the address is on file, so it cannot be used to enumerate a
+franchisor's staff.
+
+It shows the demo's five metrics, the brand's vendor policy stated back to them,
+the approval-alert banner, and one card per location comparing installed signs
+against the length of the brand's own standard package. **Program spend is read
+per package and means committed** — what someone has accepted. What is quoted
+and not yet accepted is named separately rather than folded in, because they are
+different claims (DECISIONS #77).
+
+**The approvals tab shows everything and decides nothing.** A 30-day multi-use
+bookmark must not be able to approve signage, so decisions stay in the signed,
+single-use, 7-day links the approval email carries. The tab renders the same
+detail the reviewer's own page renders and offers one action — send that email
+again, to the address already on the brand (#75). The rule is enforced in the
+database, not just in the UI: `verify-schema` reads `pg_policy` and fails if any
+policy scoped by `app.corporate_brand()` is anything but SELECT.
+
+**The §8b budget export and the §8d registration panel** now have the actor SPEC
+names for them. Registering from the dashboard writes `registered_by =
+'corporate'`, which is what #61 was waiting for. Both stay on `/admin` as well —
+Signage.com operates this portal white-glove and every one of these is something
+a franchisor phones about (#76).
+
+**The hardening pass**, and two things it turned up:
+
+- `error.tsx`, `global-error.tsx` and `not-found.tsx` now exist. Every 404 in
+  this build means one thing — a token did not resolve — and the page says so
+  rather than "check the address", which nobody can act on when the URL came
+  from an email.
+- **`loading.tsx` costs the 404.** A segment with one streams, and a streamed
+  `notFound()` answers 200. Only `/admin` has a skeleton, because it is the only
+  screen that never 404s (#79).
+- **`npm run build` had never succeeded on this machine.** Next prerendered
+  `/admin`, and `authProvider()` correctly refuses to run in production with no
+  Supabase project. An authenticated console has no meaningful build-time
+  render: `/admin` and `/dev` are now `force-dynamic`, and the build is green
+  (#80).
+- **`NotifyOutcome.sent` meant "the provider delivered it"**, which is false for
+  every message this build has ever sent. Nothing had ever read it, so it had
+  never been wrong out loud — the dashboard's re-send button was the first
+  caller, and it told a franchisor the email had failed while the email sat in
+  the outbox. `welcome.tsx` had already settled the convention (#62); notify and
+  franchisee now agree with it (#81).
+
+**`docs/QA.md` is new**: the demo storyline as a 25-minute manual pass, all five
+participants, both tails, every document. `npm run smoke` proves most of it
+automatically and sees none of the layout, copy or timing, which is what the
+manual pass is for.
+
+165 smoke checks, 113 unit tests, 19 schema checks, typecheck, lint, and a green
+production build.
+
+## Next: Session 7 or 8, both still gated
+
+Neither can start on what is in the repo today:
+
+- **Session 7 — Design Studio integration.** Needs the five requirements in SPEC
+  §8 confirmed with Usman, and `docs/design-studio-findings.md` lists eight
+  contradictions against the spec that need answers first. Until then mockups
+  stay manual: `mockup_file_id` is written when the team uploads one, and the
+  generic `render_key` thumbnail is the fallback everywhere.
+- **Session 8 — the DID generator.** Needs the **v13 flow demo** in the repo
+  (the file on disk is v12 and has no DID screens), corporate template sign-off,
+  and a Stripe account. Any DID UX built before the demo lands is a guess.
+
+**What could be done meanwhile**, in rough order of value:
+
+1. **A Supabase project**, which would unblock the four largest untested
+   assumptions at once: the RLS behaviour tests, the Auth path, the Storage
+   driver, and the seed against a real database. This is the biggest gap in the
+   build and has been since Session 1.
+2. **A real Resend key**, so that the mail path runs once against a provider
+   rather than an outbox.
+3. **The `/dev` outbox's future** — Session 4 left it as "keep it if it earns
+   its place, and put it behind `/admin` if it does". It is still unauthenticated
+   and still guarded only by `assertDevConsole`.
 
 ## The §6 amendment: fulfillment is package-level
 
@@ -131,24 +216,12 @@ produced correctly. The run now mirrors its codes to
 `scripts/.smoke-leftovers.json` (gitignored) and clears the file only on a clean
 finish.
 
-## Next: Session 6, the corporate dashboard
+## Session 5's handover note (kept for the trail)
 
-SPEC §9 interface 6 — read-only, magic-link: portfolio metrics (locations,
-installed signs, open requests, pending approvals, program spend), per-location
-compliance cards, jump-to-approvals. Two things already built belong on it
-rather than on `/admin`, and should move when it exists: the §8b budget one-pager
-export and the §8d registration panel (DECISIONS #44, #61). Both were put on the
-team queue explicitly because corporate had nowhere to stand.
-
-**Nothing blocks Session 6.** DECISIONS #51 and #57 — the split-request
-question that two features rested on — are answered by the §6 amendment above
-and built. Program spend on the new dashboard should read per package, since
-that is now where acceptance and invoicing live.
-
-**The dev database needs a reset to pick up the §8d and §6 migrations.** `npm run
-dev:db:reset` — the dev server skips migrations when a schema is already
-present, so an existing `.pglite/` has no `franchisee_registrations.access_token`
-and the registrations panel will fail on it.
+Session 5 ended by naming Session 6 as next and nothing as blocking it, which
+held. The one operational warning it left is still true of any stale checkout:
+**the dev server skips migrations when a schema is already present**, so an
+existing `.pglite/` will not have the newer tables. `npm run dev:db:reset`.
 
 ---
 
@@ -172,6 +245,7 @@ npm run dev          # starts the dev database AND the web server
 | Franchisee | http://localhost:3000/freshbites | no login; tokenized links |
 | Signage.com team | http://localhost:3000/admin | allowlisted team email |
 | Corporate reviewer | from a link in the approval email | no login, ever |
+| Corporate dashboard | http://localhost:3000/freshbites/corporate | magic link to `brand@freshbites.com` |
 | Outbox (dev) | http://localhost:3000/dev | what would have been emailed |
 
 Sign in to `/admin` as `team@signage.com` — with no Supabase project configured
@@ -183,10 +257,11 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 142 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 165 checks (needs `npm run dev` up) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 113 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres, 17 schema checks |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres, 19 schema checks |
+| `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
@@ -209,6 +284,11 @@ and retry. If it starts refusing every connection, it has wedged — restart
 Uploaded files land in `.storage/` (gitignored) and are served from
 `/api/files/…`. Setting `SUPABASE_STORAGE_BUCKET` makes the app refuse that path
 on purpose — the Supabase driver is not written yet.
+
+**`docs/QA.md` is the manual pass** — the demo storyline by hand, all five
+participants, about 25 minutes. Run it before showing the product to anyone, and
+after any change to status, routing or mail. It is the layout, copy and timing
+that `npm run smoke` cannot see.
 
 Also useful: the reference app at `reference/design-studio` (`npm run dev` inside
 it, port 5173) serves `/demo` — the canonical v12 UX reference — and `/flow`.
@@ -289,6 +369,20 @@ and real uploads behind `src/lib/storage/`.
 - The §6 amendment (spec v2.2): package-level fulfillment, and with it the
   split-request acceptance and invoice that DECISIONS #51/#57 had blocked.
 
+**Session 6 — the corporate dashboard, and the hardening pass**
+(SPEC §9 interface 6, §10):
+
+- `corporate_links`: a brand-scoped, 30-day, multi-use, hashed credential, and
+  `app.corporate_brand()` beside it in RLS. Read-only by construction, and
+  asserted so against `pg_policy`.
+- The magic-link request page, which recognises the brand's configured contacts
+  and cannot be used to discover who they are.
+- The dashboard itself: metrics, vendor policy, approval banner, per-location
+  completeness cards; the approvals view that decides nothing; the §8b budget
+  export and the §8d registration panel in corporate's own hands.
+- `error.tsx`, `global-error.tsx`, `not-found.tsx`, and one `loading.tsx`.
+- `docs/QA.md`, and a production build that succeeds for the first time.
+
 ---
 
 ## Owed, and worth clearing early
@@ -298,7 +392,12 @@ and real uploads behind `src/lib/storage/`.
   never consulted. Token scoping rests on the WHERE clauses in
   `src/lib/db/queries.ts` and the ownership checks in each server action.
   **The first time a real Supabase project exists, test that anon cannot read
-  another location's rows.** Still the largest untested assumption in the build.
+  another location's rows** — and, since Session 6, that a corporate link cannot
+  read another BRAND's. Still the largest untested assumption in the build.
+  `app.corporate_brand()` is a second anon-reachable predicate, and the only
+  thing standing between one franchisor's link and another franchisor's program.
+  The read-only half of that claim IS tested (`verify-schema` refuses any
+  non-SELECT policy scoped by it); the brand-scoping half is not.
 - **No mail has ever actually been sent.** The Resend path in
   `src/lib/email/send.ts` is written and unexercised; everything so far has gone
   to the outbox. The templates, links, triggers and SLA around it are exercised
@@ -350,6 +449,18 @@ In `docs/DECISIONS.md`, none blocking:
    amended to separate "how a franchisee reaches their page" from "what
    authorizes a DID"; the two are one sentence in v2.1 and they are not the same
    thing.
+
+10. Session 6's calls (entries 73–83), chiefly two worth your explicit view:
+    **#75 — the corporate dashboard shows the approvals view and cannot decide
+    from it.** The demo lets corporate approve from their own screen; the
+    product keeps that in the emailed links, because a 30-day multi-use bookmark
+    with approval power is not the credential SPEC §10 describes. If a
+    franchisor asks to approve from the dashboard, that is a spec conversation
+    about the credential, not a UI change.
+    And **#76 — the §8b export and the §8d registration panel are duplicated
+    onto the dashboard rather than moved off `/admin`**, because Signage.com
+    operates the portal white-glove. #44 and #61 read like a promise to move
+    them; this is the deliberate departure.
 
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee

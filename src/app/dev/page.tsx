@@ -16,6 +16,15 @@ import { emailProvider, recentEmails } from '@/lib/email/send';
 
 import { assertDevConsole } from './guard';
 
+/**
+ * Dynamic for a different reason than /admin: this page IS its data.
+ *
+ * A prerendered outbox is a snapshot of whatever mail existed when the build
+ * ran, served forever afterwards — which for the one screen whose entire job is
+ * "what did we send, and when" is worse than not having it.
+ */
+export const dynamic = 'force-dynamic';
+
 export default async function DevOutbox() {
   assertDevConsole();
   const emails = await recentEmails(30);

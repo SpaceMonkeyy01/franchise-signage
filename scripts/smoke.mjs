@@ -1534,6 +1534,22 @@ record(
   `status ${expiredSheet.status}`,
 );
 
+// ------------------------------------------------------------ dead-link copy
+// Every 404 in this build means the same thing — a token did not resolve — and
+// nobody typed the URL, so "check the address" is useless advice. The page has
+// to say what actually happened. Asserted alongside the status because the two
+// come apart easily: a `loading.tsx` on the segment makes the response stream,
+// and a streamed notFound() answers 200 (DECISIONS #79).
+const deadLink = await fetch(`${BASE}/freshbites/request/not-a-real-token`, {
+  redirect: 'manual',
+});
+const deadBody = await deadLink.text();
+record(
+  'a dead link answers 404 and explains itself',
+  deadLink.status === 404 && deadBody.includes('That link did not open anything'),
+  `status ${deadLink.status}`,
+);
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();

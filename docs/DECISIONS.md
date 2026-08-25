@@ -646,6 +646,118 @@ throwaway UI over permanent rules.
     their own building that it is finished when it plainly is not is the most
     visible wrong thing this system can say.
 
+## Session 6 — the corporate dashboard
+
+73. **Corporate's link is its own table, not a mode on `review_links`.** SPEC §10
+    says four words about it — "corporate dashboard: magic link" — and the two
+    credentials differ on every axis that matters: scope (a brand, not a
+    request), lifetime (30 days of a working bookmark, not 7 days to decide),
+    uses (many, not one — reading is not an act), and revocation (never on
+    package version, because it approves nothing). A single table with a mode
+    column would have had to branch on that column at every one of those points,
+    which is four chances to give a dashboard link a reviewer's powers by
+    accident. `corporate_links` is a separate table with a separate resolver.
+
+74. **The dashboard link authorises reading, and the schema enforces it.** The
+    argument for a long-lived multi-use credential rests entirely on it being
+    unable to change anything, and that claim was too important to leave as a
+    comment. `app.corporate_brand()` resolves the presented token to a brand id,
+    every policy written against it is `for select`, and `verify-schema` now
+    reads `pg_policy` and fails if any policy mentioning `corporate_brand` is
+    anything but SELECT. The links table itself stays closed to anon: a policy
+    letting a token find its own row would invite enumeration of the rest and
+    answers nothing the server-side resolver does not already know.
+
+75. **The approvals view shows everything and decides nothing.** The demo's
+    corporate persona has a second tab that IS the reviewer's screen, buttons and
+    all — correct in a demo where one person plays everybody. In the product they
+    are different credentials, and letting a 30-day bookmark approve signage
+    would quietly replace the credential SPEC §10 was careful about (signed,
+    single-use, 7 days, dead the moment the franchisee edits the package) with
+    one that is none of those things. So the tab renders the same detail the
+    reviewer's page renders, from the same `getRequestById`, and offers exactly
+    one action: **send the approval email again**, to the address already
+    configured on the brand. That is the realistic ask — "I can't find the
+    email" — and it cannot be pointed at a new recipient.
+
+76. **The §8b export and the §8d registration panel gain a home on the dashboard
+    and keep their place on `/admin`.** #44 and #61 put both on the team queue
+    "until corporate has somewhere to stand", which reads as a promise to move
+    them. They are not moved, they are duplicated, and the reason is the business
+    model rather than tidiness: Signage.com operates this portal white-glove, the
+    vendor-policy card on the new dashboard says "contact your Signage.com
+    manager to change it", and every one of these is something a franchisor
+    telephones about. Deleting the team's copy would trade a support capability
+    for a tidier screen. What is NOT duplicated is the actor: registering from
+    the dashboard writes `registered_by = 'corporate'`, which is the whole point
+    of §8d and the thing #61 was waiting for.
+
+77. **"Program spend" means committed, and is read per package.** The demo sums
+    every quote total, which in the real model is neither one thing nor the
+    other. This counts packages someone has **accepted** — the franchisee on the
+    internal tail, the team logging the order on the external one — because that
+    is the moment money is owed. Per package rather than per request (SPEC §6 as
+    amended): the seeded split request has one accepted half and one still out
+    for a number, and a request-level figure is either double or nothing. What is
+    quoted and not yet accepted is real and is not the same claim, so it is named
+    in its own sentence underneath. Custom-quote lines stay out of the total for
+    the reason #45 gives — a franchisor plans against this number.
+
+78. **"Package complete" counts against the brand's own package, duplicates
+    included.** A location is complete when its installed signs reach the length
+    of `brand_packages.items` for its format — and that array's duplicates are
+    meaningful (SPEC §3.2: an endcap takes 2× storefront letters because it has
+    two elevations). Counting distinct sign types would call an endcap finished
+    with one elevation bare. It is a completeness check and is worded as one:
+    the portal never promises an approval or permit outcome, and a fully signed
+    location can still be waiting on a city.
+
+79. **Only `/admin` has a `loading.tsx`, and the reason is the 404.** A segment
+    with a loading file streams, and a streamed response has already flushed its
+    shell by the time `notFound()` is called — so Next answers **200** instead of
+    404. Every other page in this build resolves a credential and calls
+    `notFound()` when it fails. On those, "this link is dead" is worth more than
+    a shimmer on a page that renders in a few hundred milliseconds, and two smoke
+    assertions that had been checking for 404 quietly went green against 200
+    while the skeleton was in place. `/admin` authenticates by redirect, never
+    404s, and is the one screen an operator opens cold across every brand.
+
+80. **`/admin` and `/dev` are `force-dynamic`, and the production build had never
+    succeeded.** `npm run build` failed on this machine — Next prerendered
+    `/admin`, `authProvider()` correctly refused to run in production without a
+    Supabase project, and the build exited. The guard was right and the question
+    was wrong: an authenticated console decided per request by who holds the
+    cookie has no meaningful build-time render. `/dev` is forced dynamic for a
+    different reason — a prerendered outbox is a snapshot of whatever mail
+    existed when the build ran, served forever, which for the one screen whose
+    job is "what did we send, and when" is worse than not having it. The build is
+    green for the first time; nothing else in the app needed changing.
+
+81. **`NotifyOutcome.sent` meant "the provider delivered it", which is false for
+    every message this build has ever sent.** `sendEmail` returns `delivered:
+    false` from the outbox, and `notify` and `franchisee` both reported that as
+    `sent`. Nothing had ever read the value, so it had never been wrong out loud
+    — the corporate dashboard's re-send button was the first caller, and it told
+    a franchisor the email could not be sent while the email sat in the outbox.
+    `welcome.tsx` had already settled this convention the other way and written
+    down why (#62): `sent` means dispatched without a provider error. The other
+    two now agree with it, and `result.delivered` is still there for a caller
+    that wants the stronger claim.
+
+82. **Days-to-opening is computed by Postgres.** The location card wants "opens
+    in 12 days", which needs a *now* — and a component may not have one: the
+    clock is not a pure input, and the lint rule that says so is right. The
+    database has a now, it is the same one every other date on the page was
+    derived from, and it does not drift against the viewer's laptop.
+
+83. **`brands_public` gained `corporate_cc`.** The vendor-policy card states a
+    brand's own routing rule back to them, and whether packages copy corporate is
+    part of that rule. It is a boolean about policy, not a contact address — the
+    franchisee is already told it in the routing note — so it belongs in the view
+    rather than forcing the dashboard to read the row that carries three email
+    addresses. The schema check that `brands_public` exposes no contact emails
+    still passes, and still means what it says.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`
