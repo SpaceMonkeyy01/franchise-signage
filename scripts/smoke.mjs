@@ -1569,6 +1569,29 @@ await page.getByRole('link', { name: 'Outbox' }).click();
 await page.waitForLoadState('networkidle');
 await expectVisible(page, 'h1:text-is("Sent messages")', 'and is one click from the queue when you are');
 
+// -------------------------------------------------------- the entry points
+// The same bargain as the outbox, and the same check. This page lists live
+// franchisee tokens and welcome links in one place, which is only safe because
+// the allowlist decides who reads it. A signed-out response must carry no page
+// and, more to the point, no token — a redirect that still ships the payload
+// would leak every one of them.
+const entrySignedOut = await fetch(`${BASE}/admin/entry-points`, { redirect: 'manual' });
+const entryBody = entrySignedOut.status < 300 ? await entrySignedOut.text() : '';
+record(
+  'the entry points are not readable without signing in',
+  entrySignedOut.status >= 300 || !entryBody.includes('Every live link'),
+  `status ${entrySignedOut.status}`,
+);
+record(
+  'and no franchisee token is in the signed-out response',
+  !/request\/[A-Za-z0-9_-]{16,}/.test(entryBody),
+  'a token appeared in the body of a page that redirects',
+);
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: 'Entry points' }).click();
+await page.waitForLoadState('networkidle');
+await expectVisible(page, 'h1:text-is("Entry points")', 'and are one click from the queue when you are');
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();

@@ -37,8 +37,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           {member && (
             <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-              {/* The outbox is a support tool, not a daily one — findable from
-                  every screen, and never competing with the queue for attention. */}
+              {/* Both are support tools, not daily ones — findable from every
+                  screen, and never competing with the queue for attention. */}
+              <Link
+                href="/admin/entry-points"
+                className="text-gray-300 underline-offset-2 hover:underline"
+              >
+                Entry points
+              </Link>
               <Link href="/admin/outbox" className="text-gray-300 underline-offset-2 hover:underline">
                 Outbox
               </Link>
