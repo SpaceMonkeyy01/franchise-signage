@@ -43,13 +43,17 @@ reviewed and never executed** — which is the whole argument for having done it
   is served by `/api/files`, byte-identical, and an absent path is a 404 rather
   than a 500.
 
-**`.env.local` is currently in SUPABASE MODE**, which is not the mode to leave it
-in. The app is pointed at the real project — database, Storage and Auth — and in
-that mode **`npm run smoke` cannot run at all**: it signs in through the dev
-picker's `<select>`, which the Supabase login page does not render. Comment out
-`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `DATABASE_URL` and
-`SUPABASE_STORAGE_BUCKET` to put local development back on PGlite with the whole
-suite working. The file says so at each of them.
+**`.env.local` rests in PGlite mode, and that is where it was left.** Four lines
+turn Supabase mode on — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+`DATABASE_URL` and `SUPABASE_STORAGE_BUCKET` — and they go together, or the app
+reads one database while storing files against another. In that mode **`npm run
+smoke` cannot run at all**: it signs in through the dev picker's `<select>`,
+which the Supabase login page does not render. The file says so at each of them.
+
+**The suite has been run against these changes**, in PGlite mode, after they were
+made: 167 smoke checks, 123 unit tests, 39 schema checks, typecheck, lint. The
+storage and auth fixes both touch paths the smoke suite drives, so this is the
+check that matters and not a formality.
 
 **Step 7 is one click from done.** The magic link was sent through the real form
 to `samniullah.bluecascade@gmail.com` (added to `team_members`); GoTrue created
@@ -336,9 +340,9 @@ login, not a login (see below).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 165 checks (needs `npm run dev` up) |
+| `npm run smoke` | drive the real flows in a browser — 167 checks (needs `npm run dev` up, and Supabase mode OFF) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 113 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy |
+| `npm test` | 123 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres — 39 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
