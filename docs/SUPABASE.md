@@ -35,11 +35,31 @@ not show it twice, and step 3 needs it.
   ever reaches a browser bundle, every policy in `supabase/migrations/` is
   decoration.
 
-**Project Settings → Database:** the connection string, as `DATABASE_URL`. Use
-the direct connection rather than the transaction pooler — the migration runner
-uses transactions and session-level settings that a transaction pooler drops.
+**Project Settings → Database:** the connection string, as `DATABASE_URL`.
 
-Put them in `.env.local` (gitignored; `.env.example` is the template).
+There are three of them, and the choice is not free. The migration runner uses
+transactions and session-level settings, which the **transaction** pooler (port
+6543) drops — so that one is out. Of the remaining two:
+
+- **Direct** (`db.<ref>.supabase.co:5432`) is what this runbook used to say. On
+  projects provisioned since about 2024 that hostname is **IPv6-only**, and a
+  machine without IPv6 egress cannot reach it at all — the failure is a TCP
+  timeout with nothing to suggest the cause is addressing.
+- **Session pooler** (`aws-N-<region>.pooler.supabase.com:5432`) is IPv4, keeps
+  transactions and session settings, and is what actually ran here.
+
+**Use the session pooler unless you know you have IPv6.** The username is
+`postgres.<project-ref>`, and the region in the hostname is the project's, not a
+choice — copy it from the dashboard rather than guessing.
+
+The database password is shown **once**, at project creation, and cannot be read
+back afterwards. If it is lost: Project Settings → Database → Reset database
+password. Percent-encode it if it contains `@ : / ? #`.
+
+Put the keys in `.env.local` (gitignored; `.env.example` is the template) — but
+see the warning at the top of that file about which of them to leave commented
+out, because the app selects its auth provider and its database on presence
+alone, and setting them all takes local development off PGlite.
 
 ## 3 · Apply the schema
 
@@ -55,6 +75,18 @@ nothing behind: fix the file and run again.
 The migrations expect the `anon`, `authenticated` and `service_role` roles and
 an `auth.jwt()` function to exist. **Supabase provides all four** — that is why
 the local harnesses have to stub them and this does not.
+
+> **Where extensions live differs, and it is not visible locally.** Supabase
+> installs pgcrypto into an `extensions` schema; `create extension pgcrypto` with
+> no schema — what the dev database does — puts it in `public`. A function that
+> pins `set search_path` (as every `security definer` function here rightly does)
+> therefore resolves `digest()` locally and fails on Supabase with `function
+> digest(text, unknown) does not exist`. This bit `app.corporate_brand()` on the
+> first real run; the fix is to name **both** schemas in the search_path, since
+> Postgres ignores whichever one is absent. Any future security-definer function
+> that calls into an extension needs the same. Note that `gen_random_uuid()` does
+> **not** — it is core Postgres since 13 and resolves either way, which is part of
+> why the gap stayed hidden.
 
 > **Pointing it at a database that already has a schema** (the dev database, for
 > instance) is refused rather than attempted, because there is no way to tell
@@ -161,9 +193,9 @@ against PGlite and Supabase alike; that is why the app talks to Postgres through
 **Different, and worth knowing:**
 
 - **Connection limits.** The dev database serves exactly one connection at a
-  time and `src/lib/db/pool.ts` caps the pool at one to match. Against Supabase
-  that cap is wrong in the other direction — raise it, and use the pooler
-  connection string for the app (but not for `npm run migrate`).
+  time and `src/lib/db/pool.ts` caps the pool at one to match. It already lifts
+  that to ten — and turns on SSL — the moment `DATABASE_URL` is set, so there is
+  nothing to change by hand; an earlier version of this runbook said there was.
 - **RLS is actually consulted.** Locally the app connects as the table owner, so
   policies are inert and the WHERE clauses in `src/lib/db/queries.ts` are what
   scope every read. On Supabase both apply. A query that works locally and

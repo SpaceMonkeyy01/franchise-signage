@@ -1,6 +1,66 @@
 # Where the build is
 
-Last updated: 25 Aug 2026. **Session 6 is complete, and the RLS gap is closed.**
+Last updated: 28 Aug 2026. **There is a Supabase project, and the schema, the
+seed and the policies have all now run against it.**
+
+Project `mvpiaounwuzwtvxpvhcz`, ap-northeast-1, Postgres 17.6. Steps 3, 4, 5 and
+6 of `docs/SUPABASE.md` are done and step 7 is one click from done. **Standing
+the project up found three bugs, all of them in code that had been written,
+reviewed and never executed** — which is the whole argument for having done it:
+
+- **A portability bug the local harness could not have caught.** Supabase keeps
+  pgcrypto in an `extensions` schema; the dev database keeps it in `public`. So
+  `app.corporate_brand()`, which pins `search_path` as a security-definer
+  function should, resolved `digest()` locally and failed on Supabase. Migration
+  11 was the only one affected and now names both schemas. **`npm run db:verify`
+  was green throughout** — the harness models the roles faithfully and the
+  extension layout not at all.
+- **A broken bucket read as a franchisee who uploaded nothing.** `isNotFound()`
+  matched `/not found/i` anywhere in the message — and Supabase answers a wrong
+  key with **"Bucket not found"**, because a caller who cannot authenticate
+  cannot see the bucket. So a misconfigured deployment returned `null`, which
+  `/api/files` turns into a 404: exactly the confusion the layer exists to
+  prevent, and exactly what its tests claimed to pin. They pinned an invented
+  error shape (`Invalid JWT`, status 401); the real one is `Bucket not found`,
+  status 400, statusCode "404" — identical to the absent-object case in
+  everything but the message. Now `isMissingObject()`, tests rewritten against
+  the observed shapes and confirmed to go red without the fix.
+- **The magic link could never have signed anyone in.** There was no route
+  handler to exchange the credential for a session — `supabaseEmail()`'s comment
+  refers to one ("Refresh happens in the route handler that completes the magic
+  link") that did not exist, and the link pointed at `/admin`, which cannot write
+  a cookie. Added `src/app/auth/callback/route.ts`, accepting both the PKCE
+  (`code`) and token-hash link shapes. **`signOut()` was also dev-only**: it
+  deleted the dev cookie and left the Supabase session intact, so Sign out did
+  nothing at all under the provider it mattered for.
+
+- **The policies hold through real PostgREST**, which is what was actually owed
+  since Session 6a. A franchisee's `x-access-token` returns their one request and
+  nothing without it; a corporate link reads its brand's whole program and is
+  refused every write — checked by UPDATE, INSERT and DELETE, and confirmed by
+  reading the rows back afterwards rather than trusting a `204`.
+- **Storage round-trips through the running app**: a file in the private bucket
+  is served by `/api/files`, byte-identical, and an absent path is a 404 rather
+  than a 500.
+
+**`.env.local` is currently in SUPABASE MODE**, which is not the mode to leave it
+in. The app is pointed at the real project — database, Storage and Auth — and in
+that mode **`npm run smoke` cannot run at all**: it signs in through the dev
+picker's `<select>`, which the Supabase login page does not render. Comment out
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `DATABASE_URL` and
+`SUPABASE_STORAGE_BUCKET` to put local development back on PGlite with the whole
+suite working. The file says so at each of them.
+
+**Step 7 is one click from done.** The magic link was sent through the real form
+to `samniullah.bluecascade@gmail.com` (added to `team_members`); GoTrue created
+the user and recorded `confirmation_sent_at`, so everything up to the inbox is
+proven. What is NOT yet proven is the click: `/auth/callback` exchanging the code
+for a session, `/admin` rendering, and the deactivation check — set that member's
+`active` to false and the next request should sign them straight out. The dev
+server must be running when the link is clicked, since it redirects to
+`http://localhost:3000/auth/callback`.
+
+Previously: 25 Aug 2026. **Session 6 is complete, and the RLS gap is closed.**
 Every interface SPEC §9 lists for MVP now exists except Design Studio (Session 7,
 still blocked on the integration decisions) and the DID generator (Session 8,
 still blocked on the v13 flow demo). All five participants can be demonstrated
@@ -96,13 +156,15 @@ Neither can start on what is in the repo today:
 
 **What could be done meanwhile**, in rough order of value:
 
-1. **A Supabase project**, which would unblock what is left of the untested
-   assumptions: the Auth path, the Storage driver, the seed against a real
-   database, and re-running the RLS suite through GoTrue and PostgREST rather
-   than through supplied inputs. Still the biggest gap, though a smaller one
-   than it was this morning.
+1. ~~**A Supabase project.**~~ **Stood up on 28 Aug** — see the top of this file.
+   The seed and PostgREST halves are done; what remains of it is the three steps
+   that need the app itself pointed at Supabase: the Storage round-trip (step 4),
+   the Auth path (step 7), and a real send (step 8). All three break
+   `npm run smoke` while they are switched on, so they want to be done together,
+   deliberately, and switched back.
 2. **A real Resend key**, so that the mail path runs once against a provider
-   rather than an outbox.
+   rather than an outbox. Still outstanding, and now the only missing
+   credential.
 3. ~~**The `/dev` outbox's future.**~~ Answered in Session 6c: it earned its
    place and moved to `/admin/outbox`, behind the team allowlist (#97).
 
@@ -439,10 +501,13 @@ and real uploads behind `src/lib/storage/`.
   link reaches one brand's program and cannot write to any of it, expired and
   revoked links open nothing, and a deactivated team member is locked out at
   once. Both policies were deliberately weakened to confirm the suite goes red
-  (#86). What is still missing is **GoTrue and PostgREST themselves** — nothing
-  here mints a real JWT or forwards a real `x-access-token` header, so the tests
-  supply both directly. Re-run the same assertions through a real project when
-  one exists; what will be new then is the plumbing, not the rules.
+  (#86). What was still missing was **GoTrue and PostgREST themselves**.
+  **PostgREST is now done** (28 Aug): the token pair and the corporate-link pair
+  both ran against the live project, and the read-only claim was tested by
+  attempting the writes rather than by reading the policy. One check passed for
+  the wrong reason first — PostgREST rejects an UPDATE with no `WHERE` before
+  RLS is ever consulted, so it had to be re-run with a filter to make the
+  database be the thing that refused. **GoTrue is still untested**; it is step 7.
 - **No mail has ever actually been sent.** The Resend path in
   `src/lib/email/send.ts` is written and unexercised; everything so far has gone
   to the outbox. The templates, links, triggers and SLA around it are exercised
@@ -451,14 +516,18 @@ and real uploads behind `src/lib/storage/`.
   cookie here; the magic-link send and session read in `src/lib/auth/team.ts` are
   written against an API nothing on this machine has called. The allowlist half —
   the part that actually decides access — is exercised by the smoke suite.
-- **The seed has never run against Supabase.** It HAS now run against a bare
-  Postgres carrying the roles and `auth.jwt()` that Supabase supplies, via
-  `npm run migrate` then `npm run seed` — so the SQL is exercised and what is
-  left untested is the service, not the statements.
+- **~~The seed has never run against Supabase.~~ Closed** (28 Aug). `npm run
+  migrate` applied all eleven migrations to the real project and `npm run seed
+  -- --with-demo-requests` filled it: 77 catalog rows, 10 brand items, 2
+  locations, REQ-0016…19. Owed since Session 1.
 - **~~The Supabase Storage driver is unwritten.~~ Written, and unexercised
   against a real bucket.** Its logic is covered by nine tests against a stub;
   what no test can cover here is whether the bucket exists and the key works.
-  `docs/SUPABASE.md` step 4 is the ten-minute check.
+  The private `request-files` bucket **now exists** (28 Aug, `public: false`) and
+  the secret key lists it, so what is left of step 4 is the round-trip: upload a
+  site photo through the franchisee flow and open it from the status page.
+  `SUPABASE_STORAGE_BUCKET` is deliberately still empty in `.env.local` — setting
+  it makes the app refuse local disk with no fallback.
 - **`src/lib/supabase/clients.ts` and `src/lib/env.ts` are still unused.** The
   Storage driver deliberately did not adopt them: `serverEnv()` validates the
   whole configuration at once, and storing a file must not require a Resend key
