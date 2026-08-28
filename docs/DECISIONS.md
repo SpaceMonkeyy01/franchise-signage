@@ -909,6 +909,124 @@ throwaway UI over permanent rules.
     token-scoped, and the sentence justifying that pointed at a caller which no
     longer existed. It now names the guard that actually makes it safe.
 
+## Session 6d — the Supabase project, and what running it found
+
+The four items owed since Sessions 1, 3, 5 and 6a were all owed to the same
+missing thing: a project. One now exists, and standing it up turned three
+written-and-never-executed paths into three bugs. The entries below are as much
+about how they hid as about how they were fixed.
+
+99. **The pgcrypto search_path names both schemas rather than qualifying the
+    call.** Supabase installs pgcrypto into an `extensions` schema; `create
+    extension pgcrypto` with no schema — what the dev database does — puts it in
+    `public`. `app.corporate_brand()` pins `set search_path`, correctly, as every
+    security-definer function here does, and so resolved `digest()` locally and
+    could not on Supabase.
+
+    Three fixes were possible. Schema-qualifying the call (`extensions.digest`)
+    hardcodes an environment difference into the SQL and breaks the other one.
+    Moving the extension makes the migration responsible for the layout of a
+    database it does not own, and on Supabase the extension is already installed,
+    so `if not exists` would quietly do nothing. Naming both schemas in the
+    search_path works in both directions and costs nothing: Postgres ignores a
+    schema in the path that does not exist. Unpinning the search_path was never
+    on the table — it is the guard, not the problem.
+
+    Worth recording that `npm run db:verify` was green before, during and after.
+    The PGlite harness models the ROLES faithfully, which is what it was built
+    for, and the extension layout not at all. Any future security-definer
+    function that reaches into an extension has the same exposure and the same
+    fix.
+
+100. **A bucket error throws; only a missing object reads as absent.**
+    `isNotFound()` matched `/not found/i` anywhere in the error message, and
+    Supabase answers a bad service-role key with **"Bucket not found"** — a
+    caller that cannot authenticate cannot see the bucket, so it is told the
+    bucket is not there. The result was that a misconfigured deployment returned
+    `null`, which `/api/files` turns into a 404: a franchisee's site photo and
+    lease exhibit reported as never uploaded.
+
+    The three cases are, read off the live service:
+
+        absent object   Object not found   status 400, statusCode "404"
+        wrong bucket    Bucket not found   status 400, statusCode "404"
+        wrong key       Bucket not found   status 400, statusCode "404"
+
+    The status codes are identical, so there is nothing to branch on but the
+    message — which is unpleasant and is the whole of what the API offers. The
+    guard is therefore explicit about refusing the bucket case first, and says
+    in a comment where the shapes came from and when, because the next person
+    will reasonably assume a 404 is a 404.
+
+    A bad key and a wrong bucket remain indistinguishable from each other. That
+    is acceptable: both are our misconfiguration, both must be loud, and neither
+    may be reported as the franchisee's absence.
+
+101. **The tests that guarded this had invented the error shapes.** They pinned
+    a bad key as `Invalid JWT: signature verification failed` with status 401 —
+    plausible, and nothing the service has ever returned. The test asserting
+    that "a broken bucket is not read as a missing file" passed while the code
+    did exactly that. Rewritten against the observed shapes and confirmed to go
+    red without the fix.
+
+    The general point is worth more than the fix: a stub written from
+    imagination tests the imagination. Where the shape of a failure IS the
+    contract — as here, where two failures differ only in a string — the stub is
+    worth no more than the day someone checked it against the real thing.
+
+102. **`/auth/callback` is a new route handler, and it authorizes nothing.** The
+    magic link had no way to become a session: nothing called
+    `exchangeCodeForSession` or `verifyOtp`, and the link pointed at `/admin`,
+    which cannot write a cookie. `supabaseEmail()` had been written to ignore
+    cookie writes and explained why — "Refresh happens in the route handler that
+    completes the magic link" — referring to a handler that was never built.
+
+    Three calls inside it. It accepts **both** the PKCE (`code`) and token-hash
+    link shapes, so changing the project's email template cannot silently break
+    sign-in. It refuses any `next` that is not same-origin, because an open
+    redirect on the end of an authentication flow is worth more to an attacker
+    than on any other page. And it establishes identity only — whether that
+    person is on the team stays with `getTeamMember()`, on every request, in the
+    one place it has always been decided. Duplicating the allowlist check here
+    would have been the intuitive move and would have created a second place to
+    forget.
+
+103. **`shouldCreateUser` stays true, and is now explicit.** A team member's
+    first sign-in has no Supabase user, and this is what creates it. It reads
+    like self-serve access and is not: the allowlist is checked before any link
+    is sent and again on every request afterwards. The Supabase user is an
+    identity; `team_members` is the authorization. Written out because the next
+    person to read that line will reach for the opposite value.
+
+104. **`signOut()` signed nobody out.** It deleted the dev cookie and left the
+    Supabase session untouched, so under the only provider where it mattered the
+    button reloaded the page and left the member signed in. Both are cleared
+    now. Nothing had caught it because nothing had ever run the Supabase path.
+
+105. **The session pooler, not the direct connection.** `docs/SUPABASE.md` said
+    to use the direct connection and avoid the pooler, on the correct reasoning
+    that the migration runner needs transactions and session-level settings. But
+    `db.<ref>.supabase.co` is IPv6-only on projects provisioned since about 2024
+    and is unreachable from this machine; the failure is a bare TCP timeout that
+    suggests nothing about addressing. The **session** pooler (port 5432) is
+    IPv4 and keeps both properties — it is the **transaction** pooler (6543)
+    that drops them. The runbook now says so, and says where the password comes
+    from, since Supabase shows it once and never again.
+
+106. **`.env.local` rests in PGlite mode, and the four Supabase lines go
+    together.** Presence alone decides two things — `src/lib/auth/team.ts` picks
+    its identity provider on it, and `src/lib/storage/index.ts` picks its driver
+    — so a partial switch reads one database while storing files against
+    another. And in Supabase mode `npm run smoke` cannot run at all: it signs in
+    through the dev picker's `<select>`, which the magic-link page does not
+    render.
+
+    That last point is the reason the resting state is PGlite rather than the
+    real project. The 167-check suite is the only regression net this build has,
+    and a configuration that disables it is a configuration to switch on
+    deliberately, use, and switch off — not one to leave lying around. Steps 4,
+    7 and 8 of the runbook are the deliberate use.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

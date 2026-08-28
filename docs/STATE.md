@@ -591,6 +591,20 @@ In `docs/DECISIONS.md`, none blocking:
     operates the portal white-glove. #44 and #61 read like a promise to move
     them; this is the deliberate departure.
 
+11. Session 6d's calls (entries 99–106), from standing the Supabase project up.
+    Most are forced rather than chosen — a bug found is not a decision — but
+    three are worth your explicit view:
+    **#100/#101 — a bad key and a wrong bucket are indistinguishable at the
+    Storage API**, and both now throw rather than reporting an absent file. The
+    franchisee-facing consequence is that a misconfigured deployment shows an
+    error where it used to show "no photo uploaded", which is the right way
+    round but is a visible change in behaviour.
+    **#102 — `/auth/callback` deliberately does not check the allowlist**, so
+    that membership stays decided in exactly one place. Adding a second check
+    there would look safer and would be the beginning of drift.
+    And **#106 — local development rests on PGlite, not on the real project**,
+    because Supabase mode disables the only regression suite the build has.
+
 And unchanged from CLAUDE.md: the Design Studio integration path, the pilot
 brand's real vendor policy, the stamp decision, the business model, the DID fee
 amount, and the v13 flow demo (Session 8 stays blocked on it).
