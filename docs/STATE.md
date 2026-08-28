@@ -55,14 +55,25 @@ made: 167 smoke checks, 123 unit tests, 39 schema checks, typecheck, lint. The
 storage and auth fixes both touch paths the smoke suite drives, so this is the
 check that matters and not a formality.
 
-**Step 7 is one click from done.** The magic link was sent through the real form
-to `samniullah.bluecascade@gmail.com` (added to `team_members`); GoTrue created
-the user and recorded `confirmation_sent_at`, so everything up to the inbox is
-proven. What is NOT yet proven is the click: `/auth/callback` exchanging the code
-for a session, `/admin` rendering, and the deactivation check — set that member's
-`active` to false and the next request should sign them straight out. The dev
-server must be running when the link is clicked, since it redirects to
-`http://localhost:3000/auth/callback`.
+**Step 7 is done, bar one branch.** Nine checks pass in a single run against the
+live project: the link completes at `/auth/callback`, a session cookie is
+written, `/admin` renders the queue, **deactivating the `team_members` row locks
+the caller out on the very next request**, reactivating lets them back in, Sign
+out leaves no session cookie and `/admin` then redirects, and a bogus link is
+refused with a message that says why. The deactivation check is the half of SPEC
+§10 that actually decides access, and it had never executed before today.
+
+The unproven remainder is the **PKCE (`?code=`) branch** of the callback. Those
+checks drove the token-hash branch, which can be reconstructed from the database;
+a real emailed link uses PKCE, and reproducing one needs a fresh `signInWithOtp`
+in a live browser, which Supabase's built-in mailer rate-limited. The flow is
+confirmed to be PKCE — the verifier cookies appear — but confirmed is not
+executed. One click from a real inbox settles it. DECISIONS #107.
+
+**A magic link only works in the browser that asked for it** (#108) — PKCE keeps
+the verifier in a cookie. Fine for an operator console; a support question when
+someone opens the mail on their phone. `sendMagicLink`'s header says so, and
+names the remedy if it is ever wanted.
 
 Previously: 25 Aug 2026. **Session 6 is complete, and the RLS gap is closed.**
 Every interface SPEC §9 lists for MVP now exists except Design Studio (Session 7,

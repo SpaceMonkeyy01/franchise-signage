@@ -3,9 +3,10 @@
 // Two things happen here, and only one of them is swappable:
 //
 //   1. Identity — "which email is this?" — comes from Supabase Auth when a
-//      project is configured, and from a dev cookie when one is not. There is no
-//      Supabase project on this machine (docs/STATE.md), so the dev provider is
-//      what actually runs today.
+//      project is configured, and from a dev cookie when one is not. Both paths
+//      have now run against a real project; the dev provider is still what runs
+//      by default here, because Supabase mode disables the smoke suite
+//      (docs/STATE.md, DECISIONS #106).
 //   2. Authorization — "is that email on the team?" — is a lookup against
 //      `team_members`, and is IDENTICAL under both providers. Membership is
 //      granted out of band, never self-serve, and is re-checked on every request
@@ -92,9 +93,14 @@ async function currentEmail(): Promise<string | null> {
 /**
  * The email on the Supabase session.
  *
- * UNVERIFIED: no Supabase project exists yet, so this path has never run
- * (docs/DECISIONS.md #23). The allowlist check around it has, under the dev
- * provider, which is the half that decides anything.
+ * Verified against a real project on 28 Aug 2026: a magic link completed at
+ * /auth/callback, this read the session back, and deactivating the caller's
+ * `team_members` row locked them out on the very next request. Nine checks, and
+ * DECISIONS #107 records what they were.
+ *
+ * Cookie writes are ignored here because a Server Component cannot perform
+ * them; the route handler that completes the link does the writing, and it now
+ * exists.
  */
 async function supabaseEmail(): Promise<string | null> {
   const { createServerClient } = await import('@supabase/ssr');

@@ -1027,6 +1027,47 @@ about how they hid as about how they were fixed.
     deliberately, use, and switch off — not one to leave lying around. Steps 4,
     7 and 8 of the runbook are the deliberate use.
 
+107. **The Auth path is proven, except the branch a real email uses.** Nine
+    checks pass in one run against the live project: the link completes at
+    `/auth/callback`, a session cookie is written, `/admin` renders the queue,
+    **deactivating the `team_members` row locks the caller out on the very next
+    request**, reactivating lets them back in, Sign out leaves no session cookie
+    and `/admin` then redirects, and a bogus link is refused with a message that
+    says why. That third one is the half of SPEC §10 that actually decides
+    access, and it had never executed.
+
+    What is NOT proven is the **PKCE (`?code=`) branch**. The checks above drove
+    the token-hash branch, because it can be reconstructed from the database; the
+    emailed link uses PKCE, and reproducing it needs a fresh `signInWithOtp` in a
+    live browser, which Supabase's built-in mailer rate-limited. The branch is
+    four lines beside one that works, and the flow is confirmed to be PKCE — the
+    verifier cookies appear — but confirmed is not the same as executed. One
+    click on a link from a real inbox settles it.
+
+    Two measurement traps are worth recording, because both produced a confident
+    wrong answer first. A Server Component `redirect()` lands as a **second**
+    navigation, so asserting on the URL after `domcontentloaded` reads the page
+    that is about to redirect and reports the lockout as broken when it works.
+    And `pool()` caches its Pool in `globalThis` at first use: Next hot-reloads
+    `.env.local`, the pool does not follow, so a dev server started in PGlite
+    mode goes on reading PGlite while every other part of the app has moved to
+    Supabase. That one cost the most — it looked exactly like a failing allowlist
+    lookup, with the correct email and a row that plainly existed.
+
+108. **A magic link only works in the browser that requested it, and that is
+    left as it is.** PKCE stores a code verifier in a cookie at
+    `signInWithOtp` and needs it back at the exchange, so requesting a link on a
+    laptop and opening the mail on a phone fails. For an operator console — one
+    person, one work machine — that is the right trade: the verifier is what
+    stops a link intercepted in transit from being usable elsewhere.
+
+    Written into `sendMagicLink`'s header rather than fixed, because it is a
+    support question when it happens and there is nothing to fix in this
+    codebase: the remedy is the project's email template carrying
+    `{{ .TokenHash }}` instead, which `/auth/callback` already accepts and which
+    needs no verifier. That is a deliberate loosening, and it should be someone's
+    decision rather than a default.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

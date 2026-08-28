@@ -48,6 +48,17 @@ export async function devSignIn(email: string): Promise<SubmitFailure | undefine
  * has to be exchanged for a session, and only a route handler can write the
  * cookie that results. Sending it straight to /admin was the original shape and
  * could never have worked — see that handler's header.
+ *
+ * **The link only works in the browser that asked for it.** `createServerClient`
+ * uses PKCE, so this call leaves a code-verifier cookie behind and the exchange
+ * needs it back; a team member who requests a link on their laptop and opens the
+ * mail on their phone will not get in. That is acceptable for an operator
+ * console — one person, one work machine — and it is a real support question
+ * when it happens, so it is written down rather than discovered.
+ *
+ * If it ever needs to work across devices, the fix is not here: it is the
+ * project's email template, which can carry `{{ .TokenHash }}` instead of the
+ * PKCE link. /auth/callback already accepts that shape, and it needs no verifier.
  */
 export async function sendMagicLink(email: string): Promise<SubmitFailure | undefined> {
   if (authProvider() !== 'supabase') {
