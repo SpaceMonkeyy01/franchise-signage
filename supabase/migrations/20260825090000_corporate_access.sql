@@ -44,12 +44,19 @@ create index corporate_links_hash_idx on corporate_links (token_hash);
 -- decide what it reaches. `app.access_token()` already reads that header, so
 -- this helper only has to answer the second question — which brand, if any, does
 -- the presented token open?
+-- `extensions` is in the search_path because `digest()` lives there on Supabase,
+-- which installs pgcrypto into its own schema; `create extension pgcrypto` with
+-- no schema puts it in `public`, which is where the dev database has it. Pinning
+-- the search_path on a security-definer function is right and stays — so the
+-- path names both, and Postgres ignores whichever schema is absent. This is the
+-- only function here that calls into an extension: the other two pinned ones
+-- reach `auth.jwt()`, which is qualified at the call site.
 create or replace function app.corporate_brand()
 returns uuid
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
   select l.brand_id
     from corporate_links l
