@@ -118,23 +118,47 @@ describe('getUpload against Supabase Storage', () => {
     expect((await getUpload('req-0001/abc.pdf'))?.contentType).toBe('application/pdf');
   });
 
+  // The three shapes below were read off the live service on 28 Aug 2026 rather
+  // than imagined, after the imagined ones passed while the real behaviour was
+  // the opposite. Supabase answers all three with status 400 / statusCode "404",
+  // so only the message separates them — and a wrong KEY reports the BUCKET as
+  // missing, because a caller who cannot authenticate cannot see it.
   it('reads a missing object as no file', async () => {
-    download.mockResolvedValue({ data: null, error: { message: 'Object not found', status: 404 } });
+    download.mockResolvedValue({
+      data: null,
+      error: { message: 'Object not found', status: 400, statusCode: '404' },
+    });
     const { getUpload } = await storage();
 
     expect(await getUpload('req-0001/gone.png')).toBeNull();
   });
 
-  it('but does NOT read a broken bucket as a missing file', async () => {
+  it('but does NOT read a missing bucket as a missing file', async () => {
     // The distinction this file exists for. Both end in an empty page; only one
     // of them is our mistake, and it must not be reported as the franchisee's.
     download.mockResolvedValue({
       data: null,
-      error: { message: 'Invalid JWT: signature verification failed', status: 401 },
+      error: { message: 'Bucket not found', status: 400, statusCode: '404' },
     });
     const { getUpload } = await storage();
 
-    await expect(getUpload('req-0001/abc.png')).rejects.toThrow(/Invalid JWT/);
+    await expect(getUpload('req-0001/abc.png')).rejects.toThrow(/Bucket not found/);
+  });
+
+  it('and does NOT read a bad service-role key as a missing file', async () => {
+    // Indistinguishable from the case above at the API — a key that cannot
+    // authenticate is told the bucket does not exist. Pinned separately anyway,
+    // because it is a different mistake to make and the next person will look
+    // for it by name.
+    download.mockResolvedValue({
+      data: null,
+      error: { message: 'Bucket not found', status: 400, statusCode: '404' },
+    });
+    const { getUpload } = await storage();
+
+    await expect(getUpload('req-0001/abc.png')).rejects.toThrow(
+      /Supabase Storage could not read/,
+    );
   });
 });
 

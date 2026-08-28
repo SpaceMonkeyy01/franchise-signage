@@ -142,7 +142,7 @@ const supabaseDriver: StorageDriver = {
     // "no such file", which /api/files turns into a 404, and anything else
     // should surface rather than be reported as a missing photo.
     if (error) {
-      if (isNotFound(error)) return null;
+      if (isMissingObject(error)) return null;
       throw new Error(`Supabase Storage could not read ${storagePath}: ${error.message}`);
     }
     if (!data) return null;
@@ -199,10 +199,29 @@ async function storageClient(): Promise<{ client: SupabaseStorageClient; bucket:
 }
 
 /** Storage reports a missing object as a 404 rather than as a typed error. */
-function isNotFound(error: { message: string; status?: number }): boolean {
+/**
+ * Whether an error means "no such object" — the only case that may be reported
+ * as an absent file.
+ *
+ * Checked against the live service on 28 Aug 2026, because the shapes are not
+ * what a reasonable person would guess and the earlier stub had invented them:
+ *
+ *   absent object   Object not found   status 400, statusCode "404"
+ *   wrong bucket    Bucket not found   status 400, statusCode "404"
+ *   wrong key       Bucket not found   status 400, statusCode "404"
+ *
+ * All three carry the same codes, so the status is no help and the message is
+ * the only signal there is. Note the third line: a key that cannot authenticate
+ * sees no bucket and says the bucket is missing — so a matched-anywhere
+ * "not found" reads a broken deployment as a franchisee who uploaded nothing,
+ * which is the one confusion this whole layer exists to prevent. Bucket errors
+ * therefore throw, and only the object case returns null.
+ */
+function isMissingObject(error: { message: string; status?: number }): boolean {
+  if (/bucket not found/i.test(error.message)) return false;
   return (
     error.status === 404 ||
-    /not[_ ]?found/i.test(error.message) ||
+    /object not found/i.test(error.message) ||
     /does not exist/i.test(error.message)
   );
 }
