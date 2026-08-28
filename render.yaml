@@ -1,0 +1,90 @@
+# Render blueprint — a TESTING deployment (docs/DEPLOY.md).
+#
+# Production is still Vercel (CLAUDE.md, and vercel.json beside this file). This
+# exists so the build can be put in front of people on a URL, from a git repo,
+# without settling that question.
+#
+# Nothing secret lives here. Every value that matters is `sync: false`, which
+# means Render prompts for it once and stores it — this file is committed and a
+# service-role key in it would be a service-role key on GitHub.
+
+services:
+  - type: web
+    name: franchise-signage
+    runtime: node
+    plan: free
+    # Supabase for this project is in ap-northeast-1 (Tokyo) and Render has no
+    # Tokyo region. Singapore is the closest one; Oregon adds roughly 150ms to
+    # EVERY query, and a page here runs several in sequence.
+    region: singapore
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      # Next 16 needs a modern Node; package.json pins no engine, so pin it here.
+      - key: NODE_VERSION
+        value: "22"
+
+      # --- Supabase. All four go together (DECISIONS #106) ---------------------
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      # Render's filesystem is EPHEMERAL. Without this the local-disk driver is
+      # selected and a franchisee's lease exhibit is discarded on the next
+      # deploy — silently, which is the one failure src/lib/storage refuses to
+      # allow. It must be set.
+      - key: SUPABASE_STORAGE_BUCKET
+        sync: false
+      # The SESSION pooler string (port 5432), not the transaction pooler.
+      - key: DATABASE_URL
+        sync: false
+
+      # --- Mail ---------------------------------------------------------------
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM_EMAIL
+        sync: false
+
+      # --- App ----------------------------------------------------------------
+      # MUST be this service's own full https:// origin. Every tokenized link in
+      # every email is built from it; wrong here means mail that sends and links
+      # that go nowhere.
+      #
+      # Deliberately NOT wired with `fromService`: that yields a bare host (or
+      # host:port) with no scheme, and this needs the scheme. Set it by hand
+      # after the first deploy, when Render has assigned the hostname —
+      # https://<service>.onrender.com, no trailing slash.
+      - key: APP_URL
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+      - key: DID_FEE_CENTS
+        value: "49900"
+
+# The review SLA (SPEC §3.1). /api/cron/review-sla is deliberately a plain HTTP
+# route rather than a platform job, so this is a curl and nothing more.
+#
+# NOTE: Render's cron jobs are not part of the free tier — check current pricing
+# before relying on this. Until then the same work is `npm run sla` by hand, and
+# nothing is ever approved by a clock anyway (DECISIONS, Session 4), so a missed
+# run delays a reminder rather than deciding anything.
+  - type: cron
+    name: franchise-signage-review-sla
+    runtime: node
+    plan: starter
+    region: singapore
+    schedule: "0 9 * * *"
+    buildCommand: "true"
+    startCommand: >-
+      curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/review-sla"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: franchise-signage
+          envVarKey: CRON_SECRET
+      - key: APP_URL
+        sync: false
