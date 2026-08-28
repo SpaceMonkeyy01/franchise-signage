@@ -44,8 +44,10 @@ export async function devSignIn(email: string): Promise<SubmitFailure | undefine
 /**
  * Supabase magic link.
  *
- * UNVERIFIED — no project exists to send one (docs/DECISIONS.md #23). Written so
- * the screen is complete and the swap is a configuration change, not a rewrite.
+ * The link lands on /auth/callback, NOT on /admin: the one-time credential in it
+ * has to be exchanged for a session, and only a route handler can write the
+ * cookie that results. Sending it straight to /admin was the original shape and
+ * could never have worked — see that handler's header.
  */
 export async function sendMagicLink(email: string): Promise<SubmitFailure | undefined> {
   if (authProvider() !== 'supabase') {
@@ -75,7 +77,15 @@ export async function sendMagicLink(email: string): Promise<SubmitFailure | unde
 
   const { error } = await supabase.auth.signInWithOtp({
     email: member.email,
-    options: { emailRedirectTo: `${process.env.APP_URL ?? 'http://localhost:3000'}/admin` },
+    options: {
+      emailRedirectTo: `${process.env.APP_URL ?? 'http://localhost:3000'}/auth/callback`,
+      // Explicit because it looks alarming and is not: a team member's FIRST
+      // sign-in has no Supabase user yet, and this is what creates it. It is not
+      // self-serve access — the allowlist was checked above before any link was
+      // sent, and is checked again on every request afterwards (SPEC §10). The
+      // Supabase user is an identity; team_members is the authorization.
+      shouldCreateUser: true,
+    },
   });
   if (error) return { error: error.message };
   return undefined;
@@ -84,5 +94,26 @@ export async function sendMagicLink(email: string): Promise<SubmitFailure | unde
 export async function signOut(): Promise<void> {
   const store = await cookies();
   store.delete(DEV_SESSION_COOKIE);
+
+  // And out of Supabase, where the session actually lives under that provider.
+  // Deleting the dev cookie alone used to be the whole of this function, which
+  // meant Sign out did nothing at all once a project was configured: the page
+  // reloaded, the session was still there, and the team member stayed signed in.
+  if (authProvider() === 'supabase') {
+    const { createServerClient } = await import('@supabase/ssr');
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => store.getAll(),
+          setAll: (list) =>
+            list.forEach(({ name, value, options }) => store.set(name, value, options)),
+        },
+      },
+    );
+    await supabase.auth.signOut();
+  }
+
   redirect('/admin/login');
 }
