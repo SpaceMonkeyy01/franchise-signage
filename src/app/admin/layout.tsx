@@ -37,8 +37,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           {member && (
             <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-              {/* Both are support tools, not daily ones — findable from every
+              {/* All three are support tools, not daily ones — findable from every
                   screen, and never competing with the queue for attention. */}
+              <Link href="/admin/demo" className="text-gray-300 underline-offset-2 hover:underline">
+                Walkthrough
+              </Link>
               <Link
                 href="/admin/entry-points"
                 className="text-gray-300 underline-offset-2 hover:underline"

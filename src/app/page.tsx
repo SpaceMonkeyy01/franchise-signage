@@ -1,40 +1,86 @@
-// The root. There is no product surface here by design: every real entry point
-// is scoped — /{brand_slug} for franchisees (Session 2), /admin for the team
-// (Session 3), and tokenized or magic links for everyone else (SPEC §10).
-// Nobody arrives at the bare origin in the ordinary run of things.
+// The root — the front door.
 //
-// It does now carry two links, which it did not before a hosted deployment
-// existed. They are ADDRESSES, not credentials — the same two sentences this
-// page always said, made clickable — and they cost nothing: /admin refuses
-// anyone not on the allowlist, and a brand's home page is where a franchisee is
-// meant to start. What must never appear here is a token. The operator's index
-// of live links is /admin/entry-points, behind the allowlist, for that reason.
+// There is still no login here for anyone but the team, and there must not be:
+// franchisees and corporate reviewers hold tokenized links, and nobody signs up
+// (SPEC §10). What this page does is say, for each participant, where their way
+// in actually is — which for three of them is "the link in your email", and for
+// the franchisor also "ask for a fresh one".
+//
+// Every link on it is an ADDRESS, not a credential, and costs nothing: /admin
+// and /admin/demo refuse anyone not on the allowlist, a brand's home page is
+// where a franchisee is meant to start, and the corporate page says the same
+// sentence whichever address is typed into it. What must never appear here is a
+// token. The operator's index of live links is /admin/entry-points, and the
+// walkthrough that frames every participant's view is /admin/demo — both behind
+// the allowlist, for that reason.
 
 import Link from 'next/link';
 
+// The pilot brand. Hard-coded rather than queried so the page stays static and
+// builds with no database, as it always has.
+const PILOT = { slug: 'freshbites', name: 'Freshbites' };
+
+const DOORS = [
+  {
+    who: 'Signage.com team',
+    what: 'The operator console: the queue, packages, routing, pricing and fulfilment.',
+    how: 'Sign in with your team address.',
+    href: '/admin',
+    cta: 'Sign in',
+  },
+  {
+    who: `${PILOT.name} franchisee`,
+    what: 'Order signage for a location, and follow every request from submission to install.',
+    how: 'No account. Start here, or open the private link in any email about your request.',
+    href: `/${PILOT.slug}`,
+    cta: `Go to ${PILOT.name} signage`,
+  },
+  {
+    who: `${PILOT.name} corporate`,
+    what: 'Your program dashboard: every location, what is installed, what is committed.',
+    how: 'No account. Enter your brand email and a dashboard link is sent to you.',
+    href: `/${PILOT.slug}/corporate`,
+    cta: 'Email me my dashboard link',
+  },
+];
+
 export default function Home() {
   return (
-    <main className="mx-auto flex max-w-xl flex-1 flex-col justify-center gap-3 px-6 py-16">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-16 sm:px-6">
       <p className="text-xs font-medium uppercase tracking-widest text-brand">
         Franchise by Signage
       </p>
-      <h1 className="text-2xl font-semibold text-gray-900">
+      <h1 className="mt-2 text-2xl font-semibold text-gray-900">
         Signage workflow for franchise brands.
       </h1>
-      <p className="text-sm leading-relaxed text-gray-600">
-        Entry points are scoped per brand. Franchisees arrive on a co-branded link, the
-        Signage.com team signs in at{' '}
-        <Link href="/admin" className="font-medium text-gray-900 underline underline-offset-2">
-          /admin
-        </Link>
-        , and corporate reviewers act from email — no account required.
+      <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-600">
+        Choose who you are. Only the Signage.com team signs in — everyone else reaches their page by
+        a private link, and corporate approvals happen straight from email.
       </p>
-      <p className="text-sm leading-relaxed text-gray-600">
-        The pilot brand is{' '}
-        <Link href="/freshbites" className="font-medium text-gray-900 underline underline-offset-2">
-          Freshbites
-        </Link>
-        .
+
+      <div className="mt-8 grid gap-3 sm:grid-cols-3">
+        {DOORS.map((door) => (
+          <Link
+            key={door.href}
+            href={door.href}
+            className="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
+          >
+            <span className="text-sm font-semibold text-gray-900">{door.who}</span>
+            <span className="mt-1 text-xs leading-relaxed text-gray-600">{door.what}</span>
+            <span className="mt-2 flex-1 text-xs leading-relaxed text-gray-400">{door.how}</span>
+            <span className="mt-4 text-sm font-medium text-brand group-hover:underline">
+              {door.cta} →
+            </span>
+          </Link>
+        ))}
+      </div>
+
+      <p className="mt-6 text-xs leading-relaxed text-gray-500">
+        Showing the product?{' '}
+        <Link href="/admin/demo" className="font-medium text-gray-900 underline underline-offset-2">
+          The walkthrough
+        </Link>{' '}
+        puts every participant&rsquo;s view of one request side by side. Team sign-in required.
       </p>
     </main>
   );

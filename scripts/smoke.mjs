@@ -1592,6 +1592,27 @@ await page.getByRole('link', { name: 'Entry points' }).click();
 await page.waitForLoadState('networkidle');
 await expectVisible(page, 'h1:text-is("Entry points")', 'and are one click from the queue when you are');
 
+// The walkthrough frames every participant's live link, so it gets the same
+// two checks — and the tabs themselves, since they are the page.
+const demoSignedOut = await fetch(`${BASE}/admin/demo`, { redirect: 'manual' });
+const demoBody = demoSignedOut.status < 300 ? await demoSignedOut.text() : '';
+record(
+  'the walkthrough is not readable without signing in',
+  demoSignedOut.status >= 300 || !demoBody.includes('Corporate reviewer'),
+  `status ${demoSignedOut.status}`,
+);
+record(
+  'and no franchisee token is in the signed-out response',
+  !/request\/[A-Za-z0-9_-]{16,}/.test(demoBody) && !/accessToken/.test(demoBody),
+  'a token appeared in the body of a page that redirects',
+);
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: 'Walkthrough' }).click();
+await page.waitForLoadState('networkidle');
+await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on the franchisee view of a request');
+await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
+await expectVisible(page, 'iframe[src*="/corporate/"]', 'and its corporate tab opens a dashboard link');
+
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 
 await browser.close();
