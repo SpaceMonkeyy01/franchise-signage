@@ -1,9 +1,9 @@
-# Franchise Signage Studio — MVP Spec v2.2
+# Franchise Signage Studio — MVP Spec v2.3
 
-Version 2.2 · Supersedes v2.1 · Handoff document for implementation (Claude Code)
-Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for admin) + Resend + Vercel.
+Version 2.3 · Supersedes v2.2 · Handoff document for implementation (Claude Code)
+Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for every account) + Resend + Vercel.
 Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
-What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
+What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -186,7 +186,7 @@ A split request therefore reads:
 - `exception` (flagged standard item) → always pending_review.
 - `replacement` (like-for-like of an active installed sign) → auto_approved, always.
 - Reviewer UX is email-only: signed expiring links, per-item Approve / Decline + optional note; a "changes requested" path with comment + flagged fields. Auto-approved count stated in the email ("4 standard signs auto-approved — no action needed").
-- Corporate also gets a read-only dashboard (§9) but approval never requires login.
+- Approval never requires signing in: the email buttons decide. A signed-in reviewer or brand admin can also decide from the dashboard (v2.3, §10); both paths write the same events.
 
 ## 8. Design Studio integration
 
@@ -230,7 +230,7 @@ Franchisees applying for buildout loans need design intent drawings (DIDs): conc
 
 **New object `did_requests`:** brand_id, requester_email (brand-domain validated), address jsonb, zip, area_sqft nullable, imagery_source enum (upload | street_view | none), format_inference, drawing_file_ids, estimate_total, fee_status (unpaid | paid), payment_ref, signature_status (unsigned | intent_only | signed), signed_at, location_id nullable FK (linked when the franchisee proceeds to real setup — the DID becomes the first document in the location record and prefills address/format/photos).
 
-**Scope changes it introduces:** brand-email magic-link auth (moved up from v1.1); Stripe checkout for the fixed fee (payments were out of scope; this is the single exception, scoped to DID fees only).
+**Scope changes it introduces:** ~~brand-email magic-link auth (moved up from v1.1)~~ superseded in v2.3 — the franchisee signs in to their account (§10) and the DID button requires `franchisee_owner`; Stripe checkout for the fixed fee (payments were out of scope; this is the single exception, scoped to DID fees only).
 
 **The stamp: legal design (corrected in v2.1, replaces the earlier "review and adopt" wording):**
 The seal itself can never be automated. Auto-applying an architect's seal to generated drawings is plan stamping, banned in all 50 states, and under the NCARB standard most states use, reviewing documents after they were prepared may not count as "responsible control" either. The version that survives a licensing board: the JV architect authors the drawing template and the generation rules (responsible control over the system that prepares the drawings), every output lands in their review queue, they judge each drawing (minutes at DID complexity), and they apply their own e-seal in one click. From the franchisee's side this feels automated; legally it is a controlled professional workflow. The sealing architect must also be licensed in the project's state, so the signed tier rolls out state by state and JV partner selection should weigh how many state licenses the firm holds. Team decision pending: (a) ship unstamped only and let lender calls decide whether signed is needed, or (b) build the signed tier the legal way. Recommendation: a now, b if lenders demand it. Never build any code path that applies a seal without a per-drawing architect action.
@@ -247,6 +247,8 @@ Access happens in two steps, at two different moments, because the DID is needed
 **Level 1, at agreement signing:** corporate registers the franchisee's email in the portal (this is the same corporate approval that gates DID generation in §8c). Registration fires the **welcome email**: co-branded, sent as the brand, carrying the brand-email magic link. Content covers only what matters at signing: concept drawings and a signage number for the bank (DID + budget one-pager). Signage ordering stays invisible; nothing about it is relevant yet. Corporate's lift is one email address per new franchisee, appended to the welcome bundle they already send at countersigning.
 
 **Level 2, after the lease:** the location workspace (tokenized links per request, as in §10), created either fresh or via the DID's convert-to-location prefill.
+
+**v2.3:** both levels now live in one account (§10). Registration at level 1 creates the franchisee company and an owner invitation, and the welcome email carries that invitation; accepting it is the sign-up (§10.3.2). Level 2 is the same account gaining a store.
 
 **Build requirements:** the welcome email is a first-class MVP deliverable — template, trigger on email registration, brand-styled sender — and belongs in interface 5 (notifications) scope. It was implicit in v2; every flow assumed the franchisee already held a link. It is the first thing a franchisee ever sees from the product.
 
@@ -265,13 +267,249 @@ Access happens in two steps, at two different moments, because the DID is needed
 6. **Corporate dashboard** (read-only, magic-link or simple auth): portfolio metrics (locations, installed signs, open requests, pending approvals, program spend), per-location compliance cards, jump-to-approvals.
 7. **Brand admin**: seed pilot brand via script (brand, brand_items, packages, master_catalog import from the taxonomy sheet); CRUD UI only when onboarding brand #2.
 
-## 10. Access model
+### 9b. Accounts (v2.3), phases A–D
 
-Franchisee: tokenized links per request; brand entry page mints new requests. v1.1: magic-link email lookup listing "your locations" (needed for multi-unit operators). Reviewer: signed single-use expiring email links. Team: Supabase Auth allowlist. Corporate dashboard: magic link. Vendor: email only. RLS: anon role scoped by presented token.
+Built ahead of Design Studio (§8) and the DID generator (§8c), both of which are blocked. Each phase can be demonstrated on its own, and none requires the next.
+
+| Phase | Delivers | Demo |
+|---|---|---|
+| **A. Identity core** | profiles, memberships, invitations and their accept page (create account, set password), email + password sign-in, forgot password, two-factor for `platform_admin`, `platform_admin` replacing the allowlist, the RLS helpers and their tests | A team member accepts an invite, sets a password and two-factor, signs in; deactivation still locks them out |
+| **B. Franchisee accounts** | franchisee companies, store ownership + backfill, welcome email = invitation, sign-up continuing into store setup or the level-1 page (§10.3.2), a "My stores" home across all of a franchisee's stores, DID sign-in built on this | Corporate invites a franchisee, who signs up, sets up a store, and later sees both stores and every request |
+| **C. Corporate in-app** | brand_admin and brand_reviewer, the dashboard behind sign-in, approve from the dashboard, invite and deactivate users, `corporate_links` retired | A reviewer approves from the dashboard, and the same item's email button then says it's already decided |
+| **D. Staff + brand portals** | `franchisee_staff` with store assignment, owner invites staff, `{brand}.signage.com` routing | A manager sees one store of two; freshbites.localhost serves the brand |
+
+Phase B has one dependency that isn't built yet: the DID screens still wait on the
+v13 demo. Phase B builds the sign-in the DID uses, not the DID itself.
+
+The `/admin/demo` walkthrough keeps working throughout. Under accounts it should
+become "view as", showing exactly what a chosen member sees. That is a
+`platform_admin` capability, and every "view as" session is written to the
+event log.
+
+## 10. Access model (rewritten in v2.3 — accounts)
+
+Everyone except vendors has an account and signs in with an email and a password. Email links exist only where email is the point: accepting an invitation, and resetting a password. Nobody signs up on their own: Signage.com creates a brand, and every account after that is created by an **invitation** from someone above it — Signage.com invites the brand's admins, a brand admin invites franchisees and reviewers, a franchisee owner invites their store staff. What a person can see and do is a **role on a brand**, and for franchisees also **which stores they own or are assigned to**. Vendors stay email-only. The reviewer's one-click email buttons stay (§10.3.4).
+
+Enforcement is two-layered, as it was in v2.2: the application checks, and RLS is the backstop.
+
+### 10.1 Roles
+
+A person can hold several memberships, for example an admin at two brands, or a
+franchisee owner who is also staff somewhere else. Each membership is one row:
+**who, which brand, which role**, plus a store scope for staff.
+
+| Role | Scope | Held by |
+|---|---|---|
+| `platform_admin` | Every brand | The Signage.com team. Replaces `team_members`. |
+| `brand_admin` | One brand, everything in it | Franchisor corporate: the program owner. |
+| `brand_reviewer` | One brand, approvals and reading | Franchisor staff who approve signage. |
+| `franchisee_owner` | One franchisee company's stores | The franchisee. |
+| `franchisee_staff` | Named stores only | A store manager, invited by the owner. |
+
+**A franchisee is a company, not an email address.** A new `franchisees` record
+(one company under a brand) owns stores, and people belong to it. If the
+franchisee were one email address, a store would be orphaned the first time its
+manager changed. Stores (`locations`) gain a `franchisee_id`.
+
+### 10.2 Who can do what
+
+✓ = can do · — = cannot see or do · "own" = only the franchisee's own stores ·
+"assigned" = only the stores the staff member is assigned to.
+
+| Capability | platform_admin | brand_admin | brand_reviewer | franchisee_owner | franchisee_staff |
+|---|---|---|---|---|---|
+| See all brands | ✓ | — | — | — | — |
+| See every store and request in the brand | ✓ | ✓ | ✓ | own | assigned |
+| Start a request, replace a sign | ✓ | — | — | own | assigned |
+| Answer a change request, resubmit | ✓ | — | — | own | assigned |
+| **Accept a quote** (commits money) | ✓ | — | — | own | — |
+| Download budgetary quote, invoice, receipt | ✓ | ✓ | — | own | — |
+| Generate a DID (§8c) | ✓ | — | — | ✓ | — |
+| **Approve / decline / request changes** | ✓ | ✓ | ✓ | — | — |
+| Corporate dashboard, budget one-pager export | ✓ | ✓ | ✓ | — | — |
+| Invite or deactivate brand admins and reviewers | ✓ | ✓ | — | — | — |
+| Invite a franchisee (the §8d registration) | ✓ | ✓ | — | — | — |
+| Invite or deactivate store staff | ✓ | ✓ | — | own stores | — |
+| Prepare packages, price, route, fulfil, invoice | ✓ | — | — | — | — |
+| Create a brand, edit the catalog or packages | ✓ | — | — | — | — |
+
+Four lines deserve a note:
+
+- **Accepting a quote is owner-only.** It is the point where money is committed,
+  and on the internal tail it produces the invoice a lender pays against. Staff
+  can prepare everything up to it. (§10.7 D2.)
+- **Corporate never edits a franchisee's request.** Corporate approves items or
+  sends them back with a note. The franchisee changes their own request. This is
+  the v2.2 rule, and accounts don't loosen it.
+- **Only Signage.com runs the service side.** Package prep, pricing, routing and
+  fulfilment stay with `platform_admin`. A brand admin has full access to the
+  brand's program, not to Signage.com's operations.
+- **Creating a brand stays white-glove.** A brand admin can invite people into a
+  brand that exists. They cannot create one. "Franchisor self-serve onboarding"
+  stays out of scope.
+
+### 10.3 Invitations and sign-in
+
+#### 10.3.1 One invitation mechanism
+
+| Field | Notes |
+|---|---|
+| id, brand_id, email, role | the role the invitee gets on accepting |
+| franchisee_id nullable | for franchisee roles; a new franchisee company is created with the invite |
+| location_ids uuid[] nullable | for `franchisee_staff` |
+| invited_by (membership id), created_at | |
+| token_hash, expires_at (14 days), accepted_at, revoked_at | hashed, like review and corporate links |
+
+Accepting an invitation creates the membership. It is single-use and expires. An
+admin can re-send it, which replaces the token and kills the old one, or revoke
+it.
+
+**The §8d registration becomes a franchisee invitation.** Corporate registers a
+franchisee's email at agreement signing, as today. That creates a `franchisees`
+record and an owner invitation, and **the welcome email carries the invitation**.
+The welcome email's content is unchanged: the DID and the budget number, with
+ordering absent. The difference is that the link now leads to an account that
+will still be there after the lease. `franchisee_registrations` stays as the record of the §8d event and points
+to its invitation. The §8d welcome email must not change behaviour.
+
+#### 10.3.2 Accepting an invitation: sign up, then set up
+
+The invitation email carries one link. Opening it:
+
+1. **Confirms the email address.** The invitation token proves it, so there is
+   no separate "verify your email" step.
+2. **Creates the account.** Name, phone, and a password. For a franchisee owner,
+   also the company name, which creates the `franchisees` record.
+3. **Continues into setup, depending on the role:**
+   - **Franchisee owner, with a site:** straight into the existing initial-setup
+     flow (store basics and format, the standard package checklist, add-ons,
+     submit). The store is created owned by their company.
+   - **Franchisee owner, no site yet:** the §8d level-1 page (DID and budget
+     number), with "Set up a store" waiting for when the lease is signed.
+     Ordering stays out of sight until then, as §8d requires. (§10.7 D7.)
+   - **Store staff:** straight to their assigned stores.
+   - **Brand admin or reviewer:** straight to the dashboard.
+
+The link is single-use. Once the account exists, the same link says "this
+invitation has been accepted — sign in" rather than failing.
+
+**The invite link works on any device.** It is our own hashed token, not a
+Supabase magic link, so it avoids the PKCE rule that ties a Supabase link to the
+browser that requested it (DECISIONS #108). That matters because a franchisee's
+first visit is often on a phone.
+
+#### 10.3.3 Signing in
+
+- **Email and password**, through Supabase Auth, which the team sign-in already
+  uses. One sign-in page per brand address (§10.4), plus the console's.
+- **Password rules:** a minimum of 10 characters, and Supabase's leaked-password
+  check (a paid-plan feature). Repeated failures are rate-limited and then
+  locked for a period; Supabase provides both, and we set the limits.
+- **Forgot password** sends a reset link. That email must use the token-hash
+  template, not Supabase's default PKCE link, so it works when opened on a
+  different device from the one that asked for it. Same fix #108 names.
+- **Two-factor:** required for `platform_admin`, whose account reaches every
+  brand, through an authenticator app (Supabase supports it). Optional for
+  everyone else, and a brand can require it of its own admins (§10.7 D8).
+- **The allowed-domain rule stays.** A brand keeps its list of approved franchisee
+  email domains (§8c). An invitation to an address outside the list is refused,
+  or warned about (§10.7 D5).
+- **Sessions:** 30 days for franchisee and brand roles, and 12 hours for
+  `platform_admin`, which has access to every brand. Supabase sets one session
+  length for the whole project, so the shorter limit is enforced by the app
+  checking the sign-in time on each request. Deactivating a membership
+  takes effect on the next request, as the team allowlist does today (tested in
+  Session 6d).
+
+#### 10.3.4 What happens to the links that exist today
+
+| Link | Under v2.3 |
+|---|---|
+| Reviewer's approve / decline / changes buttons | **Unchanged.** Signed, single-use, 7 days. |
+| Franchisee's per-request link in notifications | **Kept as a shortcut** during the pilot (§10.7 D1). |
+| Corporate dashboard link (`corporate_links`) | **Retired** once brand roles are live. The dashboard sits behind sign-in. |
+| Welcome link (`franchisee_registrations.access_token`) | **Becomes** the owner invitation. |
+| Team allowlist (`team_members`) | **Migrated** into `platform_admin` memberships. |
+
+**Reviewers keep the email buttons.** Approving straight from the inbox is the
+product's fastest path, and the reason corporate goes along with any of this. A
+signed-in reviewer can also decide from the dashboard, which resolves #75. Both
+routes call the same decision code and write the same `request_events`, with the
+actor recorded as either `via_link` or `via_session`.
+
+### 10.4 Brand portals: `{brand}.signage.com`
+
+- **One address per brand**, for example `freshbites.signage.com`. It serves that
+  brand's sign-in, franchisee home, and corporate dashboard. The Signage.com
+  console sits on its own address, for example `franchise.signage.com/admin`.
+- **It routes to the pages that already exist.** The request resolves the
+  subdomain to a brand, and `freshbites.signage.com/…` serves what
+  `/freshbites/…` serves today. The path-based URLs keep working, so nothing is
+  rebuilt and local development needs no DNS.
+- **Each brand gets its own sign-in session.** Sessions are scoped to the brand's
+  address, so being signed in at Freshbites doesn't carry over to another brand.
+  That fits co-branding. Anyone who belongs to two brands signs in at each.
+- **Needs from outside the code:** wildcard DNS and a wildcard certificate for
+  `*.signage.com` on the host, and a wildcard redirect URL in the Supabase auth
+  settings. None of this blocks the rest of the plan. Subdomains are the last
+  phase (§9b).
+
+### 10.5 Data model changes (additive)
+
+| Change | Notes |
+|---|---|
+| `profiles` | id = the Supabase Auth user id; email, name, created_at |
+| `franchisees` | id, brand_id, name (the company), created_at |
+| `memberships` | id, profile_id, brand_id nullable (null only for platform_admin), role, franchisee_id nullable, active, created_at |
+| `membership_locations` | membership_id, location_id — the staff scope |
+| `invitations` | §10.3.1 |
+| `locations.franchisee_id` | nullable FK; backfilled (§10.6), then required for new stores |
+| `requests.created_by` | nullable profile id. `requester_*` stays: it is contact data, not identity |
+| `brands.franchisee_email_domains` | text[] — the §8c approved-domains list made concrete |
+
+Nothing is dropped in the same release. `team_members` and `corporate_links` go
+read-only, and are removed one release after their replacements have run in
+production.
+
+**RLS.** Two helper functions answer every question: `app.brand_role(brand_id)`
+returns the caller's highest role on a brand, and `app.can_see_location(location_id)`
+answers the owner and staff scope. Policies are written against those two, and
+the per-request token policies stay beside them for as long as §10.7 D1 keeps the
+links. The behaviour suite (`npm run db:verify`) gains a check for each role
+against the two-brand fixture. That includes the ones that matter most: staff
+can't see a store they aren't assigned to, an owner can't see a sibling
+franchisee's stores, and a brand admin can't write a request.
+
+### 10.6 Migrating what existed in v2.2
+
+- **Team:** each active `team_members` row becomes a profile plus a
+  `platform_admin` membership, and gets an invitation to set a password and
+  enrol two-factor. Until they accept it, their current sign-in keeps working.
+- **Stores:** each location's owner is inferred from the `requester_email` of its
+  earliest request. The team reviews that list before it is applied. An inferred
+  owner is a guess, and a wrong one would show a stranger someone else's store.
+  Stores nobody can attribute stay unowned and visible only to the brand and the
+  team until someone is invited.
+- **Registrations:** each `franchisee_registrations` row becomes a franchisee
+  company plus a pending owner invitation. Nobody is emailed automatically.
+- **Pilot seed:** Freshbites gets a brand admin (`brand@freshbites.com`), a
+  reviewer, and one franchisee company owning Oak Plaza and Cedar Park, so every
+  role can be demonstrated from `npm run dev`.
+
+### 10.7 Settled decisions (Sep 2026)
+
+- **D1. Per-request links stay, for the pilot.** A notification link still opens its request with one tap. Accepting a quote is owner-only and needs a signed-in owner, so a forwarded link can view a request and cannot commit money. "Sign in to view" can be switched on per brand later.
+- **D2. Store staff are in the data model from phase A; their screens come in phase D.**
+- **D3. A brand admin can do everything a reviewer can.**
+- **D4. `brands.reviewer_email` stays as the escalation and SLA address** (§3.1). Approval emails go to every `brand_reviewer`, or to the configured address while the brand has none.
+- **D5. An invitation outside the brand's email domains warns, then allows.** An invitation is the voucher §8c's hard domain rule was standing in for.
+- **D6. The console's address is a naming decision**, left to deployment; nothing in the build depends on it.
+- **D7. A franchisee invited before they have a site** lands on the §8d level-1 page after sign-up, with "Set up a store" waiting there. Always going straight into store setup may become a per-brand setting.
+- **D8. Two-factor is required for `platform_admin`**, optional for everyone else, with a per-brand switch to require it for that brand's admins and reviewers.
 
 ## 11. Out of scope (MVP)
 
-Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding · franchisee accounts · vendor portal · payments/deposits (single exception: the §8c Stripe checkout for DID fees) · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
+Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (brand creation stays white-glove; brand admins invite users into an existing brand) · social sign-in · single sign-on with a franchisor's identity provider (not blocked: Supabase Auth supports SAML) · permissions finer than the five §10 roles · vendor portal · payments/deposits (single exception: the §8c Stripe checkout for DID fees) · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
 
 **Phase-2 backlog added in v2.1 (from lifecycle research; do not build, do not preclude in schema):**
 - De-identification workflow: on franchise exit, all branded signage must come down, sometimes within days, with trademark law behind it. installed_signs is the removal checklist; workflow adds removal tracking and proof photos for corporate legal.
@@ -284,7 +522,7 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding �
 1. Usman: the five DS integration requirements in §8 — which are feasible, and on what timeline? Until answered, mockups are manual and est_price comes from a static field.
 2. Which standin categories (esp. window vinyl/frosting if high-volume) should be promoted to direct pricing early?
 3. Pilot brand's real vendor policy — determines which tail gets exercised first.
-4. Pilot franchisees single- or multi-unit? (drives whether magic-link lookup moves into v1.)
+4. ~~Pilot franchisees single- or multi-unit?~~ Answered by v2.3: accounts give every franchisee a "My stores" home, single or multi-unit.
 5. SLA default (5 days, remind) — confirm with pilot franchisor at setup.
 6. DID diligence (§8c): licensing lawyer sign-off on the responsible-control design; per-drawing review cost; SBA lender acceptance of unstamped packages and which gate needs site-specific docs; DID fee amount and Stripe account setup.
 7. The stamp decision (§8c): unstamped only for now, or build the signed tier the legal way. Recommendation: unstamped first, signed if lenders demand it.
@@ -295,6 +533,14 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding �
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
 
 ---
+
+## Changelog v2.2 → v2.3 (Sep 2026)
+
+- **§10 rewritten: accounts.** Everyone but vendors signs in with email and password. Accounts are created only by invitation, down the chain Signage.com → brand admins → franchisees → store staff; the invitation link is the sign-up, and a franchisee owner continues into store setup (or, before a site exists, the §8d level-1 page). Five roles — `platform_admin`, `brand_admin`, `brand_reviewer`, `franchisee_owner`, `franchisee_staff` — scoped by brand and, for franchisees, by store. A franchisee is a company that owns stores. Two-factor is required for Signage.com. Brands get `{brand}.signage.com` addresses.
+- **What it replaces:** the team allowlist (→ `platform_admin`), the corporate dashboard link (→ sign-in), the §8c one-off brand-email magic link (→ the account), and the welcome link (→ the owner invitation). **What it keeps:** the reviewer's signed email buttons, and the per-request links as a pilot shortcut that cannot commit money.
+- **§7:** a signed-in reviewer can decide from the dashboard, resolving DECISIONS #75. Email approval is unchanged.
+- **§9b (new):** phases A–D. **§11:** franchisee accounts leave out-of-scope; social sign-in, SSO and finer permissions are named instead. **§12 Q4** answered.
+- The §10.5 schema additions (`franchisees`, `locations.franchisee_id`, `requests.created_by`, `brands.franchisee_email_domains`) are specified there and not repeated in the §3/§5 tables.
 
 ## Changelog v2.1 → v2.2 (Aug 2026)
 
