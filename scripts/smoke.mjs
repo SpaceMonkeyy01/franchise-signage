@@ -16,6 +16,7 @@
 // bridge), so the direct-SQL helpers here connect, do their work and disconnect
 // — and retry, because `next dev` may be holding the connection when they ask.
 
+import { createHmac } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 import { chromium } from 'playwright';
@@ -40,6 +41,57 @@ const PIXEL_PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
   'base64',
 );
+
+/**
+ * The seeded dev admin (src/lib/auth/dev-auth.ts). Its password and
+ * authenticator secret are published there on purpose: the account exists only
+ * in the dev database, and this suite has to be able to type both.
+ */
+const DEV_ADMIN = {
+  email: 'team@signage.com',
+  password: 'signage-dev-password',
+  totpSecret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
+};
+
+/** The Signage.com admin the accounts section invites, and then removes. */
+const SMOKE_ADMIN = 'smoke.admin@signage.test';
+const SMOKE_ADMIN_PASSWORD = 'smoke-admin-password-1';
+
+/**
+ * RFC 6238, as every authenticator app computes it — the same algorithm as
+ * src/lib/auth/totp.ts, restated because this file cannot import TypeScript.
+ */
+function totpCode(secret, at = Date.now()) {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  let bits = 0;
+  let value = 0;
+  const bytes = [];
+  for (const char of secret.toUpperCase()) {
+    value = (value << 5) | alphabet.indexOf(char);
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 0xff);
+      bits -= 8;
+    }
+  }
+  const counter = Buffer.alloc(8);
+  counter.writeBigUInt64BE(BigInt(Math.floor(at / 30_000)));
+  const digest = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
+  const offset = digest[digest.length - 1] & 0x0f;
+  return ((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).toString().padStart(6, '0');
+}
+
+/** Password, then the authenticator code — the whole Signage.com sign-in. */
+async function signInAsAdmin(page, { email, password, totpSecret }) {
+  await page.goto(`${BASE}/sign-in?next=/admin`, { waitUntil: 'networkidle' });
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: false }).first().fill(password);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.waitForURL('**/two-factor**', { timeout: TIMEOUT });
+  await page.getByLabel('Six-digit code').fill(totpCode(totpSecret));
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.waitForURL(/\/admin$/, { timeout: TIMEOUT });
+}
 
 const record = (label, passed, detail = '') => {
   results.push({ label, passed });
@@ -96,6 +148,35 @@ async function withDb(fn, attempt = 0) {
   } finally {
     await client.end().catch(() => {});
   }
+}
+
+/** The path of the newest link matching `pattern` in the newest email of `kind` to `to`. */
+async function latestLinkTo(to, kind, pattern) {
+  const html = await withDb(async (client) => {
+    const { rows } = await client.query(
+      `select html from sent_emails where to_email = $1 and kind = $2
+        order by created_at desc limit 1`,
+      [to, kind],
+    );
+    return rows[0]?.html ?? '';
+  });
+  return html.match(pattern)?.[0] ?? null;
+}
+
+/**
+ * Remove the smoke admin — identity, profile, roles, invitations and mail — so
+ * each run invites a stranger. Run before and after, like the other cleanups.
+ */
+async function removeSmokeAdmin() {
+  return withDb(async (client) => {
+    await client.query(`delete from invitations where lower(email) = lower($1)`, [SMOKE_ADMIN]);
+    await client.query(`delete from profiles where lower(email) = lower($1)`, [SMOKE_ADMIN]);
+    await client.query(`delete from sent_emails where to_email = $1`, [SMOKE_ADMIN]);
+    const devAuth = await client.query(`select to_regclass('dev_auth.users') as t`);
+    if (devAuth.rows[0].t) {
+      await client.query(`delete from dev_auth.users where lower(email) = lower($1)`, [SMOKE_ADMIN]);
+    }
+  });
 }
 
 /**
@@ -409,26 +490,36 @@ await expectVisible(page, 'text=Resubmitted with changes', 'the resubmission wro
 // deliver -> accept -> install -> the location record grows.
 console.log('\nThe operator console (/admin) and the approval email');
 
+// SPEC v2.3 §10.3.3: a password, then a code from an authenticator. The dev
+// provider is a real password login, so each half can be refused on its own.
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'h1:has-text("Signage.com team")', '/admin refuses anyone who is not signed in');
+await expectVisible(page, 'h1:text-is("Sign in")', '/admin sends anyone not signed in to sign in');
 
-// An address that is not on the allowlist gets nothing, even though the dev
-// provider takes the browser's word for who it is.
-await page.evaluate(() => {
-  const select = document.querySelector('select');
-  const option = document.createElement('option');
-  option.value = 'stranger@example.com';
-  select.appendChild(option);
-  select.value = 'stranger@example.com';
-  select.dispatchEvent(new Event('change', { bubbles: true }));
-});
+await page.getByLabel('Email').fill(DEV_ADMIN.email);
+await page.getByLabel('Password', { exact: false }).first().fill('not-the-password');
 await page.getByRole('button', { name: 'Sign in' }).click();
-await expectVisible(page, 'text=/not on the Signage.com team allowlist/', 'an address off the allowlist is refused');
+await expectVisible(page, "text=/That email and password don't match/", 'a wrong password is refused');
 
-await page.selectOption('select', 'team@signage.com');
+await page.getByLabel('Password', { exact: false }).first().fill(DEV_ADMIN.password);
 await page.getByRole('button', { name: 'Sign in' }).click();
-await page.waitForURL('**/admin', { timeout: TIMEOUT });
-await expectVisible(page, 'h1:has-text("Request queue")', 'an allowlisted address reaches the queue');
+await page.waitForURL('**/two-factor**', { timeout: TIMEOUT });
+await expectVisible(page, 'h1:text-is("Enter your code")', 'the right password asks for the second factor');
+
+// The password alone is not a Signage.com session: the console still refuses.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+record(
+  'and the console stays shut until it is passed',
+  page.url().includes('/two-factor'),
+  `landed on ${page.url().replace(BASE, '')}`,
+);
+
+await page.getByLabel('Six-digit code').fill('000000');
+await page.getByRole('button', { name: 'Continue' }).click();
+await expectVisible(page, "text=/That code didn't match/", 'a wrong code is refused');
+await page.getByLabel('Six-digit code').fill(totpCode(DEV_ADMIN.totpSecret));
+await page.getByRole('button', { name: 'Continue' }).click();
+await page.waitForURL(/\/admin$/, { timeout: TIMEOUT });
+await expectVisible(page, 'h1:has-text("Request queue")', 'the right code reaches the queue');
 await expectVisible(page, 'text=fast lane', 'fast-lane requests are badged in the queue');
 
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
@@ -1612,6 +1703,127 @@ await page.waitForLoadState('networkidle');
 await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on the franchisee view of a request');
 await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
 await expectVisible(page, 'iframe[src*="/corporate/"]', 'and its corporate tab opens a dashboard link');
+
+// ------------------------------------------------------------------ accounts
+// SPEC v2.3 §9b phase A, as its demo reads: a team member accepts an invite,
+// sets a password and two-factor, signs in — and deactivation still locks them
+// out, on their very next click. Then the forgotten-password loop.
+console.log('\nAccounts (SPEC v2.3 §10): invite, sign up, two-factor, lockout, reset');
+
+await removeSmokeAdmin();
+
+await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
+await page.getByPlaceholder('name@signage.com').fill(SMOKE_ADMIN);
+await page.getByRole('button', { name: 'Send invitation' }).click();
+await expectVisible(page, `text=Invitation sent to ${SMOKE_ADMIN}`, 'a team member can invite another admin');
+
+const inviteUrl = await latestLinkTo(SMOKE_ADMIN, 'invitation', /\/invite\/[A-Za-z0-9_-]+/);
+record('and the invitation email carries the sign-up link', Boolean(inviteUrl), 'no /invite/ link in the email');
+
+// The invitee is a different person: their own browser, no shared cookies.
+const invitee = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const inviteePage = await invitee.newPage();
+inviteePage.on('pageerror', (error) => pageErrors.push(error.message));
+
+await inviteePage.goto(`${BASE}${inviteUrl}`, { waitUntil: 'networkidle' });
+await expectVisible(inviteePage, 'h1:text-is("Create your account")', 'the link opens account creation');
+await inviteePage.getByLabel('Your name').fill('Smoke Admin');
+// The browser's own minlength would stop this before the server saw it; the
+// server's rule is the one that protects the account, so that is what is tested.
+await inviteePage.locator('input[autocomplete="new-password"]').evaluateAll((inputs) =>
+  inputs.forEach((input) => input.removeAttribute('minlength')),
+);
+await inviteePage.getByLabel('Choose a password').fill('short');
+await inviteePage.getByLabel('Confirm password').fill('short');
+await inviteePage.getByRole('button', { name: 'Create my account' }).click();
+await expectVisible(inviteePage, 'text=/at least 10 characters/', 'a short password is refused');
+
+await inviteePage.getByLabel('Choose a password').fill(SMOKE_ADMIN_PASSWORD);
+await inviteePage.getByLabel('Confirm password').fill(SMOKE_ADMIN_PASSWORD);
+await inviteePage.getByRole('button', { name: 'Create my account' }).click();
+await inviteePage.waitForURL('**/two-factor**', { timeout: TIMEOUT });
+await expectVisible(
+  inviteePage,
+  'h1:text-is("Set up two-factor sign-in")',
+  'accepting leads a Signage.com admin straight into two-factor setup',
+);
+
+await inviteePage.getByRole('button', { name: 'Set up my authenticator' }).click();
+const secretLocator = inviteePage.getByTestId('totp-secret');
+await secretLocator.waitFor({ state: 'visible', timeout: TIMEOUT });
+const smokeSecret = (await secretLocator.textContent())?.trim() ?? '';
+await inviteePage.getByLabel('Six-digit code').fill(totpCode(smokeSecret));
+await inviteePage.getByRole('button', { name: 'Turn on two-factor' }).click();
+await inviteePage.waitForURL(/\/admin$/, { timeout: TIMEOUT });
+await expectVisible(inviteePage, 'h1:has-text("Request queue")', 'and a code from the new authenticator opens the console');
+
+const reused = await fetch(`${BASE}${inviteUrl}`).then((r) => r.text());
+record('the invitation link works once', reused.includes('Already accepted'));
+
+// Signed out and back in: the account is real, not just the acceptance session.
+await inviteePage.getByRole('button', { name: 'Sign out' }).click();
+await inviteePage.waitForURL('**/sign-in**', { timeout: TIMEOUT });
+await signInAsAdmin(inviteePage, {
+  email: SMOKE_ADMIN,
+  password: SMOKE_ADMIN_PASSWORD,
+  totpSecret: smokeSecret,
+});
+await expectVisible(inviteePage, 'h1:has-text("Request queue")', 'the new admin signs in with password and code');
+
+// Deactivated from the first admin's browser; locked out on the next click.
+await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
+page.once('dialog', (dialog) => dialog.accept());
+await page
+  .locator('div.rounded-xl', { hasText: SMOKE_ADMIN })
+  .getByRole('button', { name: 'Deactivate' })
+  .click();
+await expectVisible(page, `div.rounded-xl:has-text("${SMOKE_ADMIN}") >> text=deactivated`, 'an admin can deactivate another');
+await inviteePage.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+record(
+  'and the deactivated admin is locked out on their next click',
+  inviteePage.url().includes('/sign-in'),
+  `landed on ${inviteePage.url().replace(BASE, '')}`,
+);
+
+// Forgotten password: the same sentence whether or not the address exists, a
+// link by email, and the old password stops working.
+await page
+  .locator('div.rounded-xl', { hasText: SMOKE_ADMIN })
+  .getByRole('button', { name: 'Reactivate' })
+  .click();
+await expectVisible(page, `div.rounded-xl:has-text("${SMOKE_ADMIN}") >> text=Deactivate`, 'and reactivate them');
+
+await inviteePage.goto(`${BASE}/forgot-password`, { waitUntil: 'networkidle' });
+await inviteePage.getByLabel('Email').fill('nobody@nowhere.test');
+await inviteePage.getByRole('button', { name: 'Email me a reset link' }).click();
+const unknownAnswer = await inviteePage.locator('text=/If an account exists/').textContent({ timeout: TIMEOUT });
+await inviteePage.goto(`${BASE}/forgot-password`, { waitUntil: 'networkidle' });
+await inviteePage.getByLabel('Email').fill(SMOKE_ADMIN);
+await inviteePage.getByRole('button', { name: 'Email me a reset link' }).click();
+const knownAnswer = await inviteePage.locator('text=/If an account exists/').textContent({ timeout: TIMEOUT });
+record(
+  'asking for a reset says the same thing whether or not the account exists',
+  unknownAnswer?.replace('nobody@nowhere.test', 'X') === knownAnswer?.replace(SMOKE_ADMIN, 'X'),
+);
+
+const resetUrl = await latestLinkTo(SMOKE_ADMIN, 'password_reset', /\/reset-password\/[A-Za-z0-9_-]+/);
+record('and a real account gets a reset link by email', Boolean(resetUrl));
+const NEW_PASSWORD = 'smoke-admin-password-2';
+await inviteePage.goto(`${BASE}${resetUrl}`, { waitUntil: 'networkidle' });
+await inviteePage.getByLabel('New password', { exact: false }).first().fill(NEW_PASSWORD);
+await inviteePage.getByLabel('Confirm new password').fill(NEW_PASSWORD);
+await inviteePage.getByRole('button', { name: 'Save new password' }).click();
+await expectVisible(inviteePage, 'text=/Your password has been changed/', 'the reset link sets a new password');
+
+await inviteePage.getByLabel('Email').fill(SMOKE_ADMIN);
+await inviteePage.getByLabel('Password', { exact: false }).first().fill(SMOKE_ADMIN_PASSWORD);
+await inviteePage.getByRole('button', { name: 'Sign in' }).click();
+await expectVisible(inviteePage, "text=/That email and password don't match/", 'and the old password stops working');
+await signInAsAdmin(inviteePage, { email: SMOKE_ADMIN, password: NEW_PASSWORD, totpSecret: smokeSecret });
+await expectVisible(inviteePage, 'h1:has-text("Request queue")', 'the new one works, still behind two-factor');
+
+await invitee.close();
+await removeSmokeAdmin();
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 

@@ -23,7 +23,7 @@ Four windows, one per participant, is the fastest way to run this:
 | Window | URL | Who they are |
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | No login, ever. Tokenized links. |
-| Team | http://localhost:3000/admin | Sign in as `team@signage.com`. |
+| Team | http://localhost:3000/admin | `team@signage.com` / `signage-dev-password`, then the code the page shows (dev only). |
 | Corporate | http://localhost:3000/freshbites/corporate | No login. Magic link. |
 | Outbox | http://localhost:3000/admin/outbox | Every message that was or would be sent. Team sign-in required. |
 
@@ -187,8 +187,9 @@ Corporate registers a franchisee at agreement signing. This is the front door.
     - ✅ The page explains that it expired and offers a new one.
     - ✅ The budget sheet stops downloading on that token too.
 26. Sign out of `/admin` and reload it.
-    - ✅ Straight to the sign-in screen. The allowlist is re-checked on every
-      request, so deactivating a `team_members` row logs someone out.
+    - ✅ Straight to the sign-in screen. Memberships are re-checked on every
+      request, so deactivating someone on `/admin/team` logs them out on their
+      next click.
 
 ---
 

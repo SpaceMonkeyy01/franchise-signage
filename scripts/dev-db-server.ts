@@ -24,6 +24,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 
+import { DEV_ADMIN, seedDevAdmin } from '../src/lib/auth/dev-auth';
 import { seedFreshbites, seedMasterCatalog } from './seed/apply';
 import { seedDemoRequests } from './seed/demo-requests';
 
@@ -31,15 +32,67 @@ const DATA_DIR = join(process.cwd(), '.pglite');
 const MIGRATIONS_DIR = join(process.cwd(), 'supabase', 'migrations');
 const PORT = Number(process.env.DEV_DB_PORT ?? 5433);
 
-async function migrateAndSeed(db: PGlite): Promise<void> {
+/**
+ * Every migration a dev database could hold before this server kept a ledger.
+ *
+ * Until Sep 2026 an existing `.pglite/` was simply skipped, which meant a new
+ * migration never reached it without a reset. A database with the schema and no
+ * ledger was therefore built from exactly these files, and is baselined to them;
+ * anything newer is applied.
+ */
+const PRE_LEDGER_MIGRATIONS = [
+  '20260813090000_enums.sql',
+  '20260813090100_catalog.sql',
+  '20260813090200_workflow.sql',
+  '20260813090300_did.sql',
+  '20260813090400_rls.sql',
+  '20260817090000_review_links.sql',
+  '20260818090000_vendor_contacts.sql',
+  '20260821090000_invoicing.sql',
+  '20260824090000_welcome_access.sql',
+  '20260824100000_package_fulfillment.sql',
+  '20260825090000_corporate_access.sql',
+];
+
+/** Bring an existing dev database up to date. Returns false when there is none yet. */
+async function applyPending(db: PGlite): Promise<boolean> {
   const existing = await db.query<{ count: string }>(
     `select count(*) as count from information_schema.tables
       where table_schema = 'public' and table_name = 'requests'`,
   );
-  if (Number(existing.rows[0].count) > 0) {
-    console.log('[dev-db] schema already present — skipping migrations');
-    return;
+  if (Number(existing.rows[0].count) === 0) return false;
+
+  await db.exec(`create table if not exists dev_migrations (name text primary key)`);
+  const recorded = await db.query<{ name: string }>(`select name from dev_migrations`);
+  if (recorded.rows.length === 0) {
+    for (const name of PRE_LEDGER_MIGRATIONS) {
+      await db.query(`insert into dev_migrations (name) values ($1)`, [name]);
+    }
   }
+
+  const applied = new Set(
+    (await db.query<{ name: string }>(`select name from dev_migrations`)).rows.map((r) => r.name),
+  );
+  const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
+  const pending = files.filter((file) => !applied.has(file));
+  for (const file of pending) {
+    await db.exec('begin');
+    try {
+      await db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
+      await db.query(`insert into dev_migrations (name) values ($1)`, [file]);
+      await db.exec('commit');
+    } catch (error) {
+      await db.exec('rollback');
+      throw error;
+    }
+    console.log(`[dev-db] applied ${file}`);
+  }
+  if (pending.length === 0) console.log('[dev-db] schema up to date');
+  return true;
+}
+
+async function migrateAndSeed(db: PGlite): Promise<void> {
+  if (await applyPending(db)) return;
 
   // Supabase provides these roles and the auth schema; PGlite does not. Stubbing
   // them lets the RLS migration apply unchanged — one schema, both targets.
@@ -56,9 +109,11 @@ async function migrateAndSeed(db: PGlite): Promise<void> {
       language sql stable as $$ select '{}'::jsonb $$;
   `);
 
+  await db.exec(`create table if not exists dev_migrations (name text primary key)`);
   const files = readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith('.sql')).sort();
   for (const file of files) {
     await db.exec(readFileSync(join(MIGRATIONS_DIR, file), 'utf8'));
+    await db.query(`insert into dev_migrations (name) values ($1)`, [file]);
     console.log(`[dev-db] applied ${file}`);
   }
 
@@ -77,6 +132,9 @@ async function main() {
   const db = new PGlite(DATA_DIR, { extensions: { pgcrypto } });
   await db.waitReady;
   await migrateAndSeed(db);
+  // Every start, so an existing database gains it too (SPEC v2.3 §10.6).
+  await seedDevAdmin(db);
+  console.log(`[dev-db] sign in as ${DEV_ADMIN.email} / ${DEV_ADMIN.password}`);
 
   const server = new PGLiteSocketServer({ db, port: PORT, host: '127.0.0.1' });
   await server.start();

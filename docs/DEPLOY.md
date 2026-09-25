@@ -73,20 +73,36 @@ deploy. `src/lib/storage/index.ts` refuses to fall back for exactly this reason,
 so an unset bucket fails loudly at the first upload rather than quietly at the
 first redeploy — but it still has to be set.
 
-## 3 · Tell Supabase about the new origin
+## 3 · Accounts: Supabase Auth settings, and the first admin
 
-**Auth → URL Configuration → Redirect URLs**: add
+Since spec v2.3 every account signs in with an email and a password, and
+Supabase never sends mail or redirects for us: invitations and password resets
+are our own tokens, mailed through Resend, and resolved by this app. So there is
+**no redirect URL to register**. What Supabase does need:
+
+- **Auth → Providers → Email:** enabled. Accounts are created through the admin
+  API already confirmed (the invitation proved the address), so the "Confirm
+  email" setting does not come into it.
+- **Auth → Sign In / Up → Allow new users to sign up: OFF.** Accounts exist only
+  by invitation (§10), and Supabase's public sign-up endpoint is reachable by
+  anyone holding the anon key. An account made that way would hold no role and
+  reach nothing — but it should not be possible to make one. The admin API the
+  app uses is unaffected by this switch.
+- **Auth → Multi-Factor:** TOTP enabled. Signage.com admins are required to use
+  it (§10.7 D8).
+- **Auth → Password security:** minimum length 10, to match the app, and the
+  leaked-password check on if the plan has it.
+- `SUPABASE_SERVICE_ROLE_KEY` set on the service: accounts are created and
+  passwords reset with it.
+
+Then create the first Signage.com admin — nobody exists yet to invite them:
 
 ```
-https://<service>.onrender.com/auth/callback
+DATABASE_URL=… APP_URL=https://<service>.onrender.com npm run invite -- you@signage.com
 ```
 
-Without it GoTrue silently downgrades the magic link to the Site URL and sign-in
-lands on the wrong page with the credential in a fragment the server never sees.
-It fails in a way that looks like the app is broken; it is configuration.
-
-Consider setting **Site URL** to the Render origin too, if this becomes the
-environment people actually use.
+It prints the accept link as well as mailing it. Open it, choose a password,
+set up the authenticator, and invite everyone else from `/admin/team`.
 
 ## 4 · The review SLA
 

@@ -1,6 +1,43 @@
 # Where the build is
 
-## 25 Sep 2026: spec v2.3 — accounts — approved; phase A next
+## 25 Sep 2026 (later): phase A is built — everyone signs in with a password
+
+**§9b phase A, the identity core, is done and demoable:** a Signage.com admin
+invites a colleague from `/admin/team`; the colleague opens the emailed link,
+creates their account with a password, sets up an authenticator app, and lands
+on the console; signs out and back in with password + code; and is locked out
+on their very next click when deactivated. Forgot-password works end to end.
+
+- **Sign in:** http://localhost:3000/sign-in (and `/admin` sends you there) as
+  `team@signage.com` / `signage-dev-password`. The two-factor page shows the
+  current code **in dev only**; under Supabase it comes from the person's app.
+- **The allowlist is gone.** `team_members` grants nothing; the team is a
+  `platform_admin` membership. The magic-link sign-in and `/auth/callback` are
+  removed. First admin on a real project: `npm run invite -- you@signage.com`.
+- **The whole §10 schema is in** (migration `20260925090000_accounts.sql`), and
+  the two helpers phases B–D will write policies against — `app.brand_role()`
+  and `app.can_see_location()` — are tested for every role.
+- **The dev database now applies new migrations** instead of skipping them when
+  a schema exists (#118), and seeds the dev admin on every start.
+- Checks: **193 smoke** (19 new; the two-factor and deactivation guards were
+  each broken on purpose and went red), **141 unit** (RFC 6238 vectors among
+  them), **48 schema** (29 behavioural), typecheck, lint, green build.
+- Decisions #109–118 in `docs/DECISIONS.md`. #116 is a departure from §10.6
+  worth your view: the old sign-in does NOT keep working during a transition.
+
+**Not yet proven: the Supabase half of all this.** Account creation, password
+sign-in, TOTP enrolment and challenge through Supabase Auth are written against
+the documented API and have not run against the live project. `docs/SUPABASE.md`
+§7 is rewritten as the checklist, and `docs/DEPLOY.md` §3 lists the four
+Supabase Auth settings it needs (sign-ups OFF, TOTP on, min length 10, service
+key).
+
+**Next: phase B — franchisee accounts** (§9b): franchisee companies and store
+ownership, the §8d welcome email carrying the owner invitation, sign-up
+continuing into store setup (or the level-1 page before a site, D7), and a
+"My stores" home.
+
+## 25 Sep 2026: spec v2.3 — accounts — approved
 
 **Direction change, approved 25 Sep:** logins. `docs/SPEC.md` is now **v2.3**
 and §10 is rewritten: email-and-password accounts for everyone but vendors,
@@ -10,9 +47,6 @@ setup), five roles scoped by brand and by store, the §8d welcome email carrying
 the franchisee's invitation, reviewers keeping their one-click email buttons,
 and `{brand}.signage.com` addresses. The eight decisions are settled in §10.7,
 all at the recommended defaults. CLAUDE.md is updated to match.
-
-**Next: §9b phase A (identity core)**, ahead of Sessions 7 and 8, which are
-still blocked.
 
 **Also built:** the root page is now a front door (one card per participant,
 naming their way in; still no tokens on it), and `/admin/demo` is a walkthrough:
@@ -361,27 +395,29 @@ npm run dev          # starts the dev database AND the web server
 | Surface | URL | Who |
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | no login; tokenized links |
-| Signage.com team | http://localhost:3000/admin | allowlisted team email |
+| Signage.com team | http://localhost:3000/sign-in | `team@signage.com` / `signage-dev-password` + code |
 | Corporate reviewer | from a link in the approval email | no login, ever |
 | Corporate dashboard | http://localhost:3000/freshbites/corporate | magic link to `brand@freshbites.com` |
 | Outbox | http://localhost:3000/admin/outbox | what was (or would have been) emailed; team sign-in |
 
-Sign in to `/admin` as `team@signage.com` — with no Supabase project configured
-the login screen is a picker over `team_members`, which is a stand-in for a
-login, not a login (see below).
+Sign in as `team@signage.com` / `signage-dev-password`, then the six-digit
+code the two-factor page shows. With no Supabase project the dev identity
+provider holds real passwords and TOTP secrets in a `dev_auth` schema in the
+local database; the code is displayed only because this is dev (DECISIONS #112).
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 167 checks (needs `npm run dev` up, and Supabase mode OFF) |
+| `npm run smoke` | drive the real flows in a browser — 193 checks (needs `npm run dev` up, and Supabase mode OFF) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 123 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres — 39 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
+| `npm test` | 141 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres — 48 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
+| `npm run invite -- <email>` | mint an invitation and print its link — how the first admin exists on a new project (`--role`, `--brand` for others) |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
 PGlite (Postgres compiled to WASM) runs as its own process speaking the real

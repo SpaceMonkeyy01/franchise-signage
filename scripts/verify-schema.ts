@@ -47,6 +47,9 @@ const checks: Check[] = [
         'installed_signs', 'requests', 'line_items', 'request_files', 'request_events',
         'change_requests', 'quotes', 'did_requests', 'team_members',
         'franchisee_registrations',
+        // SPEC v2.3 §10.5 — accounts.
+        'profiles', 'franchisees', 'memberships', 'membership_locations', 'invitations',
+        'password_resets',
       ].every((t) => names.has(t));
     },
     describe: (rows) => `${rows.length} tables: ${rows.map((r) => r.table_name).join(', ')}`,

@@ -162,6 +162,10 @@ as $$
   select nullif(auth.jwt() ->> 'sub', '')::uuid;
 $$;
 
+-- Two-factor is REQUIRED for Signage.com (§10.7 D8), so the database holds the
+-- line too: a session that has not completed its second factor carries
+-- `aal: aal1` in its JWT and is not a platform admin here, whatever the
+-- application thinks.
 create or replace function app.is_platform_admin()
 returns boolean
 language sql
@@ -169,7 +173,7 @@ stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select exists (
+  select coalesce(auth.jwt() ->> 'aal', '') = 'aal2' and exists (
     select 1 from memberships m
      where m.profile_id = app.current_profile()
        and m.role = 'platform_admin'

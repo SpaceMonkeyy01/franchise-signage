@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 import { getTeamMember } from '@/lib/auth/team';
 
-import { signOut } from './login/actions';
+import { signOut } from '../sign-in/actions';
 
 /**
  * Never prerendered, at any point, for any reason.
@@ -20,8 +20,8 @@ import { signOut } from './login/actions';
  * is the correct behaviour from that guard and the wrong question to have asked
  * it. Forcing the segment dynamic asks the right one.
  *
- * It applies to the whole segment, the login screen included: that page calls
- * the same provider to decide which sign-in to render.
+ * It applies to the whole segment: every page under it is decided by the
+ * caller's memberships.
  */
 export const dynamic = 'force-dynamic';
 
@@ -37,8 +37,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           {member && (
             <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
-              {/* All three are support tools, not daily ones — findable from every
-                  screen, and never competing with the queue for attention. */}
+              {/* Support tools, not daily ones — findable from every screen, and
+                  never competing with the queue for attention. */}
               <Link href="/admin/demo" className="text-gray-300 underline-offset-2 hover:underline">
                 Walkthrough
               </Link>
@@ -50,6 +50,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               </Link>
               <Link href="/admin/outbox" className="text-gray-300 underline-offset-2 hover:underline">
                 Outbox
+              </Link>
+              <Link href="/admin/team" className="text-gray-300 underline-offset-2 hover:underline">
+                Team
               </Link>
               <span>{member.name ?? member.email}</span>
               <form action={signOut}>

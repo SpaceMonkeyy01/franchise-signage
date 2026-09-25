@@ -18,7 +18,8 @@
     "dev:web": "next dev",
     "smoke": "node scripts/smoke.mjs",
     "dev:db:reset": "tsx scripts/dev-db-server.ts --reset",
-    "sla": "tsx scripts/run-sla.ts"
+    "sla": "tsx scripts/run-sla.ts",
+    "invite": "tsx scripts/invite.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.6.1",

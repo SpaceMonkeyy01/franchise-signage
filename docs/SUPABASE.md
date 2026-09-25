@@ -157,20 +157,23 @@ matters.
 Repeat the same pair with a corporate dashboard token against `locations`, which
 should return one brand's locations and never another's.
 
-## 7 · Prove the Auth path
+## 7 · Prove the Auth path (rewritten for spec v2.3 accounts)
 
-`/admin` authenticates through a dev cookie on a machine with no Supabase
-project, and refuses to run that way in production (`authProvider()` throws).
-With a project configured it takes the Supabase path instead — **which has never
-executed.**
+With no Supabase project the app uses the dev identity provider: real passwords
+and TOTP codes, stored in a `dev_auth` schema in the local database. With a
+project configured it uses Supabase Auth — **and that path has not yet executed
+against a real project.** The magic-link flow proven on 28 Aug is gone.
 
-1. Add your address to `team_members` (`insert into team_members (email, name,
-   active) values ('you@…', 'You', true);`).
-2. Sign in at `/admin` and confirm the magic link arrives and the session reads
-   back.
-3. Set that row's `active` to false and reload. **You should be signed out
-   immediately** — membership is re-checked on every request, which is the half
-   of the design that actually decides access.
+1. Apply the settings in `docs/DEPLOY.md` §3 (email provider, TOTP, password
+   length, service-role key).
+2. `npm run invite -- you@signage.com`, open the printed link, choose a
+   password, and set up the authenticator. You should land on `/admin`.
+3. Sign out and in again: password, then code.
+4. Invite a second address from `/admin/team`, accept it in another browser,
+   then deactivate it from the first. **The second browser should be signed out
+   on its next click.**
+5. `/forgot-password` for the second address: the reset link arrives by our
+   mail, works on a different device, and the old password stops working.
 
 ## 8 · Send one real email
 

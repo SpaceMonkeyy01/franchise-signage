@@ -1068,6 +1068,72 @@ about how they hid as about how they were fixed.
     needs no verifier. That is a deliberate loosening, and it should be someone's
     decision rather than a default.
 
+    *Superseded by #111 (Sep 2026): magic links are gone, and nothing Supabase
+    mails or redirects is on any path now.*
+
+## Session 9a — accounts, phase A (spec v2.3 §9b)
+
+109. **The whole §10 schema landed in phase A, though phase A uses one role.**
+    Profiles, franchisee companies, memberships with a staff store scope,
+    invitations and resets, `locations.franchisee_id`. The expensive thing to
+    change later is the shape — who owns a store — not the screens, and §10.7 D2
+    said as much. Phases B–D add pages and policies, not tables.
+
+110. **`app.is_team_member()` was redefined rather than replaced.** Every
+    `team_all` policy in the build calls it, so changing its body to "holds an
+    active platform_admin membership" moved all of them off the allowlist in one
+    statement. `team_members` stays, grants nothing, and has a check proving so.
+
+111. **Invitations and password resets are our tokens, not Supabase's flows.**
+    Both go out through the same Resend pipeline and outbox as every other
+    message, and both links are resolved by this app — so they work on a
+    different device from the one that asked, which a PKCE link does not (#108).
+    Supabase is used for four things only: create an account, check a password,
+    set a password, and TOTP. No redirect URL needs registering.
+
+112. **The dev provider is a real password login now, not a picker.** scrypt
+    hashes, server-side sessions, real RFC 6238 codes, in a `dev_auth` schema
+    that exists only in the dev database. A stand-in that trusted the browser
+    would have left every screen in this phase unexercised by the smoke suite.
+    The seeded admin's password and authenticator secret are published in
+    `src/lib/auth/dev-auth.ts` on purpose; the dev provider refuses production.
+    The two-factor page shows the current code **in dev only**, for anyone
+    running the demo without an authenticator app.
+
+113. **The database enforces two-factor for Signage.com, not only the app.**
+    `app.is_platform_admin()` requires `aal: aal2` in the JWT. The app connects
+    as the table owner, so its own check is the one that runs; the policy means
+    a password-only Supabase session reaches nothing through PostgREST either.
+
+114. **Sessions are read by id in the action that creates them.** A cookie set
+    in a Server Action is the NEXT request's to read, so sign-in and acceptance
+    decide "where next, and is a code owed?" from the user id they just
+    authenticated rather than from `getViewer()`.
+
+115. **Account lockout is counted on `profiles`, not left to the provider.**
+    Supabase rate-limits by IP, which does nothing for one account guessed at
+    from many addresses. Five failures lock for 15 minutes; a password reset or
+    an admin clears it. Unknown addresses and wrong passwords get the same
+    sentence, so sign-in cannot be used to learn who has an account — and
+    neither can forgot-password.
+
+116. **Departure from §10.6: the team's old sign-in does not keep working
+    until each person accepts.** The spec said it would. There are no
+    production users, the magic-link path is removed (#111), and keeping it
+    alive for a transition nobody needs would be a second sign-in to secure.
+    The team re-onboards by invitation: `npm run invite` for the first admin,
+    `/admin/team` for the rest.
+
+117. **An account can't replace its own authenticator from a half-signed-in
+    session.** Otherwise a stolen password could swap the second factor out.
+    Lost phone → another admin resets it from `/admin/team`, and the owner
+    enrols again at their next sign-in. Nobody can reset their own.
+
+118. **The dev database applies new migrations now.** It used to skip them all
+    once a schema existed, so every new migration meant a reset. A ledger
+    (`dev_migrations`) is baselined to the eleven files that predate it, and
+    anything newer is applied at start, in a transaction per file.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

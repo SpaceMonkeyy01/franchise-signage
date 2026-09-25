@@ -247,11 +247,15 @@ async function asAnon(db: PGlite, token: string | null): Promise<void> {
  * Become a signed-in person: the authenticated role, with their profile id as
  * the JWT subject, exactly as Supabase Auth would issue it.
  */
-async function asAuthenticated(db: PGlite, profileId: string): Promise<void> {
+async function asAuthenticated(
+  db: PGlite,
+  profileId: string,
+  aal: 'aal1' | 'aal2' = 'aal2',
+): Promise<void> {
   await db.exec(`reset role;`);
   await db.exec(`set role authenticated;`);
   await db.exec(`set app.access_token = '';`);
-  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId })}';`);
+  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId, aal })}';`);
 }
 
 /**
@@ -264,7 +268,7 @@ async function asAuthenticated(db: PGlite, profileId: string): Promise<void> {
  */
 async function asSubject(db: PGlite, profileId: string): Promise<void> {
   await db.exec(`reset role; set app.access_token = '';`);
-  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId })}';`);
+  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId, aal: 'aal2' })}';`);
 }
 
 /** Which of the named stores the signed-in person may see, via app.can_see_location. */
@@ -620,6 +624,16 @@ const checks: NamedCheck[] = [
       await asAuthenticated(db, PERSON.former);
       const requests = await count(db, `select count(*) as n from requests`);
       return expect(requests === 0, `a deactivated member reached ${requests} request(s)`);
+    },
+  },
+  {
+    // Two-factor is required for the team (§10.7 D8), and the database holds
+    // that line itself rather than trusting the app to.
+    label: 'a platform admin who has not passed two-factor sees nothing',
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.team, 'aal1');
+      const requests = await count(db, `select count(*) as n from requests`);
+      return expect(requests === 0, `a password-only session reached ${requests} request(s)`);
     },
   },
   {

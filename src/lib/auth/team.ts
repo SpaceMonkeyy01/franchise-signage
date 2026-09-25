@@ -1,74 +1,88 @@
-// Who is allowed into /admin (SPEC §10).
+// Who is allowed into /admin (SPEC v2.3 §10).
 //
-// Two things happen here, and only one of them is swappable:
+// Since v2.3 the Signage.com team is a `platform_admin` membership, not a row in
+// the `team_members` allowlist, and the console asks three things of a caller
+// on every request:
 //
-//   1. Identity — "which email is this?" — comes from Supabase Auth when a
-//      project is configured, and from a dev cookie when one is not. Both paths
-//      have now run against a real project; the dev provider is still what runs
-//      by default here, because Supabase mode disables the smoke suite
-//      (docs/STATE.md, DECISIONS #106).
-//   2. Authorization — "is that email on the team?" — is a lookup against
-//      `team_members`, and is IDENTICAL under both providers. Membership is
-//      granted out of band, never self-serve, and is re-checked on every request
-//      so that deactivating a row logs someone out rather than waiting for a
-//      session to expire.
+//   1. an identity — a password session (./identity.ts);
+//   2. an ACTIVE platform_admin membership, read fresh each time, so that
+//      deactivating someone locks them out on their next click;
+//   3. a passed second factor, within 12 hours of the password (§10.3.3,
+//      §10.7 D8). The database repeats the second-factor check itself:
+//      app.is_platform_admin() refuses a session whose JWT is not aal2.
 //
-// The dev provider is a stand-in for a login, NOT a login: possession of a
-// cookie naming an allowlisted address is enough. It refuses to run in
-// production, where a Supabase project is required.
+// The exported names are the ones every /admin page and action already calls,
+// so the change of model is invisible to them.
 
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { queryOne } from '../db/pool';
+import {
+  getViewer,
+  owesSecondFactor,
+  platformMembership,
+  platformSessionExpired,
+  type Viewer,
+} from './access';
 
-export const DEV_SESSION_COOKIE = 'team_session';
+export { authProvider, type AuthProvider } from './identity';
 
 export interface TeamMember {
+  /** The profile id — the Supabase Auth user id. */
   id: string;
   email: string;
   name: string | null;
+  membershipId: string;
 }
 
-export type AuthProvider = 'supabase' | 'dev';
+export type TeamAccess =
+  | { state: 'ok'; member: TeamMember; viewer: Viewer }
+  | { state: 'signed_out' }
+  | { state: 'expired' }
+  | { state: 'not_member'; viewer: Viewer }
+  | { state: 'second_factor'; viewer: Viewer };
 
-/** Which identity provider is in play, and why. */
-export function authProvider(): AuthProvider {
-  const configured =
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL) &&
-    Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-  if (configured) return 'supabase';
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(
-      'No Supabase project is configured, so /admin has no way to authenticate anyone. ' +
-        'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.',
-    );
-  }
-  return 'dev';
+export async function teamAccess(): Promise<TeamAccess> {
+  const viewer = await getViewer();
+  if (!viewer) return { state: 'signed_out' };
+
+  const membership = platformMembership(viewer);
+  if (!membership) return { state: 'not_member', viewer };
+  if (platformSessionExpired(viewer)) return { state: 'expired' };
+  if (owesSecondFactor(viewer)) return { state: 'second_factor', viewer };
+
+  return {
+    state: 'ok',
+    viewer,
+    member: {
+      id: viewer.profile.id,
+      email: viewer.profile.email,
+      name: viewer.profile.name,
+      membershipId: membership.id,
+    },
+  };
 }
 
-/**
- * The signed-in team member, or null.
- *
- * Never trust the identity alone: it is checked against the allowlist here, in
- * the one place, so no call site can forget.
- */
+/** The signed-in team member, or null. */
 export async function getTeamMember(): Promise<TeamMember | null> {
-  const email = await currentEmail();
-  if (!email) return null;
-
-  return queryOne<TeamMember>(
-    `select id, email, name from team_members
-      where lower(email) = lower($1) and active`,
-    [email],
-  );
+  const access = await teamAccess();
+  return access.state === 'ok' ? access.member : null;
 }
 
-/** Guard for every /admin page. Sends anyone else to the sign-in screen. */
+/** Guard for every /admin page. Sends anyone else to where they can fix it. */
 export async function requireTeamMember(): Promise<TeamMember> {
-  const member = await getTeamMember();
-  if (!member) redirect('/admin/login');
-  return member;
+  const access = await teamAccess();
+  switch (access.state) {
+    case 'ok':
+      return access.member;
+    case 'second_factor':
+      redirect('/two-factor?next=/admin');
+    case 'expired':
+      redirect('/sign-in?next=/admin&reason=expired');
+    case 'not_member':
+      redirect('/sign-in?next=/admin&reason=not_member');
+    default:
+      redirect('/sign-in?next=/admin');
+  }
 }
 
 /**
@@ -82,44 +96,4 @@ export async function assertTeamMember(): Promise<TeamMember> {
   const member = await getTeamMember();
   if (!member) throw new Error('Not signed in as a Signage.com team member.');
   return member;
-}
-
-async function currentEmail(): Promise<string | null> {
-  if (authProvider() === 'supabase') return supabaseEmail();
-  const store = await cookies();
-  return store.get(DEV_SESSION_COOKIE)?.value ?? null;
-}
-
-/**
- * The email on the Supabase session.
- *
- * Verified against a real project on 28 Aug 2026: a magic link completed at
- * /auth/callback, this read the session back, and deactivating the caller's
- * `team_members` row locked them out on the very next request. Nine checks, and
- * DECISIONS #107 records what they were.
- *
- * Cookie writes are ignored here because a Server Component cannot perform
- * them; the route handler that completes the link does the writing, and it now
- * exists.
- */
-async function supabaseEmail(): Promise<string | null> {
-  const { createServerClient } = await import('@supabase/ssr');
-  const store = await cookies();
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => store.getAll(),
-        // A Server Component cannot set cookies. Refresh happens in the route
-        // handler that completes the magic link, so ignoring writes here is
-        // correct rather than lossy.
-        setAll: () => {},
-      },
-    },
-  );
-
-  const { data } = await supabase.auth.getUser();
-  return data.user?.email ?? null;
 }
