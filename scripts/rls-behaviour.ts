@@ -53,6 +53,31 @@ const CORPORATE_REVOKED = 'corporate-revoked-token';
 const sha256 = (value: string) => createHash('sha256').update(value).digest('hex');
 
 /**
+ * Accounts (SPEC v2.3 §10). Fixed ids, because a signed-in person is presented
+ * to the policies as the `sub` of their JWT, which is the profile id.
+ */
+const PERSON = {
+  team: '00000000-0000-4000-8000-000000000001',
+  former: '00000000-0000-4000-8000-000000000002',
+  stranger: '00000000-0000-4000-8000-000000000003',
+  // Holds the email of an ACTIVE team_members row and no membership: the old
+  // allowlist must grant nothing now.
+  legacy: '00000000-0000-4000-8000-000000000004',
+  alphaAdmin: '00000000-0000-4000-8000-000000000005',
+  alphaReviewer: '00000000-0000-4000-8000-000000000006',
+  ownerA1: '00000000-0000-4000-8000-000000000007',
+  staffA1: '00000000-0000-4000-8000-000000000008',
+  ownerA2: '00000000-0000-4000-8000-000000000009',
+  exOwnerA1: '00000000-0000-4000-8000-00000000000a',
+} as const;
+
+const A1 = '10000000-0000-4000-8000-000000000001';
+const A2 = '10000000-0000-4000-8000-000000000002';
+
+/** Store ids captured while seeding: Alpha has three, Beta one. */
+const store = { a1Main: '', a1Second: '', a2: '', beta: '' };
+
+/**
  * Ids captured while seeding, as the owner.
  *
  * The checks cannot look these up themselves: identifying "Beta's rows" by
@@ -62,6 +87,7 @@ const sha256 = (value: string) => createHash('sha256').update(value).digest('hex
  * directly, so the ids are all a check needs.
  */
 let betaBrandId = '';
+let alphaBrandId = '';
 
 async function seed(db: PGlite): Promise<void> {
   await db.exec(`
@@ -130,10 +156,65 @@ async function seed(db: PGlite): Promise<void> {
              ('former@signage.test', 'Left the company', false);
   `);
 
+  // Accounts. Two franchisee companies in Alpha — A1 owns two stores, A2 owns
+  // one — so "sees their own" and "does not see a sibling's" are both askable.
+  // Added after the fixture above, so the token and corporate counts stand.
+  await db.exec(`
+    insert into franchisees (id, brand_id, name)
+      select '${A1}', id, 'A1 Holdings' from brands where slug = 'alpha';
+    insert into franchisees (id, brand_id, name)
+      select '${A2}', id, 'A2 Foods' from brands where slug = 'alpha';
+
+    update locations set franchisee_id = '${A1}'
+     where brand_id = (select id from brands where slug = 'alpha');
+    insert into locations (brand_id, name, format, franchisee_id)
+      select id, 'Alpha Second', 'inline', '${A1}' from brands where slug = 'alpha';
+    insert into locations (brand_id, name, format, franchisee_id)
+      select id, 'Alpha Sibling', 'inline', '${A2}' from brands where slug = 'alpha';
+
+    insert into profiles (id, email) values
+      ('${PERSON.team}', 'team@signage.test'),
+      ('${PERSON.former}', 'former@signage.test'),
+      ('${PERSON.stranger}', 'stranger@example.com'),
+      ('${PERSON.legacy}', 'legacy@signage.test'),
+      ('${PERSON.alphaAdmin}', 'admin@alpha.test'),
+      ('${PERSON.alphaReviewer}', 'review@alpha.test'),
+      ('${PERSON.ownerA1}', 'owner@a1.test'),
+      ('${PERSON.staffA1}', 'staff@a1.test'),
+      ('${PERSON.ownerA2}', 'owner@a2.test'),
+      ('${PERSON.exOwnerA1}', 'ex-owner@a1.test');
+    insert into team_members (email, name, active)
+      values ('legacy@signage.test', 'Allowlisted, no membership', true);
+
+    insert into memberships (profile_id, brand_id, role, franchisee_id, active)
+      select '${PERSON.team}'::uuid, null::uuid, 'platform_admin'::member_role, null::uuid, true
+      union all select '${PERSON.former}', null, 'platform_admin', null, false
+      union all select '${PERSON.alphaAdmin}', b.id, 'brand_admin', null, true from brands b where b.slug = 'alpha'
+      union all select '${PERSON.alphaReviewer}', b.id, 'brand_reviewer', null, true from brands b where b.slug = 'alpha'
+      union all select '${PERSON.ownerA1}', b.id, 'franchisee_owner', '${A1}', true from brands b where b.slug = 'alpha'
+      union all select '${PERSON.staffA1}', b.id, 'franchisee_staff', '${A1}', true from brands b where b.slug = 'alpha'
+      union all select '${PERSON.ownerA2}', b.id, 'franchisee_owner', '${A2}', true from brands b where b.slug = 'alpha'
+      union all select '${PERSON.exOwnerA1}', b.id, 'franchisee_owner', '${A1}', false from brands b where b.slug = 'alpha';
+
+    -- Staff are assigned the second store only.
+    insert into membership_locations (membership_id, location_id)
+      select m.id, l.id from memberships m, locations l
+       where m.profile_id = '${PERSON.staffA1}' and l.name = 'Alpha Second';
+  `);
+
+  const stores = await db.query<{ name: string; id: string }>(`select name, id from locations`);
+  const byName = new Map(stores.rows.map((row) => [row.name, row.id]));
+  store.a1Main = byName.get('Alpha Brand Location')!;
+  store.a1Second = byName.get('Alpha Second')!;
+  store.a2 = byName.get('Alpha Sibling')!;
+  store.beta = byName.get('Beta Brand Location')!;
+
   // Four corporate links: one live per brand, plus an expired and a revoked one
   // for Alpha. Hashed exactly as src/lib/corporate/links.ts writes them.
   const beta = await db.query<{ id: string }>(`select id from brands where slug = 'beta'`);
   betaBrandId = beta.rows[0].id;
+  const alpha = await db.query<{ id: string }>(`select id from brands where slug = 'alpha'`);
+  alphaBrandId = alpha.rows[0].id;
 
   await db.exec(`
     insert into corporate_links (brand_id, email, token_hash, expires_at)
@@ -162,12 +243,46 @@ async function asAnon(db: PGlite, token: string | null): Promise<void> {
   await db.exec(`set app.access_token = '${token ?? ''}';`);
 }
 
-/** Become an authenticated Supabase user with this email in their claims. */
-async function asAuthenticated(db: PGlite, email: string): Promise<void> {
+/**
+ * Become a signed-in person: the authenticated role, with their profile id as
+ * the JWT subject, exactly as Supabase Auth would issue it.
+ */
+async function asAuthenticated(db: PGlite, profileId: string): Promise<void> {
   await db.exec(`reset role;`);
   await db.exec(`set role authenticated;`);
   await db.exec(`set app.access_token = '';`);
-  await db.exec(`set app.test_jwt = '${JSON.stringify({ email })}';`);
+  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId })}';`);
+}
+
+/**
+ * Present a person's JWT without taking on the authenticated role.
+ *
+ * For asking the §10.5 helpers directly. `authenticated` has no USAGE on the
+ * `app` schema — policies can call its functions, a caller cannot, and that is
+ * the right default to keep — and the helpers read nothing but the JWT, so the
+ * answer is the same one a policy would get.
+ */
+async function asSubject(db: PGlite, profileId: string): Promise<void> {
+  await db.exec(`reset role; set app.access_token = '';`);
+  await db.exec(`set app.test_jwt = '${JSON.stringify({ sub: profileId })}';`);
+}
+
+/** Which of the named stores the signed-in person may see, via app.can_see_location. */
+async function visibleStores(db: PGlite): Promise<string> {
+  const names: string[] = [];
+  for (const [name, id] of Object.entries(store)) {
+    const result = await db.query<{ ok: boolean }>(`select app.can_see_location('${id}') as ok`);
+    if (result.rows[0]?.ok) names.push(name);
+  }
+  return names.join(',');
+}
+
+async function roleOn(db: PGlite, brand: 'alpha' | 'beta'): Promise<string | null> {
+  const brandId = brand === 'beta' ? betaBrandId : alphaBrandId;
+  const result = await db.query<{ role: string | null }>(
+    `select app.brand_role('${brandId}')::text as role`,
+  );
+  return result.rows[0]?.role ?? null;
 }
 
 async function asOwner(db: PGlite): Promise<void> {
@@ -380,7 +495,8 @@ const checks: NamedCheck[] = [
         `select count(*) as n from franchisee_registrations`,
       );
       return expect(
-        requests === 2 && locations === 1 && registrations === 1,
+        // Three: the fixture's own, plus the two stores the accounts fixture adds.
+        requests === 2 && locations === 3 && registrations === 1,
         `${requests} request(s), ${locations} location(s), ${registrations} registration(s)`,
       );
     },
@@ -469,11 +585,13 @@ const checks: NamedCheck[] = [
   },
 
   // --------------------------------------------------------------- the team
+  // Since v2.3 the team is a platform_admin MEMBERSHIP, presented as the JWT
+  // subject; `team_members` no longer decides anything.
   {
     // Team policies are unscoped by design — membership IS the scope.
-    label: 'an allowlisted team member sees every brand',
+    label: 'a platform admin sees every brand',
     run: async (db) => {
-      await asAuthenticated(db, 'team@signage.test');
+      await asAuthenticated(db, PERSON.team);
       const requests = await count(db, `select count(*) as n from requests`);
       const brands = await count(db, `select count(*) as n from brands`);
       return expect(
@@ -485,7 +603,7 @@ const checks: NamedCheck[] = [
   {
     label: 'a signed-in stranger sees nothing',
     run: async (db) => {
-      await asAuthenticated(db, 'stranger@example.com');
+      await asAuthenticated(db, PERSON.stranger);
       const requests = await count(db, `select count(*) as n from requests`);
       const brands = await count(db, `select count(*) as n from brands`);
       return expect(
@@ -497,11 +615,110 @@ const checks: NamedCheck[] = [
   {
     // Membership is re-checked on every request, so deactivating a row logs
     // someone out rather than waiting for a session to expire.
-    label: 'and a deactivated member is locked out immediately',
+    label: 'and a deactivated platform admin is locked out immediately',
     run: async (db) => {
-      await asAuthenticated(db, 'former@signage.test');
+      await asAuthenticated(db, PERSON.former);
       const requests = await count(db, `select count(*) as n from requests`);
       return expect(requests === 0, `a deactivated member reached ${requests} request(s)`);
+    },
+  },
+  {
+    label: 'the old team allowlist grants nothing any more',
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.legacy);
+      const requests = await count(db, `select count(*) as n from requests`);
+      return expect(requests === 0, `an allowlisted email with no membership reached ${requests}`);
+    },
+  },
+
+  // ------------------------------------------------- roles and store scope
+  // The two helpers every brand- and store-scoped policy is written against
+  // (SPEC §10.5), asked directly as each person.
+  {
+    label: "a person's role is their strongest on that brand, and nothing on another",
+    run: async (db) => {
+      const wrong: string[] = [];
+      const want: Array<[string, string, 'alpha' | 'beta', string | null]> = [
+        ['team', PERSON.team, 'beta', 'platform_admin'],
+        ['alpha admin', PERSON.alphaAdmin, 'alpha', 'brand_admin'],
+        ['alpha admin', PERSON.alphaAdmin, 'beta', null],
+        ['alpha reviewer', PERSON.alphaReviewer, 'alpha', 'brand_reviewer'],
+        ['A1 owner', PERSON.ownerA1, 'alpha', 'franchisee_owner'],
+        ['A1 staff', PERSON.staffA1, 'alpha', 'franchisee_staff'],
+        ['stranger', PERSON.stranger, 'alpha', null],
+        ['deactivated owner', PERSON.exOwnerA1, 'alpha', null],
+      ];
+      for (const [who, id, brand, role] of want) {
+        await asSubject(db, id);
+        const got = await roleOn(db, brand);
+        if (got !== role) wrong.push(`${who} on ${brand}: ${got}, expected ${role}`);
+      }
+      return wrong.length === 0 ? null : wrong.join('; ');
+    },
+  },
+  {
+    label: "an owner sees their company's stores, and not a sibling franchisee's",
+    run: async (db) => {
+      await asSubject(db, PERSON.ownerA1);
+      const seen = await visibleStores(db);
+      return expect(seen === 'a1Main,a1Second', `A1's owner sees ${seen || 'nothing'}`);
+    },
+  },
+  {
+    label: 'staff see only the stores they are assigned',
+    run: async (db) => {
+      await asSubject(db, PERSON.staffA1);
+      const seen = await visibleStores(db);
+      return expect(seen === 'a1Second', `A1's staff see ${seen || 'nothing'}`);
+    },
+  },
+  {
+    label: "brand admins and reviewers see every store in their brand, and none of another's",
+    run: async (db) => {
+      const wrong: string[] = [];
+      for (const [who, id] of [
+        ['admin', PERSON.alphaAdmin],
+        ['reviewer', PERSON.alphaReviewer],
+      ]) {
+        await asSubject(db, id);
+        const seen = await visibleStores(db);
+        if (seen !== 'a1Main,a1Second,a2') wrong.push(`${who} sees ${seen || 'nothing'}`);
+      }
+      return wrong.length === 0 ? null : wrong.join('; ');
+    },
+  },
+  {
+    label: 'a deactivated owner sees no store',
+    run: async (db) => {
+      await asSubject(db, PERSON.exOwnerA1);
+      const seen = await visibleStores(db);
+      return expect(seen === '', `a deactivated owner still sees ${seen}`);
+    },
+  },
+  {
+    label: "a person reads their own profile and memberships, and nobody else's",
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.ownerA1);
+      const profiles = await count(db, `select count(*) as n from profiles`);
+      const memberships = await count(db, `select count(*) as n from memberships`);
+      return expect(
+        profiles === 1 && memberships === 1,
+        `${profiles} profile(s) and ${memberships} membership(s) visible, expected 1 and 1`,
+      );
+    },
+  },
+  {
+    label: 'anon reaches no account table, invitation or password reset',
+    run: async (db) => {
+      await asAnon(db, ALPHA_TOKEN);
+      const leaks: string[] = [];
+      for (const table of ['profiles', 'memberships', 'invitations', 'password_resets', 'franchisees']) {
+        // Permission denied is the strongest answer, and counts as a pass.
+        if (await refusal(db, `select count(*) from ${table}`)) continue;
+        const n = await count(db, `select count(*) as n from ${table}`);
+        if (n !== 0) leaks.push(`${table}: ${n}`);
+      }
+      return leaks.length === 0 ? null : `anon read ${leaks.join(', ')}`;
     },
   },
 ];
