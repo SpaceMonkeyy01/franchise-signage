@@ -1,5 +1,28 @@
 # Where the build is
 
+## 25 Sep 2026: accounts are proposed, and there is a front door
+
+**Direction change, pending sign-off:** logins are coming. `docs/SPEC-v2.3-accounts.md`
+is the DRAFT amendment: passwordless accounts for everyone but vendors, created
+by invitation only (Signage.com → brand admins → franchisees → store staff),
+five roles scoped by brand and by store, the §8d welcome email becoming the
+franchisee's invitation, reviewers keeping their one-click email buttons, and
+`{brand}.signage.com` addresses. Four build phases, A–D. **It is not the
+contract until approved**; SPEC.md is still v2.2, and CLAUDE.md still lists
+franchisee accounts as out of scope. Its §10 has six decisions (D1–D6), each
+with a recommended default the draft is written to. On approval, phase A
+(identity core) is next, ahead of Sessions 7 and 8, which are still blocked.
+
+**Also built:** the root page is now a front door (one card per participant,
+naming their way in; still no tokens on it), and `/admin/demo` is a walkthrough:
+the flow demo's persona switcher over the real app, with four tabs framing the
+live franchisee, team, reviewer-email and corporate views of one request. Team
+allowlist; 174 smoke checks. The Render blueprint (`render.yaml`,
+`docs/DEPLOY.md`) and `/admin/entry-points` landed on 28 Aug after the entry
+below was written.
+
+---
+
 Last updated: 28 Aug 2026. **There is a Supabase project, and the schema, the
 seed and the policies have all now run against it.**
 
