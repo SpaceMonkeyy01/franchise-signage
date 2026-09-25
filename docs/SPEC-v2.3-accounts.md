@@ -11,8 +11,9 @@ Drafted 25 Sep 2026.
 
 ## 1. The change in one paragraph
 
-Everyone except vendors gets an account. There are no passwords: every sign-in
-is an email link or a six-digit code. Nobody signs up on their own. Signage.com
+Everyone except vendors gets an account and signs in with an email and a
+password. Email links are used only for the things email is for: accepting an
+invitation and resetting a password. Nobody signs up on their own. Signage.com
 creates a brand, and from then on each account is created by an **invitation**
 from someone above it. Signage.com invites the brand's admins. A brand admin
 invites franchisees and corporate reviewers. A franchisee owner invites their own
@@ -126,18 +127,45 @@ into `invitations` or stays as the record of the §8d event and points to one.
 That's an implementation detail, but the §8d welcome email must not change
 behaviour.
 
-### 5.2 Signing in
+### 5.2 Accepting an invitation: sign up, then set up
 
-- **Email link or six-digit code, from the same email.** Both come from Supabase
-  Auth, which the team sign-in already uses.
-- **The code is required, not a nice-to-have.** Supabase's email links use a
-  security scheme (PKCE) that only works in the browser that requested the link
-  (DECISIONS #108). An operator at a desk barely notices that. A franchisee who
-  asks for a link on their laptop and opens it on their phone would be locked
-  out. The six-digit code works on any device.
-- **Accepting an invitation needs no link request at all.** The invitation token
-  proves the email address, so accepting signs the person in directly. That
-  covers the most common case, the first visit, which often happens on a phone.
+The invitation email carries one link. Opening it:
+
+1. **Confirms the email address.** The invitation token proves it, so there is
+   no separate "verify your email" step.
+2. **Creates the account.** Name, phone, and a password. For a franchisee owner,
+   also the company name, which creates the `franchisees` record.
+3. **Continues into setup, depending on the role:**
+   - **Franchisee owner, with a site:** straight into the existing initial-setup
+     flow (store basics and format, the standard package checklist, add-ons,
+     submit). The store is created owned by their company.
+   - **Franchisee owner, no site yet:** the §8d level-1 page (DID and budget
+     number), with "Set up a store" waiting for when the lease is signed.
+     Ordering stays out of sight until then, as §8d requires. (Decision D7.)
+   - **Store staff:** straight to their assigned stores.
+   - **Brand admin or reviewer:** straight to the dashboard.
+
+The link is single-use. Once the account exists, the same link says "this
+invitation has been accepted — sign in" rather than failing.
+
+**The invite link works on any device.** It is our own hashed token, not a
+Supabase magic link, so it avoids the PKCE rule that ties a Supabase link to the
+browser that requested it (DECISIONS #108). That matters because a franchisee's
+first visit is often on a phone.
+
+### 5.3 Signing in
+
+- **Email and password**, through Supabase Auth, which the team sign-in already
+  uses. One sign-in page per brand address (§6), plus the console's.
+- **Password rules:** a minimum of 10 characters, and Supabase's leaked-password
+  check (a paid-plan feature). Repeated failures are rate-limited and then
+  locked for a period; Supabase provides both, and we set the limits.
+- **Forgot password** sends a reset link. That email must use the token-hash
+  template, not Supabase's default PKCE link, so it works when opened on a
+  different device from the one that asked for it. Same fix #108 names.
+- **Two-factor:** required for `platform_admin`, whose account reaches every
+  brand, through an authenticator app (Supabase supports it). Optional for
+  everyone else, and a brand can require it of its own admins (decision D8).
 - **The allowed-domain rule stays.** A brand keeps its list of approved franchisee
   email domains (§8c). An invitation to an address outside the list is refused,
   or warned about (decision D5).
@@ -148,7 +176,7 @@ behaviour.
   takes effect on the next request, as the team allowlist does today (tested in
   Session 6d).
 
-### 5.3 What happens to the links that exist today
+### 5.4 What happens to the links that exist today
 
 | Link | Under v2.3 |
 |---|---|
@@ -210,7 +238,8 @@ franchisee's stores, and a brand admin can't write a request.
 ## 8. Migrating what exists
 
 - **Team:** each active `team_members` row becomes a profile plus a
-  `platform_admin` membership. The first sign-in claims the profile by email.
+  `platform_admin` membership, and gets an invitation to set a password and
+  enrol two-factor. Until they accept it, their current sign-in keeps working.
 - **Stores:** each location's owner is inferred from the `requester_email` of its
   earliest request. The team reviews that list before it is applied. An inferred
   owner is a guess, and a wrong one would show a stranger someone else's store.
@@ -228,8 +257,8 @@ Each phase can be demonstrated on its own, and none requires the next.
 
 | Phase | Delivers | Demo |
 |---|---|---|
-| **A. Identity core** | profiles, memberships, invitations, the shared sign-in (link + code), `platform_admin` replacing the allowlist, the RLS helpers and their tests | The team signs in through the new path, and deactivation still locks out |
-| **B. Franchisee accounts** | franchisee companies, store ownership + backfill, welcome email = invitation, a "My stores" home across all of a franchisee's stores, DID sign-in built on this | A franchisee accepts an invite and sees both stores and every request |
+| **A. Identity core** | profiles, memberships, invitations and their accept page (create account, set password), email + password sign-in, forgot password, two-factor for `platform_admin`, `platform_admin` replacing the allowlist, the RLS helpers and their tests | A team member accepts an invite, sets a password and two-factor, signs in; deactivation still locks them out |
+| **B. Franchisee accounts** | franchisee companies, store ownership + backfill, welcome email = invitation, sign-up continuing into store setup or the level-1 page (§5.2), a "My stores" home across all of a franchisee's stores, DID sign-in built on this | Corporate invites a franchisee, who signs up, sets up a store, and later sees both stores and every request |
 | **C. Corporate in-app** | brand_admin and brand_reviewer, the dashboard behind sign-in, approve from the dashboard, invite and deactivate users, `corporate_links` retired | A reviewer approves from the dashboard, and the same item's email button then says it's already decided |
 | **D. Staff + brand portals** | `franchisee_staff` with store assignment, owner invites staff, `{brand}.signage.com` routing | A manager sees one store of two; freshbites.localhost serves the brand |
 
@@ -261,16 +290,27 @@ Each has a recommended default, and the draft above is written to that default.
 - **D4. What happens to `reviewer_email` on the brand?** *Recommended: it stays as
   the escalation and SLA address* (§3.1). Approval emails go to every
   `brand_reviewer`, or to the configured address if the brand has none yet.
-- **D5. An invitation outside the brand's email domains?** *Recommended: warn and
-  allow for brand admins, refuse for self-service.* Franchisees use personal and
-  company addresses in practice. §8c's hard domain rule was written for the DID
-  sign-in, where nobody vouched for the person.
+- **D5. An invitation outside the brand's email domains?** *Recommended: warn,
+  then allow.* Franchisees use personal and company addresses in practice.
+  §8c's hard domain rule was written for a DID sign-in anyone could request,
+  where nobody vouched for the person. An invitation is that voucher.
 - **D6. The Signage.com console's address.** `franchise.signage.com/admin`, or
   `admin.signage.com`? A naming decision, nothing more.
+- **D7. A franchisee invited before they have a site.** *Recommended: sign-up
+  lands on the level-1 page (DID and budget number), and "Set up a store"
+  appears there for when the lease is signed.* That keeps §8d's rule that
+  ordering is out of sight at agreement signing, and it still gets the account
+  created at the earliest moment. The alternative, always going straight into
+  store setup, suits brands that invite franchisees only once a site exists, and
+  could be a per-brand setting.
+- **D8. Two-factor beyond Signage.com admins?** *Recommended: optional for
+  everyone else, with a per-brand switch to require it for that brand's admins
+  and reviewers.* Franchisor IT departments often ask for it; forcing it on
+  franchisees would cost sign-ups for little gain.
 
 ## 11. What stays out of scope
 
-Passwords and social sign-in · franchisor self-serve brand creation · vendor
+Social sign-in ("Sign in with Google") · franchisor self-serve brand creation · vendor
 accounts (vendors stay email-only) · permissions finer than the five roles ·
 single sign-on with a franchisor's identity provider (a likely enterprise ask
 later; nothing here blocks it, because Supabase Auth supports SAML) · in-app

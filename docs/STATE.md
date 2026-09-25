@@ -3,13 +3,14 @@
 ## 25 Sep 2026: accounts are proposed, and there is a front door
 
 **Direction change, pending sign-off:** logins are coming. `docs/SPEC-v2.3-accounts.md`
-is the DRAFT amendment: passwordless accounts for everyone but vendors, created
-by invitation only (Signage.com → brand admins → franchisees → store staff),
+is the DRAFT amendment: email-and-password accounts for everyone but vendors, created
+by invitation only (Signage.com → brand admins → franchisees → store staff;
+the invite link is the sign-up, and a franchisee goes on into store setup),
 five roles scoped by brand and by store, the §8d welcome email becoming the
 franchisee's invitation, reviewers keeping their one-click email buttons, and
-`{brand}.signage.com` addresses. Four build phases, A–D. **It is not the
+`{brand}.signage.com` addresses. Four build phases, A–D, and eight decisions. **It is not the
 contract until approved**; SPEC.md is still v2.2, and CLAUDE.md still lists
-franchisee accounts as out of scope. Its §10 has six decisions (D1–D6), each
+franchisee accounts as out of scope. Its §10 lists them (D1–D8), each
 with a recommended default the draft is written to. On approval, phase A
 (identity core) is next, ahead of Sessions 7 and 8, which are still blocked.
 
