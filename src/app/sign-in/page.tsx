@@ -8,7 +8,7 @@ import { redirect } from 'next/navigation';
 
 import { AuthCard, FormNotice } from '@/components/AuthCard';
 import { getViewer, homeFor, owesSecondFactor, safeNext } from '@/lib/auth/access';
-import { DEV_ADMIN } from '@/lib/auth/dev-auth';
+import { DEV_ADMIN, DEV_FRANCHISEE } from '@/lib/auth/dev-auth';
 import { authProvider } from '@/lib/auth/identity';
 
 import { SignInForm } from './SignInForm';
@@ -40,7 +40,7 @@ export default async function SignInPage({
 
   const devHint =
     authProvider() === 'dev'
-      ? `The seeded Signage.com account is ${DEV_ADMIN.email} / ${DEV_ADMIN.password}.`
+      ? `Seeded accounts: Signage.com ${DEV_ADMIN.email} / ${DEV_ADMIN.password}; franchisee ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}.`
       : null;
 
   return (

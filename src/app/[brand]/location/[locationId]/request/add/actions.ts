@@ -9,6 +9,7 @@
 
 import { redirect } from 'next/navigation';
 
+import { checkStoreOrdering } from '@/lib/auth/stores';
 import { createAndSubmitRequest } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
@@ -22,6 +23,9 @@ export interface AddSignsInput {
 
 export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailure | undefined> {
   if (input.items.length === 0) return { error: 'Pick at least one sign.' };
+
+  const access = await checkStoreOrdering(input.brandSlug, input.locationId);
+  if ('error' in access) return { error: access.error };
 
   const location = await queryOne<{ brand_id: string }>(
     `select l.brand_id from locations l
@@ -38,6 +42,7 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
       brandId: location.brand_id,
       locationId: input.locationId,
       intent: 'add',
+      createdBy: access.viewer.profile.id,
       items: input.items.map((item) => ({
         brandItemId: item.brandItemId,
         origin: 'addon',

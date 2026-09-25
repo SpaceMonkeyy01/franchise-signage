@@ -9,9 +9,11 @@
 // days after they signed with their franchisor and weeks before they have heard
 // of Signage.com, and mail from an unknown vendor at that moment reads as spam.
 
+import { createInvitation } from '../auth/invitations';
+import { appUrl } from '../auth/tokens';
 import { budgetByFormat } from '../budget';
 import { getRegistrationById, getRegistrationByToken } from '../db/queries';
-import { query } from '../db/pool';
+import { query, queryOne } from '../db/pool';
 import { render } from './layout';
 import { brandSender } from './sender';
 import { sendEmail, type SendResult } from './send';
@@ -47,12 +49,14 @@ export async function sendWelcomeEmail(registrationId: string): Promise<WelcomeO
   const { brand } = found;
 
   const budgets = await budgetByFormat(brand.id);
+  const account = await accountLink(registrationId, brand.id, brand.slug, registration.email);
   const html = await render(
     <WelcomeEmail
       brand={brand}
       name={registration.name}
       budgets={budgets}
       welcomeUrl={welcomeUrl(brand.slug, registration.access_token)}
+      account={account}
     />,
   );
 
@@ -76,4 +80,42 @@ export async function sendWelcomeEmail(registrationId: string): Promise<WelcomeO
   }
 
   return { sent: !result.error, result };
+}
+
+/**
+ * The welcome email's main button (SPEC v2.3 §10.3.1).
+ *
+ * Someone who already holds this brand's owner role is sent to sign in. Anyone
+ * else gets a fresh owner invitation — minted each time the email goes, which
+ * retires the link in any earlier copy. That is the one behaviour this changes
+ * from v2.2, where a re-send kept the same link alive: an invitation creates an
+ * account, and two live ones for the same person is one too many. The
+ * registration's own page link (the second link) is unchanged and still works.
+ */
+async function accountLink(
+  registrationId: string,
+  brandId: string,
+  brandSlug: string,
+  email: string,
+): Promise<{ url: string; kind: 'create' | 'sign_in' }> {
+  const owner = await queryOne<{ id: string }>(
+    `select m.id from memberships m join profiles p on p.id = m.profile_id
+      where lower(p.email) = lower($1) and m.brand_id = $2
+        and m.role = 'franchisee_owner' and m.active`,
+    [email, brandId],
+  );
+  if (owner) return { url: appUrl(`/sign-in?next=/${brandSlug}`), kind: 'sign_in' };
+
+  const invitation = await createInvitation({
+    brandId,
+    email,
+    role: 'franchisee_owner',
+    invitedBy: null,
+    send: false,
+  });
+  await query(`update franchisee_registrations set invitation_id = $2 where id = $1`, [
+    registrationId,
+    invitation.id,
+  ]);
+  return { url: invitation.url, kind: 'create' };
 }

@@ -80,6 +80,8 @@ export interface NewRequestInput {
   locationId: string;
   intent: RequestIntent;
   requester?: { name?: string | null; email?: string | null; phone?: string | null };
+  /** The signed-in person submitting it (SPEC v2.3 §10.5), when there is one. */
+  createdBy?: string | null;
   /** §8b: null means "not asked", which is not the same as "answered no". */
   financingInvolved?: boolean | null;
   landlordContact?: { name?: string; email?: string; phone?: string } | null;
@@ -173,8 +175,8 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
     const [request] = await exec.query<{ id: string; code: string; access_token: string }>(
       `insert into requests
          (brand_id, location_id, intent, status, requester_name, requester_email,
-          requester_phone, financing_involved, landlord_contact)
-       values ($1,$2,$3,'draft',$4,$5,$6,$7,$8)
+          requester_phone, financing_involved, landlord_contact, created_by)
+       values ($1,$2,$3,'draft',$4,$5,$6,$7,$8,$9)
        returning id, code, access_token`,
       [
         input.brandId,
@@ -185,6 +187,7 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
         requester?.phone ?? null,
         input.financingInvolved ?? null,
         input.landlordContact ? JSON.stringify(input.landlordContact) : null,
+        input.createdBy ?? null,
       ],
     );
 
@@ -288,13 +291,15 @@ export interface CreatedLocation {
  */
 export async function createLocationWithRequest(input: {
   brandId: string;
+  /** The franchisee company that owns the new store (SPEC v2.3 §10.1). */
+  franchiseeId: string | null;
   location: NewLocationInput;
   request: Omit<NewRequestInput, 'brandId' | 'locationId'>;
 }): Promise<{ location: CreatedLocation; request: CreatedRequest }> {
   return transaction(async (exec) => {
     const [location] = await exec.query<CreatedLocation>(
-      `insert into locations (brand_id, name, address, format, opening_date)
-       values ($1,$2,$3,$4,$5)
+      `insert into locations (brand_id, name, address, format, opening_date, franchisee_id)
+       values ($1,$2,$3,$4,$5,$6)
        returning id, code`,
       [
         input.brandId,
@@ -302,6 +307,7 @@ export async function createLocationWithRequest(input: {
         JSON.stringify(input.location.address),
         input.location.format,
         parseDate(input.location.openingDate),
+        input.franchiseeId,
       ],
     );
 

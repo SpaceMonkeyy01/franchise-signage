@@ -12,8 +12,10 @@
 //     role. No second account for one person.
 //
 // Either way it continues by role: Signage.com goes on to set up two-factor,
-// which is required of it; everyone else goes home. Phase B sends a franchisee
-// owner into store setup from here.
+// which is required of it. A franchisee owner goes into store setup when the
+// lease is signed, and otherwise to the §8d level-1 page — their store list,
+// empty, with the budget figures and "Set up a store" (§10.3.2, §10.7 D7).
+// Everyone else goes home.
 
 import { redirect } from 'next/navigation';
 
@@ -35,6 +37,8 @@ export interface NewAccountFields {
   companyName: string;
   password: string;
   confirm: string;
+  /** Franchisee owners only: is there a signed lease on a site yet? */
+  hasSite: boolean;
 }
 
 export async function acceptWithNewAccount(
@@ -84,12 +88,13 @@ export async function acceptWithNewAccount(
   }
 
   await signInWithPassword(invitation.email, fields.password);
-  await continueAfterAcceptance(created.userId);
+  await continueAfterAcceptance(created.userId, invitation, fields.hasSite);
 }
 
 export async function acceptWithExistingAccount(
   token: string,
   password: string,
+  hasSite: boolean,
 ): Promise<SubmitFailure | undefined> {
   const invitation = await pendingInvitation(token);
   if ('error' in invitation) return invitation;
@@ -107,7 +112,7 @@ export async function acceptWithExistingAccount(
   await clearFailedSignIns(userId);
 
   await transaction(async (tx) => grant(tx, invitation, userId, ''));
-  await continueAfterAcceptance(userId);
+  await continueAfterAcceptance(userId, invitation, hasSite);
 }
 
 // ------------------------------------------------------------------ helpers
@@ -185,10 +190,23 @@ async function grant(
   }
 }
 
-async function continueAfterAcceptance(profileId: string): Promise<never> {
+async function continueAfterAcceptance(
+  profileId: string,
+  invitation: ResolvedInvitation,
+  hasSite: boolean,
+): Promise<never> {
   // By id, not from the session: its cookie was set in this very request.
   const memberships = await membershipsFor(profileId);
-  const home = homeFor(memberships);
-  if (requiresSecondFactor(memberships)) redirect(`/two-factor?next=${encodeURIComponent(home)}`);
-  redirect(home);
+  const destination =
+    invitation.role === 'franchisee_owner' && invitation.brandSlug
+      ? hasSite
+        ? `/${invitation.brandSlug}/setup`
+        : `/${invitation.brandSlug}`
+      : invitation.brandSlug
+        ? `/${invitation.brandSlug}`
+        : homeFor(memberships);
+  if (requiresSecondFactor(memberships)) {
+    redirect(`/two-factor?next=${encodeURIComponent(destination)}`);
+  }
+  redirect(destination);
 }

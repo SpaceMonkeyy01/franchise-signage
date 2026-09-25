@@ -72,8 +72,18 @@ const FREESTANDING = budgetFor('freestanding', 'Freestanding', 'Freestanding', [
   ENTRANCE,
 ]);
 
+const ACCOUNT_URL = 'http://localhost:3000/invite/an-invitation-token';
+
 const welcome = (budgets: FormatBudget[], name: string | null = 'Dana Whitfield') =>
-  render(createElement(WelcomeEmail, { brand: BRAND, name, budgets, welcomeUrl: WELCOME_URL }));
+  render(
+    createElement(WelcomeEmail, {
+      brand: BRAND,
+      name,
+      budgets,
+      welcomeUrl: WELCOME_URL,
+      account: { url: ACCOUNT_URL, kind: 'create' },
+    }),
+  );
 
 /**
  * The copy alone, with the markup stripped.
@@ -117,11 +127,13 @@ describe('the signage number', () => {
 });
 
 describe('the links', () => {
-  it('carries the registration link and no other destination', async () => {
+  // SPEC v2.3 §10.3.1: the invitation leads, and the registration's own page
+  // stays as the no-account way to the same figures. Nothing else.
+  it('carries the account invitation first, the registration link second, and nothing else', async () => {
     const html = await welcome([INLINE]);
     const hrefs = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1]);
 
-    expect(hrefs).toEqual([WELCOME_URL]);
+    expect(hrefs).toEqual([ACCOUNT_URL, WELCOME_URL]);
   });
 
   it('never links the DID, which does not exist yet (SPEC §8c is Session 8)', async () => {

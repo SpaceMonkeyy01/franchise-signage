@@ -74,6 +74,8 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         email={invitation.email}
         hasAccount={hasAccount}
         askCompany={invitation.role === 'franchisee_owner' && !invitation.franchiseeId}
+        askSite={invitation.role === 'franchisee_owner'}
+        brandName={invitation.brandName}
         minPassword={PASSWORD_MIN_LENGTH}
       />
     </AuthCard>

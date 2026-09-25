@@ -126,17 +126,25 @@ export interface OpenRequestRow {
 }
 
 /**
- * "Your locations" — the franchisee home.
+ * "My stores" — the franchisee home (SPEC v2.3 §10.2).
  *
- * There are no accounts (SPEC §10), so a franchisee's identity is the set of
- * tokens they hold. This lists every location they can reach through any one of
- * them, which is what "your locations" means without a login.
+ * Scoped by the caller's account: a franchisee company's stores, or a staff
+ * member's assigned ones. Unscoped (`filter` omitted) is the whole brand, for
+ * Signage.com and the brand's own admins — never pass it for a franchisee.
+ * Until v2.3 this was the whole brand for anyone who opened the page.
  */
-export async function getLocationsForBrand(brandId: string): Promise<LocationRow[]> {
+export async function getLocationsForBrand(
+  brandId: string,
+  filter?: { franchiseeId: string; locationIds: string[] | null },
+): Promise<LocationRow[]> {
   const locations = await rows<Omit<LocationRow, 'installed_signs' | 'open_requests'>>(
     `select id, code, name, address, format, opening_date
-       from locations where brand_id = $1 order by created_at`,
-    [brandId],
+       from locations
+      where brand_id = $1
+        and ($2::uuid is null or franchisee_id = $2)
+        and ($3::uuid[] is null or id = any($3))
+      order by created_at`,
+    [brandId, filter?.franchiseeId ?? null, filter?.locationIds ?? null],
   );
   if (locations.length === 0) return [];
 
@@ -613,12 +621,19 @@ export function getRegistrationById(id: string): Promise<RegistrationRow | null>
 export interface RegistrationWithBrand extends RegistrationRow {
   brand_name: string;
   brand_slug: string;
+  /** They accepted the owner invitation the welcome email carried (SPEC v2.3). */
+  has_account: boolean;
 }
 
 /** Everyone corporate has registered, newest first — the team's view of level 1. */
 export function getRegistrations(): Promise<RegistrationWithBrand[]> {
   return rows<RegistrationWithBrand>(
     `select f.id, f.brand_id, f.email, f.name, f.access_token, f.welcome_sent_at, f.created_at,
+            exists (
+              select 1 from memberships m join profiles p on p.id = m.profile_id
+               where lower(p.email) = lower(f.email) and m.brand_id = f.brand_id
+                 and m.role = 'franchisee_owner' and m.active
+            ) as has_account,
             b.name as brand_name, b.slug as brand_slug
        from franchisee_registrations f
        join brands b on b.id = f.brand_id
@@ -808,6 +823,11 @@ export async function getPendingApprovalRequestIds(brandId: string): Promise<str
 export function getRegistrationsForBrand(brandId: string): Promise<RegistrationWithBrand[]> {
   return rows<RegistrationWithBrand>(
     `select f.id, f.brand_id, f.email, f.name, f.access_token, f.welcome_sent_at, f.created_at,
+            exists (
+              select 1 from memberships m join profiles p on p.id = m.profile_id
+               where lower(p.email) = lower(f.email) and m.brand_id = f.brand_id
+                 and m.role = 'franchisee_owner' and m.active
+            ) as has_account,
             b.name as brand_name, b.slug as brand_slug
        from franchisee_registrations f
        join brands b on b.id = f.brand_id

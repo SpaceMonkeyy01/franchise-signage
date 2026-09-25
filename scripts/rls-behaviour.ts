@@ -721,6 +721,55 @@ const checks: NamedCheck[] = [
       );
     },
   },
+  // --------------------------------------------- phase B: signed-in reads
+  // The fixture's two Alpha requests are both on A1's main store; A2 and the
+  // staff member's assigned store have none. So the right answers differ per
+  // person, and each is asked through the real policies, as a SELECT.
+  {
+    label: 'a signed-in owner reads their stores and requests through RLS, and no one else’s',
+    run: async (db) => {
+      const wrong: string[] = [];
+      const want: Array<[string, string, number, number, number]> = [
+        // who, id, locations, requests, line items
+        ['A1 owner', PERSON.ownerA1, 2, 2, 2],
+        ['A2 owner', PERSON.ownerA2, 1, 0, 0],
+        ['A1 staff', PERSON.staffA1, 1, 0, 0],
+        ['alpha reviewer', PERSON.alphaReviewer, 3, 2, 2],
+        ['deactivated owner', PERSON.exOwnerA1, 0, 0, 0],
+        ['stranger', PERSON.stranger, 0, 0, 0],
+      ];
+      for (const [who, id, locations, requests, items] of want) {
+        await asAuthenticated(db, id);
+        const got = [
+          await count(db, `select count(*) as n from locations`),
+          await count(db, `select count(*) as n from requests`),
+          await count(db, `select count(*) as n from line_items`),
+        ];
+        if (got.join() !== [locations, requests, items].join()) {
+          wrong.push(`${who}: ${got.join('/')} (locations/requests/items), expected ${[locations, requests, items].join('/')}`);
+        }
+      }
+      return wrong.length === 0 ? null : wrong.join('; ');
+    },
+  },
+  {
+    label: 'and cannot change what they can read',
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.ownerA1);
+      const touched = await affected(db, `update requests set requester_name = 'x' where true`);
+      const refused = touched === 0 ? null : 'updated';
+      return expect(refused === null, `a signed-in owner updated ${touched} request(s)`);
+    },
+  },
+  {
+    label: 'a person reads their own franchisee company, and not a sibling’s',
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.ownerA1);
+      const names = await db.query<{ name: string }>(`select name from franchisees order by name`);
+      const seen = names.rows.map((row) => row.name).join(',');
+      return expect(seen === 'A1 Holdings', `A1's owner sees companies: ${seen || 'none'}`);
+    },
+  },
   {
     label: 'anon reaches no account table, invitation or password reset',
     run: async (db) => {

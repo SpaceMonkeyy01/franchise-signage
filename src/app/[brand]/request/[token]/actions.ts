@@ -8,6 +8,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { toRequestFile } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { createPgStatusStore, withStatusStore } from '@/lib/db/pg-status-store';
@@ -37,11 +38,18 @@ import type { StoredObject } from '@/lib/storage';
  * offered acceptance at all (DECISIONS #51). The request follows as the rollup.
  */
 export async function acceptQuote(token: string, quoteId: string): Promise<void> {
-  const request = await queryOne<{ id: string; status: string }>(
-    `select id, status from requests where access_token = $1`,
+  const request = await queryOne<{ id: string; status: string; location_id: string }>(
+    `select id, status, location_id from requests where access_token = $1`,
     [token],
   );
   if (!request) throw new Error('Unknown request');
+
+  // SPEC v2.3 §10.7 D1: the link opens this page for anyone who holds it, but
+  // accepting commits money — the signed-in owner of this store, or Signage.com.
+  // A forwarded link can read a quote and cannot accept it.
+  if ((await acceptQuoteAccess(request.location_id)) !== 'allowed') {
+    throw new Error('Only the owner of this store can accept its quote. Sign in first.');
+  }
 
   // Scoped by request id as well as quote id: the token authorizes this request
   // and nothing else, so a quote id from elsewhere must not resolve (SPEC §10).

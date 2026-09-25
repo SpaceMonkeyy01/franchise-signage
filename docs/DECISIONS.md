@@ -1134,6 +1134,62 @@ about how they hid as about how they were fixed.
     (`dev_migrations`) is baselined to the eleven files that predate it, and
     anything newer is applied at start, in a transaction per file.
 
+## Session 9b — franchisee accounts, phase B (spec v2.3 §9b)
+
+119. **The brand home was public, and listed every store with its request
+    links.** Right for a one-franchisee pilot with no logins; wrong the moment a
+    second franchisee exists, because anyone who opened `/freshbites` could open
+    every request in the brand. It is "My stores" now: signed out it offers
+    sign-in and names no store; signed in it is scoped by `storeScope()`. The
+    intent picker, add and replace pages, reachable before by store id alone,
+    are behind the same scope.
+
+120. **Only quote acceptance moved behind the owner (§10.7 D1).** The request
+    link still opens the status page, answers a change request and downloads the
+    documents, as before; accepting — the one action that commits money —
+    needs the signed-in owner of that store, or Signage.com. Staff cannot
+    (§10.2). A link-only visitor sees "Sign in to accept". Narrow on purpose:
+    D1 kept the links so notifications stay one tap, and this is the one thing
+    a forwarded link must not do.
+
+121. **The welcome email's main button is the owner invitation; re-sending
+    mints a fresh one.** v2.2 kept the same link alive on a re-send. An
+    invitation creates an account, and two live ones for one person is one too
+    many, so a re-send retires the earlier invitation. The registration's own
+    page — the second, no-account link — is unchanged and still works.
+
+122. **The lease question is asked at sign-up, not configured per brand (D7).**
+    "Have you signed a lease yet?" sends an owner into store setup or to the
+    level-1 view. The spec allows a per-brand "always straight to setup"; no
+    brand has asked, so it is not built.
+
+123. **A store Signage.com sets up on someone's behalf starts unowned.** The
+    admin is not a franchisee and the setup form does not ask whose it is. It
+    stays visible to the brand and the team until attached — by the backfill,
+    or by hand. Not worth a picker until it happens.
+
+124. **Brand admins and reviewers see every store on the brand home, read-only,
+    until phase C gives them their dashboard behind sign-in.** No "Request
+    signage" and no "Set up a store" for them (§10.2: corporate approves, it
+    does not order).
+
+125. **The owner backfill is a dry run unless told otherwise.** §10.6 wants the
+    team to review inferred owners before they apply; `npm run backfill-owners`
+    prints the plan, `-- --apply` does it. Nobody is emailed: the accept links
+    are printed, or the brand registers the franchisee and the welcome email
+    carries a fresh one. Someone who already owns a company on the brand gets
+    the stores attached to it rather than a second company.
+
+126. **A schema check was reading policy NAMES as roles.** "Every anon policy
+    on requests names a credential" treated anything not called `team_*` as
+    anon, so the first signed-in franchisee policy failed it. It reads
+    `polroles` now, and has a signed-in twin: every authenticated policy on
+    requests is the team's or scoped by `app.can_see_location`.
+
+127. **The budget one-pager downloads for anyone with a role on its brand.** A
+    franchisee could already get it from their welcome page with the
+    registration link; this is the same sheet through their account.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

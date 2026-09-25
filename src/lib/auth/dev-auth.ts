@@ -47,6 +47,17 @@ export const DEV_ADMIN = {
   totpSecret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
 } as const;
 
+/**
+ * The pilot franchisee's owner (SPEC v2.3 §10.6) — Dana, who submitted every
+ * demo request. Dev only, like DEV_ADMIN; no second factor, because franchisees
+ * are never forced to use one (§10.7 D8).
+ */
+export const DEV_FRANCHISEE = {
+  email: 'dana@freshbites-austin.com',
+  name: 'Dana Whitfield',
+  password: 'franchisee-dev-password',
+} as const;
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
   return `scrypt:${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
@@ -65,40 +76,65 @@ interface Db {
   exec(sql: string): Promise<unknown>;
 }
 
-/**
- * Create the dev admin's identity, profile and platform_admin membership, with
- * a verified authenticator. Idempotent: run on every dev database start, so an
- * existing database gains the account the first time it runs this code.
- */
-export async function seedDevAdmin(db: Db): Promise<void> {
+/** A dev identity and its profile; returns the id. Idempotent. */
+async function ensureDevAccount(
+  db: Db,
+  account: { email: string; name: string; password: string; totpSecret?: string },
+): Promise<string> {
   await db.exec(DEV_AUTH_SCHEMA);
 
   const existing = await db.query<{ id: string }>(
     `select id from dev_auth.users where lower(email) = lower($1)`,
-    [DEV_ADMIN.email],
+    [account.email],
   );
   let userId = existing.rows[0]?.id;
   if (!userId) {
     const created = await db.query<{ id: string }>(
       `insert into dev_auth.users (email, password_hash) values ($1, $2) returning id`,
-      [DEV_ADMIN.email, hashPassword(DEV_ADMIN.password)],
+      [account.email, hashPassword(account.password)],
     );
     userId = created.rows[0].id;
-    await db.query(
-      `insert into dev_auth.factors (user_id, secret, verified_at) values ($1, $2, now())`,
-      [userId, DEV_ADMIN.totpSecret],
-    );
+    if (account.totpSecret) {
+      await db.query(
+        `insert into dev_auth.factors (user_id, secret, verified_at) values ($1, $2, now())`,
+        [userId, account.totpSecret],
+      );
+    }
   }
 
   await db.query(
     `insert into profiles (id, email, name) values ($1, $2, $3) on conflict (id) do nothing`,
-    [userId, DEV_ADMIN.email, DEV_ADMIN.name],
+    [userId, account.email, account.name],
   );
+  return userId;
+}
+
+/**
+ * The dev admin's identity, profile and platform_admin membership, with a
+ * verified authenticator. Run on every dev database start, so an existing
+ * database gains the account the first time it runs this code.
+ */
+export async function seedDevAdmin(db: Db): Promise<void> {
+  const userId = await ensureDevAccount(db, DEV_ADMIN);
   await db.query(
     `insert into memberships (profile_id, role)
      select $1, 'platform_admin'
       where not exists (
         select 1 from memberships where profile_id = $1 and role = 'platform_admin')`,
     [userId],
+  );
+}
+
+/** Dana, owner of the pilot franchisee company. Same rules as seedDevAdmin. */
+export async function seedDevFranchisee(db: Db, franchiseeId: string): Promise<void> {
+  const userId = await ensureDevAccount(db, DEV_FRANCHISEE);
+  await db.query(
+    `insert into memberships (profile_id, brand_id, role, franchisee_id)
+     select $1, f.brand_id, 'franchisee_owner', f.id from franchisees f
+      where f.id = $2
+        and not exists (
+          select 1 from memberships m
+           where m.profile_id = $1 and m.brand_id = f.brand_id and m.role = 'franchisee_owner')`,
+    [userId, franchiseeId],
   );
 }

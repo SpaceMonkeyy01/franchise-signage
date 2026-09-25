@@ -44,6 +44,11 @@ export interface NewInvitation {
   invitedBy: string | null;
   /** Shown in the email as who asked. Defaults to the Signage.com team. */
   inviterName?: string | null;
+  /**
+   * False when another message carries the link — the §8d welcome email does,
+   * for a franchisee owner — or when it is handed over by hand (the backfill).
+   */
+  send?: boolean;
 }
 
 export interface MintedInvitation {
@@ -103,6 +108,9 @@ export async function createInvitation(input: NewInvitation): Promise<MintedInvi
   );
 
   const url = appUrl(`/invite/${token}`);
+  const domainWarning = outsideDomains(email, brand?.franchisee_email_domains ?? []);
+  if (input.send === false) return { id: row!.id, url, domainWarning };
+
   const emailBrand: EmailBrand = brand ? { name: brand.name, brand_colors: brand.brand_colors } : SIGNAGE_BRAND;
   const html = await render(
     <InvitationEmail
@@ -122,14 +130,14 @@ export async function createInvitation(input: NewInvitation): Promise<MintedInvi
     requestId: null,
   });
 
-  const domains = brand?.franchisee_email_domains ?? [];
-  const domain = email.split('@')[1]?.toLowerCase() ?? '';
-  const domainWarning =
-    domains.length > 0 && !domains.some((d) => d.toLowerCase() === domain)
-      ? `${domain} is not one of this brand's approved email domains (${domains.join(', ')}). The invitation was sent anyway.`
-      : null;
-
   return { id: row!.id, url, domainWarning };
+}
+
+/** §10.7 D5: outside the brand's approved domains warns, and is allowed. */
+function outsideDomains(email: string, domains: string[]): string | null {
+  const domain = email.split('@')[1]?.toLowerCase() ?? '';
+  if (domains.length === 0 || domains.some((d) => d.toLowerCase() === domain)) return null;
+  return `${domain} is not one of this brand's approved email domains (${domains.join(', ')}). The invitation was sent anyway.`;
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'expired' | 'revoked';

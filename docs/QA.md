@@ -22,7 +22,7 @@ Four windows, one per participant, is the fastest way to run this:
 
 | Window | URL | Who they are |
 |---|---|---|
-| Franchisee | http://localhost:3000/freshbites | No login, ever. Tokenized links. |
+| Franchisee | http://localhost:3000/freshbites | `dana@freshbites-austin.com` / `franchisee-dev-password`. Request links still open a single request. |
 | Team | http://localhost:3000/admin | `team@signage.com` / `signage-dev-password`, then the code the page shows (dev only). |
 | Corporate | http://localhost:3000/freshbites/corporate | No login. Magic link. |
 | Outbox | http://localhost:3000/admin/outbox | Every message that was or would be sent. Team sign-in required. |

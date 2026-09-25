@@ -70,7 +70,7 @@ export default async function EntryPoints() {
           <div key={brand.id} className="space-y-2">
             <Row
               label={`${brand.name} — franchisee home`}
-              detail="Where a franchisee starts a request"
+              detail="Franchisee sign-in, then their own stores (SPEC v2.3)"
               href={`/${brand.slug}`}
             />
             <Row

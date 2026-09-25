@@ -10,6 +10,7 @@
 
 import { redirect } from 'next/navigation';
 
+import { checkStoreCreation } from '@/lib/auth/stores';
 import { createLocationWithRequest, toRequestFile } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
@@ -53,6 +54,13 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   if (!input.location.format) return { error: 'Pick a location format.' };
   if (input.items.length === 0) return { error: 'The package is empty — pick a format first.' };
 
+  // Reachable by direct POST, so it decides for itself (SPEC v2.3 §10.2).
+  const access = await checkStoreCreation(input.brandSlug);
+  if ('error' in access) return { error: access.error };
+  // An owner's new store belongs to their company. Signage.com starting one on
+  // someone's behalf leaves it unowned until a franchisee is attached to it.
+  const franchiseeId = access.scope.kind === 'franchisee' ? access.scope.franchiseeId : null;
+
   const brand = await queryOne<{ id: string }>(`select id from brands where slug = $1`, [
     input.brandSlug,
   ]);
@@ -63,6 +71,7 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   try {
     const { request } = await createLocationWithRequest({
       brandId: brand.id,
+      franchiseeId,
       location: {
         name: input.location.name.trim(),
         address: {
@@ -76,6 +85,7 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
       },
       request: {
         intent: 'initial_setup',
+        createdBy: access.viewer.profile.id,
         requester: {
           name: input.requester.name,
           email: input.requester.email,

@@ -14,6 +14,11 @@
 // The DID is Session 8 and has no destination yet, so it appears here as what it
 // honestly is — the stage after this one — with no button. An email whose main
 // link 404s is worse than an email that says "not yet".
+//
+// Since spec v2.3 (§10.3.1) it also carries the franchisee's account invitation,
+// and that is its main button: the account is what outlasts this email. The
+// registration's own page stays as a quieter second link, so the budget figures
+// are one click away even for someone not ready to choose a password.
 
 import { EmailButton, EmailLayout, brandColors, type EmailBrand } from '../layout';
 import { budgetMoney, type FormatBudget } from '../../budget';
@@ -24,11 +29,16 @@ export interface WelcomeProps {
   name: string | null;
   /** One row per format the brand has a standard package for (SPEC §3.2). */
   budgets: FormatBudget[];
-  /** `/{brand_slug}/welcome/{access_token}` — absolute, and their only way in. */
+  /** `/{brand_slug}/welcome/{access_token}` — the budget figures, no account needed. */
   welcomeUrl: string;
+  /**
+   * The owner invitation (`create`), or — when they already have an account —
+   * where to sign in (`sign_in`). SPEC v2.3 §10.3.1.
+   */
+  account: { url: string; kind: 'create' | 'sign_in' };
 }
 
-export function WelcomeEmail({ brand, name, budgets, welcomeUrl }: WelcomeProps) {
+export function WelcomeEmail({ brand, name, budgets, welcomeUrl, account }: WelcomeProps) {
   const colors = brandColors(brand);
   const first = name?.trim().split(/\s+/)[0] ?? null;
   // The caveat is shared rather than repeated per row: every format quotes the
@@ -44,7 +54,7 @@ export function WelcomeEmail({ brand, name, budgets, welcomeUrl }: WelcomeProps)
         Signage for your new {brand.name}
       </p>
       <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>
-        Everything below is for the planning stage. Nothing needs an account.
+        Everything below is for the planning stage.
       </p>
 
       {first && (
@@ -126,12 +136,21 @@ export function WelcomeEmail({ brand, name, budgets, welcomeUrl }: WelcomeProps)
 
       <div style={{ marginTop: 16 }}>
         <EmailButton
-          href={welcomeUrl}
-          label={budgets.length > 0 ? 'Get your budget sheet' : 'Open your signage page'}
+          href={account.url}
+          label={account.kind === 'create' ? 'Create your account' : `Sign in to ${brand.name}`}
           background={colors.primary}
         />
-        <p style={{ margin: '8px 0 0', fontSize: 11, color: '#9ca3af' }}>
-          This link is yours — no password, no account. Keep this email to come back to it.
+        <p style={{ margin: '8px 0 0', fontSize: 12, lineHeight: 1.6, color: '#6b7280' }}>
+          {account.kind === 'create'
+            ? `You choose a password, and your ${brand.name} signage lives in one place from then on — these figures now, your store once there is a lease. The link works once, for 14 days.`
+            : `You already have an account — these figures are there too.`}
+        </p>
+        <p style={{ margin: '10px 0 0', fontSize: 12, color: '#6b7280' }}>
+          Just want the numbers?{' '}
+          <a href={welcomeUrl} style={{ color: colors.dark }}>
+            {budgets.length > 0 ? 'Get your budget sheet' : 'Open your signage page'}
+          </a>{' '}
+          — no account needed.
         </p>
       </div>
     </EmailLayout>

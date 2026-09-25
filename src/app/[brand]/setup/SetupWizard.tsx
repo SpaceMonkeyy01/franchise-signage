@@ -30,10 +30,13 @@ export function SetupWizard({
   brand,
   packages,
   catalog,
+  requester,
 }: {
   brand: BrandPublic;
   packages: PackageRow[];
   catalog: BrandItemRow[];
+  /** The signed-in account's contact details, as the starting point (SPEC v2.3). */
+  requester: { name: string; email: string; phone: string };
 }) {
   const [step, setStep] = useState(1);
   const [basics, setBasics] = useState({
@@ -43,9 +46,9 @@ export function SetupWizard({
     state: '',
     zip: '',
     openingDate: '',
-    requesterName: '',
-    requesterEmail: '',
-    requesterPhone: '',
+    requesterName: requester.name,
+    requesterEmail: requester.email,
+    requesterPhone: requester.phone,
   });
   const [format, setFormat] = useState<LocationFormat | null>(null);
   // undefined = not answered, null = "not sure yet". Both store as null (§8b:

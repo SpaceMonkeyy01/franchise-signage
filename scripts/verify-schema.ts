@@ -119,11 +119,15 @@ const checks: Check[] = [
     // the token, and `.some()` was satisfied. The behavioural suite caught that;
     // this now catches it too, one phase earlier.
     label: 'every anon policy on requests names a credential',
-    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr
+    // By the policy's ROLES, not its name: since v2.3 signed-in people other
+    // than the team have policies too, and "not named team_*" no longer means
+    // "anon".
+    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr,
+                 array(select rolname from pg_roles where oid = any(p.polroles))::text as roles
           from pg_policy p join pg_class c on c.oid = p.polrelid
           where c.relname = 'requests'`,
     expect: (rows) => {
-      const anon = rows.filter((r) => !String(r.polname).startsWith('team'));
+      const anon = rows.filter((r) => String(r.roles).includes('anon'));
       return (
         anon.length > 0 &&
         anon.every(
@@ -133,7 +137,30 @@ const checks: Check[] = [
         )
       );
     },
-    describe: (rows) => rows.map((r) => `${r.polname}: ${r.using_expr}`).join(' | '),
+    describe: (rows) => rows.map((r) => `${r.polname} ${r.roles}: ${r.using_expr}`).join(' | '),
+  },
+  {
+    // SPEC v2.3 §10. The signed-in counterpart: every policy a signed-in person
+    // reaches requests through is the team's, or scoped to the stores they may
+    // see. `using (true)` for authenticated would hand every franchisee every
+    // other franchisee's requests.
+    label: 'every signed-in policy on requests is the team’s or scoped to a store',
+    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr,
+                 array(select rolname from pg_roles where oid = any(p.polroles))::text as roles
+          from pg_policy p join pg_class c on c.oid = p.polrelid
+          where c.relname = 'requests'`,
+    expect: (rows) => {
+      const signedIn = rows.filter((r) => String(r.roles).includes('authenticated'));
+      return (
+        signedIn.length > 1 &&
+        signedIn.every(
+          (r) =>
+            String(r.using_expr).includes('app.is_team_member') ||
+            String(r.using_expr).includes('app.can_see_location'),
+        )
+      );
+    },
+    describe: (rows) => rows.map((r) => `${r.polname} ${r.roles}: ${r.using_expr}`).join(' | '),
   },
   {
     // SPEC §8d level 1. The DID migration locked this table to anon outright;

@@ -278,5 +278,17 @@ export const cedarPark = {
   installedSigns: [] as Array<{ brandItem: string; sizing: string; installed_at: string }>,
 };
 
+/**
+ * The pilot's franchisee company (SPEC v2.3 §10.6): one company owning both
+ * demo stores, run by the person who submitted every demo request. Its owner's
+ * ACCOUNT is not seeded here — on a real project it comes from an invitation;
+ * the dev database seeds a password for it (src/lib/auth/dev-auth.ts).
+ */
+export const pilotFranchisee = {
+  name: 'Freshbites Austin',
+  owner: { name: 'Dana Whitfield', email: 'dana@freshbites-austin.com' },
+  stores: ['Freshbites — Oak Plaza', 'Freshbites — Cedar Park'],
+};
+
 /** Signage.com operators who can reach /admin (SPEC §10). */
 export const teamMembers = [{ email: 'team@signage.com', name: 'Signage.com Team' }];

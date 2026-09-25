@@ -109,9 +109,13 @@ export function Registrations({
                 <span className="text-xs text-gray-400">{registration.name}</span>
               )}
               <span className="text-xs text-gray-400">{registration.brand_name}</span>
-              {registration.welcome_sent_at ? (
+              {registration.has_account ? (
+                <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  account created
+                </span>
+              ) : registration.welcome_sent_at ? (
                 <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
-                  welcomed
+                  invited
                 </span>
               ) : (
                 // Only reachable when a real provider rejected the message:

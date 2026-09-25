@@ -53,6 +53,9 @@ const DEV_ADMIN = {
   totpSecret: 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP',
 };
 
+/** The seeded pilot franchisee owner (src/lib/auth/dev-auth.ts) — Dana. */
+const DEV_FRANCHISEE = { email: 'dana@freshbites-austin.com', password: 'franchisee-dev-password' };
+
 /** The Signage.com admin the accounts section invites, and then removes. */
 const SMOKE_ADMIN = 'smoke.admin@signage.test';
 const SMOKE_ADMIN_PASSWORD = 'smoke-admin-password-1';
@@ -279,6 +282,19 @@ async function removeSmokeArtifacts(codes = []) {
       await client.query(`delete from franchisee_registrations where email = any($1)`, [
         [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
       ]);
+      // SPEC v2.3: the owner account and company the welcome invitation made.
+      await client.query(`delete from invitations where email = any($1)`, [
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+      ]);
+      await client.query(`delete from profiles where email = any($1)`, [
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+      ]);
+      await client.query(`delete from franchisees where name = 'Smoke Franchise Co'`);
+      if ((await client.query(`select to_regclass('dev_auth.users') as t`)).rows[0].t) {
+        await client.query(`delete from dev_auth.users where email = any($1)`, [
+          [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+        ]);
+      }
       await client.query(`delete from sent_emails where to_email = any($1)`, [
         [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
       ]);
@@ -333,9 +349,25 @@ page.on('pageerror', (e) => pageErrors.push(e.message));
 page.on('console', (m) => m.type() === 'error' && pageErrors.push(m.text()));
 
 // ---------------------------------------------------------------- brand home
+// SPEC v2.3 §10.2: "My stores" is behind sign-in. Signed out, the brand page is
+// a way in and nothing more — no store, and no request link.
 console.log('\nBrand home');
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'text=Your', 'the co-branded home renders');
+await expectVisible(page, 'a:text-is("Sign in")', 'signed out, the brand home asks you to sign in');
+const signedOutHome = await page.content();
+record(
+  'and shows no store and no request link',
+  !signedOutHome.includes('Oak Plaza') && !/\/request\/[A-Za-z0-9_-]{8,}/.test(signedOutHome),
+  'a store or a token appeared on the signed-out page',
+);
+
+await page.getByRole('link', { name: 'Sign in' }).click();
+await page.waitForURL('**/sign-in**', { timeout: TIMEOUT });
+await page.getByLabel('Email').fill(DEV_FRANCHISEE.email);
+await page.getByLabel('Password', { exact: false }).first().fill(DEV_FRANCHISEE.password);
+await page.getByRole('button', { name: 'Sign in' }).click();
+await page.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+await expectVisible(page, 'h1:has-text("Dana, your")', 'the franchisee owner signs in to their own stores');
 await expectCount(page, 'text=/installed (Sep|Oct) 2025/', 5, 'Oak Plaza shows its five installed signs');
 await expectCount(page, 'text=Setup in progress', 1, 'Cedar Park shows the empty state');
 await expectCount(page, 'text=/REQ-00(16|17|18)/', 3, 'the three open requests are listed');
@@ -353,6 +385,17 @@ await expectVisible(page, 'text=$12,900', 'the quote total is shown');
 
 // ------------------------------------------------------------ accept a quote
 console.log('\nAccepting the quote');
+
+// §10.7 D1: the request link still opens the page for anyone holding it, but
+// accepting commits money — a separate browser with only the link cannot.
+const linkOnly = await browser.newContext();
+const linkOnlyPage = await linkOnly.newPage();
+await linkOnlyPage.goto(page.url(), { waitUntil: 'networkidle' });
+await expectVisible(linkOnlyPage, 'text=REQ-0016', 'the request link alone still opens the status page');
+await expectVisible(linkOnlyPage, 'a:has-text("Sign in to accept")', 'but offers "Sign in to accept" instead of the button');
+await expectCount(linkOnlyPage, 'button:has-text("Accept quote")', 0, 'and no accept button');
+await linkOnly.close();
+
 const acceptButton = page.getByRole('button', { name: /Accept quote/i });
 await expectVisible(page, 'button:has-text("Accept quote")', 'accept-quote is offered on the internal tail');
 await acceptButton.click();
@@ -492,6 +535,13 @@ console.log('\nThe operator console (/admin) and the approval email');
 
 // SPEC v2.3 §10.3.3: a password, then a code from an authenticator. The dev
 // provider is a real password login, so each half can be refused on its own.
+// Still signed in as the franchisee from the sections above: the console is
+// not theirs, and says so rather than looping.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'text=/which has no access to that page/', 'a franchisee account cannot open the console');
+await page.getByRole('button', { name: 'Sign out' }).click();
+await page.waitForURL('**/sign-in**', { timeout: TIMEOUT });
+
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 await expectVisible(page, 'h1:text-is("Sign in")', '/admin sends anyone not signed in to sign in');
 
@@ -1296,11 +1346,15 @@ record(
   !welcomeProse.includes('order') && !welcomeProse.includes('request signage'),
   'ordering invisible',
 );
+// SPEC v2.3 §10.3.1: the owner invitation leads, their page follows, and the
+// DID is still described rather than linked.
+const welcomeHrefs = [...(welcomeMail?.html ?? '').matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
 record(
-  'and it links nowhere but their own page — the DID is described, not linked',
-  [...(welcomeMail?.html ?? '').matchAll(/href="([^"]+)"/g)].every((m) => m[1] === welcomeLink),
-  'one destination',
+  'and it links to the account invitation, then their own page, and nowhere else',
+  welcomeHrefs.length === 2 && /\/invite\/[A-Za-z0-9_-]+$/.test(welcomeHrefs[0]) && welcomeHrefs[1] === welcomeLink,
+  welcomeHrefs.join(' , '),
 );
+const firstInvite = welcomeHrefs[0]?.replace(BASE, '') ?? null;
 
 // The landing page itself, opened exactly as the franchisee opens it.
 await page.goto(welcomeLink, { waitUntil: 'networkidle' });
@@ -1369,6 +1423,49 @@ record(
   're-sending the welcome keeps the link that is already in their inbox',
   afterResend?.access_token === registration?.access_token && Number(afterResend?.sent) === 2,
   `${afterResend?.sent} sent, token unchanged`,
+);
+
+// SPEC v2.3 §10.3.2 and §10.7 D7: the invitation in the welcome email is the
+// sign-up. A franchisee with no lease yet lands on the level-1 view of their
+// own (empty) store list — the number for the business plan, and "Set up a
+// store" for later — and sees none of anyone else's stores.
+const newestInvite = await latestLinkTo(SMOKE_REGISTRATION, 'welcome', /\/invite\/[A-Za-z0-9_-]+/);
+const franchisee = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const franchiseePage = await franchisee.newPage();
+franchiseePage.on('pageerror', (error) => pageErrors.push(error.message));
+
+await franchiseePage.goto(`${BASE}${firstInvite}`, { waitUntil: 'networkidle' });
+await expectVisible(franchiseePage, 'h1:text-is("Invitation withdrawn")', 're-sending the welcome retires the older invitation');
+
+await franchiseePage.goto(`${BASE}${newestInvite}`, { waitUntil: 'networkidle' });
+await expectVisible(franchiseePage, 'text=Franchisee owner', 'the newest invitation opens owner sign-up');
+await franchiseePage.getByLabel('Your name').fill('Smoke Owner');
+await franchiseePage.getByLabel('Company name').fill('Smoke Franchise Co');
+await franchiseePage.getByLabel('Choose a password').fill('smoke-owner-password-1');
+await franchiseePage.getByLabel('Confirm password').fill('smoke-owner-password-1');
+await franchiseePage.getByRole('button', { name: 'Create my account' }).click();
+await expectVisible(franchiseePage, 'text=/whether your lease is signed/', 'sign-up asks whether the lease is signed');
+await franchiseePage.getByText('Not yet', { exact: true }).click();
+await franchiseePage.getByRole('button', { name: 'Create my account' }).click();
+await franchiseePage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+await expectVisible(
+  franchiseePage,
+  'text=The signage number for your business plan',
+  'with no lease, sign-up lands on the level-1 view: the budget number',
+);
+await expectVisible(franchiseePage, 'text=Lease signed? Set up your first store', 'and "set up a store" for later');
+record(
+  "and none of another franchisee's stores",
+  !(await franchiseePage.content()).includes('Oak Plaza'),
+  'Oak Plaza belongs to Freshbites Austin',
+);
+await franchisee.close();
+
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await expectVisible(
+  page,
+  `section:has(h2:text-is("Franchisee registrations")) li:has-text("${SMOKE_REGISTRATION}") >> text=account created`,
+  "the team's registration list shows the account was created",
 );
 
 // --------------------------------------------- the corporate dashboard (§9.6)

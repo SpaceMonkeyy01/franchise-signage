@@ -12,7 +12,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { requireStoreOrdering } from '@/lib/auth/stores';
 import { getBrandBySlug, getInstalledSignsForLocation, getLocationById } from '@/lib/db/queries';
 
 interface Intent {
@@ -36,6 +38,12 @@ export default async function IntentPicker({
 
   const location = await getLocationById(locationId);
   if (!location || location.brand_id !== brand.id) notFound();
+  // SPEC v2.3 §10.2: an owner, the staff assigned to this store, or Signage.com.
+  const { viewer } = await requireStoreOrdering(
+    slug,
+    locationId,
+    `/${slug}/location/${locationId}/request`,
+  );
 
   const installed = await getInstalledSignsForLocation(locationId);
   const base = `/${slug}/location/${locationId}/request`;
@@ -85,7 +93,11 @@ export default async function IntentPicker({
   return (
     <>
       <BrandTheme brand={brand} />
-      <BrandHeader brand={brand} backHref={`/${slug}`} />
+      <BrandHeader
+        brand={brand}
+        backHref={`/${slug}`}
+        account={<AccountBadge name={viewer.profile.name} email={viewer.profile.email} />}
+      />
 
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">

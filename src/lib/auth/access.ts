@@ -123,6 +123,82 @@ export function platformSessionExpired(viewer: Viewer, now: Date = new Date()): 
 }
 
 /**
+ * What a person may see and do among one brand's stores (SPEC v2.3 §10.2).
+ *
+ *   all        — Signage.com, and the brand's own admins and reviewers: every
+ *                store. Only Signage.com orders on a store's behalf here;
+ *                corporate reads (§10.2: corporate never edits a request).
+ *   franchisee — an owner: their company's stores; they order, start new
+ *                stores and accept quotes. Staff: only the stores assigned to
+ *                them; they order, and do neither of the other two.
+ *   none       — no role on this brand.
+ */
+export type StoreScope =
+  | { kind: 'none' }
+  | { kind: 'all'; canOrder: boolean; canCreateStore: boolean; canAcceptQuotes: boolean }
+  | {
+      kind: 'franchisee';
+      franchiseeId: string;
+      /** Staff only: the stores assigned to them. Null means the whole company. */
+      locationIds: string[] | null;
+      canOrder: true;
+      canCreateStore: boolean;
+      canAcceptQuotes: boolean;
+    };
+
+export async function storeScope(viewer: Viewer, brandId: string): Promise<StoreScope> {
+  if (platformMembership(viewer)) {
+    return { kind: 'all', canOrder: true, canCreateStore: true, canAcceptQuotes: true };
+  }
+  const onBrand = viewer.memberships.filter((m) => m.brandId === brandId);
+
+  const owner = onBrand.find((m) => m.role === 'franchisee_owner');
+  if (owner?.franchiseeId) {
+    return {
+      kind: 'franchisee',
+      franchiseeId: owner.franchiseeId,
+      locationIds: null,
+      canOrder: true,
+      canCreateStore: true,
+      canAcceptQuotes: true,
+    };
+  }
+
+  const staff = onBrand.find((m) => m.role === 'franchisee_staff');
+  if (staff?.franchiseeId) {
+    const assigned = await query<{ location_id: string }>(
+      `select location_id from membership_locations where membership_id = $1`,
+      [staff.id],
+    );
+    return {
+      kind: 'franchisee',
+      franchiseeId: staff.franchiseeId,
+      locationIds: assigned.map((row) => row.location_id),
+      canOrder: true,
+      canCreateStore: false,
+      canAcceptQuotes: false,
+    };
+  }
+
+  if (onBrand.some((m) => m.role === 'brand_admin' || m.role === 'brand_reviewer')) {
+    return { kind: 'all', canOrder: false, canCreateStore: false, canAcceptQuotes: false };
+  }
+  return { kind: 'none' };
+}
+
+/** Whether a scope reaches one store. Mirrors app.can_see_location(). */
+export async function scopeCoversLocation(scope: StoreScope, locationId: string): Promise<boolean> {
+  if (scope.kind === 'none') return false;
+  if (scope.kind === 'all') return true;
+  if (scope.locationIds) return scope.locationIds.includes(locationId);
+  const row = await queryOne<{ ok: boolean }>(
+    `select franchisee_id = $2 as ok from locations where id = $1`,
+    [locationId, scope.franchiseeId],
+  );
+  return Boolean(row?.ok);
+}
+
+/**
  * Where a person goes after signing in, when nothing asked for somewhere else.
  *
  * Phase A gives only Signage.com a destination of its own; brand and franchisee

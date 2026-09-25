@@ -24,8 +24,13 @@ import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { PGLiteSocketServer } from '@electric-sql/pglite-socket';
 
-import { DEV_ADMIN, seedDevAdmin } from '../src/lib/auth/dev-auth';
-import { seedFreshbites, seedMasterCatalog } from './seed/apply';
+import {
+  DEV_ADMIN,
+  DEV_FRANCHISEE,
+  seedDevAdmin,
+  seedDevFranchisee,
+} from '../src/lib/auth/dev-auth';
+import { seedFreshbites, seedMasterCatalog, seedPilotFranchisee } from './seed/apply';
 import { seedDemoRequests } from './seed/demo-requests';
 
 const DATA_DIR = join(process.cwd(), '.pglite');
@@ -132,9 +137,11 @@ async function main() {
   const db = new PGlite(DATA_DIR, { extensions: { pgcrypto } });
   await db.waitReady;
   await migrateAndSeed(db);
-  // Every start, so an existing database gains it too (SPEC v2.3 §10.6).
+  // Every start, so an existing database gains them too (SPEC v2.3 §10.6).
   await seedDevAdmin(db);
-  console.log(`[dev-db] sign in as ${DEV_ADMIN.email} / ${DEV_ADMIN.password}`);
+  await seedDevFranchisee(db, await seedPilotFranchisee(db));
+  console.log(`[dev-db] Signage.com: ${DEV_ADMIN.email} / ${DEV_ADMIN.password}`);
+  console.log(`[dev-db] franchisee:  ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}`);
 
   const server = new PGLiteSocketServer({ db, port: PORT, host: '127.0.0.1' });
   await server.start();

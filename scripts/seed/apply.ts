@@ -216,6 +216,7 @@ export async function seedFreshbites(
   }
 
   // ---- team allowlist
+  // Kept for history only: since SPEC v2.3 it grants nothing (DECISIONS #110).
   for (const member of fb.teamMembers) {
     await db.query(
       `insert into team_members (email, name) values ($1,$2)
@@ -224,5 +225,41 @@ export async function seedFreshbites(
     );
   }
 
+  await seedPilotFranchisee(db);
+
   return { brandId, itemIdByName, locationIdByName };
+}
+
+/**
+ * The pilot franchisee company, owning both demo stores (SPEC v2.3 §10.6).
+ *
+ * Idempotent, and separate from seedFreshbites so the dev database can run it at
+ * every start: a database seeded before accounts existed gains the company the
+ * first time it runs this code. A store another company already owns is left
+ * alone — this only claims unowned ones.
+ */
+export async function seedPilotFranchisee(db: SqlExec): Promise<string> {
+  const brand = await one<{ id: string }>(db, `select id from brands where slug = $1`, [
+    fb.brand.slug,
+  ]);
+  const existing = await db.query<{ id: string }>(
+    `select id from franchisees where brand_id = $1 and name = $2`,
+    [brand.id, fb.pilotFranchisee.name],
+  );
+  const franchiseeId =
+    existing.rows[0]?.id ??
+    (
+      await one<{ id: string }>(
+        db,
+        `insert into franchisees (brand_id, name) values ($1, $2) returning id`,
+        [brand.id, fb.pilotFranchisee.name],
+      )
+    ).id;
+
+  await db.query(
+    `update locations set franchisee_id = $1
+      where brand_id = $2 and name = any($3) and franchisee_id is null`,
+    [franchiseeId, brand.id, fb.pilotFranchisee.stores],
+  );
+  return franchiseeId;
 }

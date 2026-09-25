@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
@@ -55,6 +56,10 @@ export default async function RequestStatusPage({
   if (!request || request.brand.slug !== slug) notFound();
 
   const quote = request.quotes[0] ?? null;
+  // Who may press Accept (SPEC v2.3 §10.7 D1). Asked once, for every card.
+  const acceptAccess = request.quotes.some((candidate) => !candidate.external)
+    ? await acceptQuoteAccess(request.location.id)
+    : 'not_owner';
   // Signage.com's own package, if this request has one. The only tail with
   // production stages to draw — an external vendor works off-platform.
   const internalPackage = request.quotes.find((candidate) => !candidate.external) ?? null;
@@ -158,6 +163,7 @@ export default async function RequestStatusPage({
             quote={packageQuote}
             token={token}
             split={request.quotes.length > 1}
+            acceptAccess={acceptAccess}
           />
         ))}
 
@@ -270,12 +276,15 @@ function QuoteCard({
   quote,
   token,
   split,
+  acceptAccess,
 }: {
   request: RequestDetail;
   quote: NonNullable<RequestDetail['quotes'][number]>;
   token: string;
   /** True when this is one of several packages, so the card says whose it is. */
   split: boolean;
+  /** Whether the person looking may accept — never the link on its own (D1). */
+  acceptAccess: 'allowed' | 'signed_out' | 'not_owner';
 }) {
   // Each package runs its own tail now (SPEC §6, amended v2.2), so this card
   // reads that package's own stage rather than the request's. Before v2.2 a
@@ -310,7 +319,28 @@ function QuoteCard({
         {quote.manual_count > 0 && ` · ${quote.manual_count} custom item(s) quoted separately`}
       </p>
 
-      {acceptable && (
+      {acceptable && acceptAccess === 'signed_out' && (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Link
+            href={`/sign-in?next=${encodeURIComponent(`/${request.brand.slug}/request/${token}`)}`}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            style={{ background: 'var(--color-brand)' }}
+          >
+            Sign in to accept
+          </Link>
+          <span className="text-xs text-indigo-900/70">
+            Accepting commits the order, so it needs the store owner&rsquo;s account.
+          </span>
+        </div>
+      )}
+
+      {acceptable && acceptAccess === 'not_owner' && (
+        <p className="mt-3 text-xs text-indigo-900/70">
+          Only the owner of this store&rsquo;s franchisee account can accept the quote.
+        </p>
+      )}
+
+      {acceptable && acceptAccess === 'allowed' && (
         <form
           action={async () => {
             'use server';

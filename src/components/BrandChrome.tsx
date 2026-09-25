@@ -26,7 +26,16 @@ export function BrandTheme({ brand }: { brand: BrandPublic }) {
   );
 }
 
-export function BrandHeader({ brand, backHref }: { brand: BrandPublic; backHref?: string }) {
+export function BrandHeader({
+  brand,
+  backHref,
+  account,
+}: {
+  brand: BrandPublic;
+  backHref?: string;
+  /** Who is signed in, and a way out (SPEC v2.3). Omitted on link-only pages. */
+  account?: React.ReactNode;
+}) {
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
@@ -49,14 +58,14 @@ export function BrandHeader({ brand, backHref }: { brand: BrandPublic; backHref?
             Powered by <span className="font-semibold text-gray-500">Signage.com</span>
           </p>
         </div>
-        {backHref && (
-          <Link
-            href={backHref}
-            className="ml-auto text-sm text-gray-500 transition-colors hover:text-gray-900"
-          >
-            ← Back
-          </Link>
-        )}
+        <div className="ml-auto flex items-center gap-4">
+          {backHref && (
+            <Link href={backHref} className="text-sm text-gray-500 transition-colors hover:text-gray-900">
+              ← Back
+            </Link>
+          )}
+          {account}
+        </div>
       </div>
     </header>
   );

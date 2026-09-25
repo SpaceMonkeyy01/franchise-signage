@@ -111,9 +111,13 @@ export function Registrations({
                   day: 'numeric',
                 })}
               </span>
-              {registration.welcome_sent_at ? (
+              {registration.has_account ? (
+                <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  account created
+                </span>
+              ) : registration.welcome_sent_at ? (
                 <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-medium text-green-800">
-                  welcomed
+                  invited
                 </span>
               ) : (
                 <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">

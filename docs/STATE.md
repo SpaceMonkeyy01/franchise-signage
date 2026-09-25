@@ -1,5 +1,38 @@
 # Where the build is
 
+## 26 Sep 2026: phase B is built — franchisees have accounts
+
+**§9b phase B, franchisee accounts, is done and demoable:** corporate (or the
+team) registers a franchisee; the welcome email's main button is now "Create
+your account"; sign-up asks whether the lease is signed and goes to store setup
+or to the level-1 view (budget number + "Set up your first store"); and
+`/freshbites` is "My stores" — behind sign-in, scoped to the franchisee's own
+company.
+
+- **Sign in as the pilot franchisee:** `dana@freshbites-austin.com` /
+  `franchisee-dev-password` (no second factor — franchisees are never forced).
+  Dana's company, *Freshbites Austin*, owns Oak Plaza and Cedar Park.
+- **Closed a real exposure (#119):** the brand home used to list every store,
+  with every request's private link, to anyone who opened it. Signed out it now
+  names no store at all.
+- **Accepting a quote needs the signed-in owner (#120, D1).** The request link
+  still opens the page, answers change requests and downloads documents; it
+  shows "Sign in to accept" instead of the button.
+- **Existing stores get owners by `npm run backfill-owners`** — a dry run that
+  prints the inferred owners; `-- --apply` does it (#125).
+- Checks: **206 smoke** (13 new; the store-scope and accept-quote guards were
+  broken on purpose and went red), **141 unit**, **52 schema** (32
+  behavioural — the new policies are tested as each person, through SELECTs),
+  typecheck, lint, green build. Decisions #119–127.
+
+**Still not proven: the Supabase half of accounts** (phases A and B). Same
+checklist, `docs/SUPABASE.md` §7; on the live project also run
+`npm run backfill-owners` to give the already-seeded stores their owner.
+
+**Next: phase C — corporate in-app** (§9b): brand admins and reviewers sign in,
+the dashboard moves behind sign-in, reviewers can approve from it, and brand
+admins invite and deactivate their own people. `corporate_links` retires.
+
 ## 25 Sep 2026 (later): phase A is built — everyone signs in with a password
 
 **§9b phase A, the identity core, is done and demoable:** a Signage.com admin
@@ -32,10 +65,7 @@ the documented API and have not run against the live project. `docs/SUPABASE.md`
 Supabase Auth settings it needs (sign-ups OFF, TOTP on, min length 10, service
 key).
 
-**Next: phase B — franchisee accounts** (§9b): franchisee companies and store
-ownership, the §8d welcome email carrying the owner invitation, sign-up
-continuing into store setup (or the level-1 page before a site, D7), and a
-"My stores" home.
+*(Phase B followed on 26 Sep — see above.)*
 
 ## 25 Sep 2026: spec v2.3 — accounts — approved
 
@@ -394,7 +424,7 @@ npm run dev          # starts the dev database AND the web server
 
 | Surface | URL | Who |
 |---|---|---|
-| Franchisee | http://localhost:3000/freshbites | no login; tokenized links |
+| Franchisee | http://localhost:3000/freshbites | `dana@freshbites-austin.com` / `franchisee-dev-password`; request links still open one request |
 | Signage.com team | http://localhost:3000/sign-in | `team@signage.com` / `signage-dev-password` + code |
 | Corporate reviewer | from a link in the approval email | no login, ever |
 | Corporate dashboard | http://localhost:3000/freshbites/corporate | magic link to `brand@freshbites.com` |
@@ -410,14 +440,15 @@ local database; the code is displayed only because this is dev (DECISIONS #112).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 193 checks (needs `npm run dev` up, and Supabase mode OFF) |
+| `npm run smoke` | drive the real flows in a browser — 206 checks (needs `npm run dev` up, and Supabase mode OFF) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 141 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres — 48 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres — 52 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
 | `npm run invite -- <email>` | mint an invitation and print its link — how the first admin exists on a new project (`--role`, `--brand` for others) |
+| `npm run backfill-owners` | infer an owner for every unowned store and print the plan; `-- --apply` makes the companies and prints their accept links |
 
 **There is no Docker on this machine**, so `supabase start` cannot run. Instead
 PGlite (Postgres compiled to WASM) runs as its own process speaking the real

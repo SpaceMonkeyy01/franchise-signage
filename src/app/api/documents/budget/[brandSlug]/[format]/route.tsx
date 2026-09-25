@@ -15,7 +15,9 @@
 
 import { corporateSession } from '@/lib/corporate/session';
 import { getBrandBySlug, getPackageForFormat } from '@/lib/db/queries';
+import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
 import { getTeamMember } from '@/lib/auth/team';
+import { queryOne } from '@/lib/db/pool';
 import { BudgetOnePager } from '@/lib/pdf/budget-one-pager';
 import { renderPdf } from '@/lib/pdf/letterhead';
 import type { LocationFormat } from '@/lib/status/types';
@@ -73,6 +75,15 @@ export async function GET(
  */
 async function mayExport(request: Request, brandSlug: string): Promise<boolean> {
   if (await getTeamMember()) return true;
+
+  // SPEC v2.3: anyone signed in with a role on this brand. A franchisee could
+  // already download it from their §8d welcome page; this is the same sheet
+  // reached through their account instead of their registration link.
+  const viewer = await getViewer();
+  if (viewer && !owesSecondFactor(viewer)) {
+    const brand = await queryOne<{ id: string }>(`select id from brands where slug = $1`, [brandSlug]);
+    if (brand && (await storeScope(viewer, brand.id)).kind !== 'none') return true;
+  }
 
   const token = new URL(request.url).searchParams.get('token');
   if (!token) return false;

@@ -10,6 +10,7 @@
 
 import { redirect } from 'next/navigation';
 
+import { checkStoreOrdering } from '@/lib/auth/stores';
 import { createAndSubmitRequest, toRequestFile } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
@@ -37,6 +38,9 @@ export async function submitReplacement(
 ): Promise<SubmitFailure | undefined> {
   if (!REASON_LABEL[input.reason]) return { error: 'Pick what happened to the sign.' };
 
+  const access = await checkStoreOrdering(input.brandSlug, input.locationId);
+  if ('error' in access) return { error: access.error };
+
   // One query does the authorization: the sign has to be active, on this
   // location, under the brand in the URL. Anything else is not a replacement
   // this caller can make.
@@ -63,6 +67,7 @@ export async function submitReplacement(
       brandId: sign.brand_id,
       locationId: input.locationId,
       intent: 'replace_like',
+      createdBy: access.viewer.profile.id,
       items: [
         {
           brandItemId: sign.brand_item_id,
