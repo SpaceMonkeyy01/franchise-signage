@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 
 import { AuthCard } from '@/components/AuthCard';
 import { getViewer, homeFor, requiresSecondFactor, safeNext } from '@/lib/auth/access';
+import { portalSlug } from '@/lib/portal-request';
 import { devCurrentCode, totpFactors } from '@/lib/auth/identity';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
@@ -24,7 +25,7 @@ export default async function TwoFactorPage({
   const viewer = await getViewer();
   if (!viewer) redirect(`/sign-in${next ? `?next=${encodeURIComponent(next)}` : ''}`);
 
-  const destination = safeNext(next, homeFor(viewer.memberships));
+  const destination = safeNext(next, homeFor(viewer.memberships, await portalSlug()));
   if (viewer.identity.aal === 'aal2') redirect(destination);
 
   const verified = (await totpFactors()).find((factor) => factor.verified) ?? null;

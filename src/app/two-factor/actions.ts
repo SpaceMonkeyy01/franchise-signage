@@ -7,6 +7,7 @@
 import { redirect } from 'next/navigation';
 
 import { getViewer, homeFor, safeNext } from '@/lib/auth/access';
+import { portalSlug } from '@/lib/portal-request';
 import {
   devCurrentCode,
   enrollTotp,
@@ -46,5 +47,5 @@ export async function confirmTwoFactor(
   }
 
   const viewer = await getViewer();
-  redirect(safeNext(next, viewer ? homeFor(viewer.memberships) : '/'));
+  redirect(safeNext(next, viewer ? homeFor(viewer.memberships, await portalSlug()) : '/'));
 }

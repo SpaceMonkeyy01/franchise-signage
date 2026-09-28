@@ -1,15 +1,25 @@
 // Sign in (SPEC v2.3 §10.3.3).
 //
-// One page for every account in phase A. Brand portals (§10.4, phase D) will
-// put their own chrome around the same form at `{brand}.signage.com`. There is
-// no "sign up" link, on purpose: accounts exist only by invitation.
+// One page for every account. On a brand portal (§10.4) — `{brand}.signage.com`,
+// or `freshbites.localhost` in development — the same form wears the brand's
+// header and colours, and signing in lands on that brand. There is no "sign
+// up" link, on purpose: accounts exist only by invitation.
 
 import { redirect } from 'next/navigation';
 
 import { AuthCard, FormNotice } from '@/components/AuthCard';
+import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { getViewer, homeFor, owesSecondFactor, safeNext } from '@/lib/auth/access';
-import { DEV_ADMIN, DEV_FRANCHISEE } from '@/lib/auth/dev-auth';
+import {
+  DEV_ADMIN,
+  DEV_BRAND_ADMIN,
+  DEV_BRAND_REVIEWER,
+  DEV_FRANCHISEE,
+  DEV_STAFF,
+} from '@/lib/auth/dev-auth';
 import { authProvider } from '@/lib/auth/identity';
+import { getBrandBySlug } from '@/lib/db/queries';
+import { portalSlug } from '@/lib/portal-request';
 
 import { SignInForm } from './SignInForm';
 import { SignOutButton } from './SignOutButton';
@@ -28,24 +38,27 @@ export default async function SignInPage({
 }) {
   const { next, reason } = await searchParams;
   const viewer = await getViewer();
+  const portal = await portalSlug();
+  const brand = portal ? await getBrandBySlug(portal) : null;
 
   // Already signed in: go on, unless the destination is exactly what this
   // account cannot open — then say so, rather than looping between the two.
   if (viewer && reason !== 'not_member' && reason !== 'expired') {
     if (owesSecondFactor(viewer)) {
-      redirect(`/two-factor?next=${encodeURIComponent(safeNext(next, homeFor(viewer.memberships)))}`);
+      redirect(`/two-factor?next=${encodeURIComponent(safeNext(next, homeFor(viewer.memberships, portal)))}`);
     }
-    redirect(safeNext(next, homeFor(viewer.memberships)));
+    redirect(safeNext(next, homeFor(viewer.memberships, portal)));
   }
 
   const devHint =
     authProvider() === 'dev'
-      ? `Seeded accounts: Signage.com ${DEV_ADMIN.email} / ${DEV_ADMIN.password}; franchisee ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}.`
+      ? `Seeded accounts: Signage.com ${DEV_ADMIN.email} / ${DEV_ADMIN.password}; franchisee ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}; store manager ${DEV_STAFF.email} / ${DEV_STAFF.password}; brand admin ${DEV_BRAND_ADMIN.email} / ${DEV_BRAND_ADMIN.password}; reviewer ${DEV_BRAND_REVIEWER.email} / ${DEV_BRAND_REVIEWER.password}.`
       : null;
 
-  return (
+  const card = (
     <AuthCard
-      title="Sign in"
+      title={brand ? `Sign in to ${brand.name} signage` : 'Sign in'}
+      eyebrow={brand ? `${brand.name} · Franchise by Signage` : undefined}
       subtitle="Accounts are created by invitation. If you were invited, open the email to set your password first."
     >
       {reason === 'not_member' && viewer ? (
@@ -62,5 +75,14 @@ export default async function SignInPage({
         </div>
       )}
     </AuthCard>
+  );
+
+  if (!brand) return card;
+  return (
+    <>
+      <BrandTheme brand={brand} />
+      <BrandHeader brand={brand} />
+      {card}
+    </>
   );
 }

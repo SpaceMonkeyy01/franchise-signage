@@ -204,8 +204,19 @@ export async function scopeCoversLocation(scope: StoreScope, locationId: string)
  * Signage.com to the console; a brand's admins and reviewers to its dashboard
  * (§10.3.2); franchisees to their stores. Memberships arrive strongest role
  * first, so someone holding two lands where the stronger one works.
+ *
+ * On a brand portal (§10.4) the answer stays on that brand: the console is not
+ * served there, and a person with roles at two brands signed in at one of them.
  */
-export function homeFor(memberships: Membership[]): string {
+export function homeFor(memberships: Membership[], portal: string | null = null): string {
+  if (portal) {
+    const corporate = memberships.some(
+      (m) =>
+        m.role === 'platform_admin' ||
+        (m.brandSlug === portal && (m.role === 'brand_admin' || m.role === 'brand_reviewer')),
+    );
+    return corporate ? `/${portal}/corporate` : `/${portal}`;
+  }
   if (memberships.some((m) => m.role === 'platform_admin')) return '/admin';
   const first = memberships[0];
   if (!first?.brandSlug) return '/';

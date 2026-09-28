@@ -33,9 +33,15 @@ const SMOKE_LOCATION = 'Freshbites — Smoke Test';
 const SMOKE_REGISTRATION = 'smoke.franchisee@freshbites.test';
 /** Registered from the corporate dashboard rather than the team queue (§8d). */
 const SMOKE_CORPORATE_REGISTRATION = 'smoke.corporate@freshbites.test';
+/** Registered from the People tab's Franchisees section, and cleared by every run. */
+const SMOKE_PEOPLE_REGISTRATION = 'smoke.people@freshbites.test';
 /** Freshbites' corporate accounts, seeded by the dev database (SPEC v2.3 §10.6). */
 const BRAND_ADMIN = { email: 'brand@freshbites.com', password: 'corporate-dev-password' };
 const BRAND_REVIEWER = { email: 'reviewer@freshbites.com', password: 'reviewer-dev-password' };
+/** The pilot company's store manager, assigned Oak Plaza only (§9b phase D). */
+const DEV_STAFF = { email: 'riley@freshbites-austin.com', password: 'staff-dev-password' };
+/** Invited by the owner from Store staff, and cleared by every run. */
+const SMOKE_STAFF = 'smoke.manager@freshbites-austin.test';
 /** Invited from the dashboard's People tab, and cleared by every run. */
 const SMOKE_CORPORATE_INVITEE = 'smoke.reviewer@freshbites.test';
 
@@ -292,24 +298,39 @@ async function removeSmokeArtifacts(codes = []) {
       // too — it has no request_id to cascade from, so it would otherwise pile
       // up one row per run in the outbox the team reads.
       await client.query(`delete from franchisee_registrations where email = any($1)`, [
-        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION, SMOKE_PEOPLE_REGISTRATION],
       ]);
       // SPEC v2.3: the owner account and company the welcome invitation made.
       await client.query(`delete from invitations where email = any($1)`, [
-        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION, SMOKE_PEOPLE_REGISTRATION],
       ]);
       await client.query(`delete from profiles where email = any($1)`, [
-        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION, SMOKE_PEOPLE_REGISTRATION],
       ]);
       await client.query(`delete from franchisees where name = 'Smoke Franchise Co'`);
       if ((await client.query(`select to_regclass('dev_auth.users') as t`)).rows[0].t) {
         await client.query(`delete from dev_auth.users where email = any($1)`, [
-          [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+          [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION, SMOKE_PEOPLE_REGISTRATION],
         ]);
       }
       await client.query(`delete from sent_emails where to_email = any($1)`, [
-        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION],
+        [SMOKE_REGISTRATION, SMOKE_CORPORATE_REGISTRATION, SMOKE_PEOPLE_REGISTRATION],
       ]);
+      // Phase D: the manager this run invites, and Riley's stores and status,
+      // which the run changes and puts back.
+      await client.query(`delete from invitations where email = $1`, [SMOKE_STAFF]);
+      await client.query(`delete from sent_emails where to_email = $1`, [SMOKE_STAFF]);
+      await client.query(`delete from profiles where email = $1`, [SMOKE_STAFF]);
+      if ((await client.query(`select to_regclass('dev_auth.users') as t`)).rows[0].t) {
+        await client.query(`delete from dev_auth.users where email = $1`, [SMOKE_STAFF]);
+      }
+      await client.query(
+        `delete from membership_locations
+          where membership_id in (select m.id from memberships m join profiles p on p.id = m.profile_id
+                                   where p.email = $1 and m.role = 'franchisee_staff')
+            and location_id <> (select id from locations where name = 'Freshbites — Oak Plaza')`,
+        [DEV_STAFF.email],
+      );
       // Phase C: the reviewer this run invites from the People tab, and the
       // one it deactivates and restores.
       await client.query(`delete from invitations where email = $1`, [SMOKE_CORPORATE_INVITEE]);
@@ -1791,6 +1812,232 @@ const backIn = await reviewerPage.goto(`${BASE}/freshbites/corporate`, { waitUnt
 record('who is back in on the next click', backIn?.status() === 200, `status ${backIn?.status()}`);
 await reviewerAgain.close();
 await brandAdmin.close();
+
+// ------------------------------------------------ store staff (§9b phase D)
+// As its demo reads: a manager sees one store of two. Then the owner's side —
+// invite a manager to named stores, change a manager's stores, deactivate one —
+// each taking effect on the staff member's next click.
+
+const storeIds = await withDb(async (client) =>
+  Object.fromEntries(
+    (
+      await client.query(
+        `select name, id from locations where name = any($1)`,
+        [['Freshbites — Oak Plaza', 'Freshbites — Cedar Park']],
+      )
+    ).rows.map((row) => [row.name, row.id]),
+  ),
+);
+const oakPlaza = storeIds['Freshbites — Oak Plaza'];
+const cedarPark = storeIds['Freshbites — Cedar Park'];
+
+const staffContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const staffPage = await staffContext.newPage();
+staffPage.on('pageerror', (error) => pageErrors.push(error.message));
+await signInWithPassword(staffPage, DEV_STAFF, null);
+await staffPage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+await expectVisible(staffPage, 'h2:text-is("Freshbites — Oak Plaza")', 'a store manager sees the store they are assigned');
+await expectCount(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'and not the other store of the two');
+await expectCount(staffPage, 'text=Set up a new store', 0, 'staff cannot set up a store');
+await expectCount(staffPage, 'text=Store staff', 0, 'or manage staff');
+const staffOther = await staffPage.goto(`${BASE}/freshbites/location/${cedarPark}/request`, {
+  waitUntil: 'networkidle',
+});
+record('the other store’s ordering page is a 404 for them', staffOther?.status() === 404, `status ${staffOther?.status()}`);
+const staffOwn = await staffPage.goto(`${BASE}/freshbites/location/${oakPlaza}/request`, {
+  waitUntil: 'networkidle',
+});
+record('their own store’s is open', staffOwn?.status() === 200, `status ${staffOwn?.status()}`);
+const staffStaffPage = await staffPage.goto(`${BASE}/freshbites/staff`, { waitUntil: 'networkidle' });
+record('and the staff page is not theirs', staffStaffPage?.status() === 404, `status ${staffStaffPage?.status()}`);
+
+// The owner.
+const ownerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const ownerPage = await ownerContext.newPage();
+ownerPage.on('pageerror', (error) => pageErrors.push(error.message));
+await signInWithPassword(ownerPage, DEV_FRANCHISEE, null);
+await ownerPage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+await ownerPage.getByRole('link', { name: /Store staff/ }).click();
+await ownerPage.waitForURL(/\/freshbites\/staff$/, { timeout: TIMEOUT });
+await expectVisible(ownerPage, `[data-staff="${DEV_STAFF.email}"]`, 'the owner sees their staff');
+
+// Give Riley both stores; the next click shows both.
+await ownerPage
+  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`)
+  .check();
+await ownerPage.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
+await expectGone(ownerPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'the owner changes a manager’s stores');
+await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectVisible(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 'and the manager sees the new store on their next click');
+
+// And back.
+await ownerPage
+  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`)
+  .uncheck();
+await ownerPage.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
+await expectGone(ownerPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'taking a store away saves too');
+await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectCount(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'and it is gone on their next click');
+
+// Invite a second manager, to Cedar Park only.
+await ownerPage.locator('#staff-email').fill(SMOKE_STAFF);
+await ownerPage.locator('form label:has-text("Freshbites — Cedar Park") input').check();
+await ownerPage.getByRole('button', { name: 'Send invitation' }).click();
+await expectVisible(ownerPage, `text=Invitation sent to ${SMOKE_STAFF}`, 'the owner invites a manager to one store');
+const staffInvite = await withDb(async (client) =>
+  (
+    await client.query(
+      `select i.role, i.location_ids::text[] as stores,
+              i.franchisee_id = (select franchisee_id from locations where id = $2) as own_company
+         from invitations i where i.email = $1 order by i.created_at desc limit 1`,
+      [SMOKE_STAFF, cedarPark],
+    )
+  ).rows[0],
+);
+record(
+  'the invitation is staff, at their company, for that store',
+  staffInvite?.role === 'franchisee_staff' &&
+    staffInvite?.own_company === true &&
+    staffInvite?.stores?.length === 1 &&
+    staffInvite?.stores?.[0] === cedarPark,
+  JSON.stringify(staffInvite),
+);
+
+const staffInviteLink = await latestLinkTo(SMOKE_STAFF, 'invitation', /\/invite\/[A-Za-z0-9_-]+/);
+const newStaff = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const newStaffPage = await newStaff.newPage();
+newStaffPage.on('pageerror', (error) => pageErrors.push(error.message));
+await newStaffPage.goto(`${BASE}${staffInviteLink}`, { waitUntil: 'networkidle' });
+await expectVisible(newStaffPage, 'text=Store staff', 'the invitation opens staff sign-up');
+await newStaffPage.getByLabel('Your name').fill('Smoke Manager');
+await newStaffPage.getByLabel('Choose a password').fill('smoke-staff-password-1');
+await newStaffPage.getByLabel('Confirm password').fill('smoke-staff-password-1');
+await newStaffPage.getByRole('button', { name: 'Create my account' }).click();
+await newStaffPage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+await expectVisible(newStaffPage, 'h2:text-is("Freshbites — Cedar Park")', 'the new manager lands on their one store');
+await expectCount(newStaffPage, 'h2:text-is("Freshbites — Oak Plaza")', 0, 'and only that one');
+
+// Deactivated: nothing on the next click.
+await ownerPage.reload({ waitUntil: 'networkidle' });
+ownerPage.once('dialog', (dialog) => dialog.accept());
+await ownerPage.locator(`[data-staff="${SMOKE_STAFF}"]`).getByRole('button', { name: 'Deactivate' }).click();
+await expectVisible(ownerPage, `[data-staff="${SMOKE_STAFF}"] >> text=deactivated`, 'the owner deactivates a manager');
+await newStaffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectCount(newStaffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'who sees no store on their next click');
+
+await newStaff.close();
+
+// ------------------------------- franchisee people, from corporate (#140)
+// A brand admin reaches every franchisee company in the brand: its owners and
+// its staff, with the owner's own staff screen. Each change lands on the
+// person's next click, as it does from the owner's side.
+const corpPeople = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const corpPage = await corpPeople.newPage();
+corpPage.on('pageerror', (error) => pageErrors.push(error.message));
+await signInWithPassword(corpPage, BRAND_ADMIN, '/freshbites/corporate?tab=people');
+await corpPage.waitForURL(/\/freshbites\/corporate\?tab=people$/, { timeout: TIMEOUT });
+const austin = corpPage.locator('[data-franchisee="Freshbites Austin"]');
+await expectVisible(corpPage, '[data-franchisee="Freshbites Austin"]', 'a brand admin sees the franchisee companies');
+await austin.getByRole('button', { name: /Freshbites Austin/ }).click();
+await expectVisible(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"]`, 'with each company’s owner');
+await expectVisible(corpPage, `[data-staff="${DEV_STAFF.email}"]`, 'and its store staff');
+
+// Registering from here is the §8d registration itself, written as corporate's.
+const peopleRegistrations = corpPage.locator('[data-registrations="people"]');
+await peopleRegistrations.locator('input[type="email"]').fill(SMOKE_PEOPLE_REGISTRATION);
+await peopleRegistrations.getByRole('button', { name: /Register/i }).click();
+await expectVisible(
+  corpPage,
+  `[data-registrations="people"] >> text=${SMOKE_PEOPLE_REGISTRATION}`,
+  'a brand admin registers a franchisee from the People tab',
+);
+const peopleRegistration = await withDb(async (client) =>
+  (
+    await client.query(
+      `select r.registered_by, i.role as invite_role,
+              exists (select 1 from sent_emails e where e.to_email = r.email) as emailed
+         from franchisee_registrations r left join invitations i on i.email = r.email
+        where r.email = $1`,
+      [SMOKE_PEOPLE_REGISTRATION],
+    )
+  ).rows[0],
+);
+record(
+  'as corporate, with an owner invitation, and the welcome email sent',
+  peopleRegistration?.registered_by === 'corporate' &&
+    peopleRegistration?.invite_role === 'franchisee_owner' &&
+    peopleRegistration?.emailed === true,
+  JSON.stringify(peopleRegistration),
+);
+
+// Staff stores, from corporate.
+await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`).check();
+await austin.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
+await expectGone(corpPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'the brand admin changes a manager’s stores');
+await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectVisible(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 'and the manager sees it on their next click');
+await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`).uncheck();
+await austin.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
+await expectGone(corpPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'and puts it back');
+
+// The owner, deactivated and back.
+corpPage.once('dialog', (dialog) => dialog.accept());
+await austin.locator(`[data-owner="${DEV_FRANCHISEE.email}"]`).getByRole('button', { name: 'Deactivate' }).click();
+await expectVisible(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"] >> text=deactivated`, 'the brand admin deactivates a franchisee owner');
+await ownerPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectCount(ownerPage, 'h2:text-is("Freshbites — Oak Plaza")', 0, 'who sees no store on their next click');
+await austin.locator(`[data-owner="${DEV_FRANCHISEE.email}"]`).getByRole('button', { name: 'Reactivate' }).click();
+await expectGone(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"] >> text=deactivated`, 'and reactivates them');
+await ownerPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await expectVisible(ownerPage, 'h2:text-is("Freshbites — Oak Plaza")', 'who is back on the next click');
+await corpPeople.close();
+
+await ownerContext.close();
+await staffContext.close();
+
+// ------------------------------------------- brand portals (§9b phase D)
+// `{brand}.signage.com`, which in development is `freshbites.localhost` — the
+// browser resolves it to this machine with no DNS. It serves the brand's pages
+// at its root, keeps the path-based ones working, wears the brand on sign-in,
+// has a session of its own, and does not serve the console.
+const PORTAL = BASE.replace('://localhost', '://freshbites.localhost');
+const portal = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+const portalPage = await portal.newPage();
+portalPage.on('pageerror', (error) => pageErrors.push(error.message));
+
+await portalPage.goto(`${PORTAL}/`, { waitUntil: 'networkidle' });
+await expectVisible(portalPage, 'text=Order and track signage for your Freshbites stores', 'freshbites.localhost serves the brand at its root');
+await portalPage.goto(`${PORTAL}/sign-in`, { waitUntil: 'networkidle' });
+await expectVisible(portalPage, 'h1:text-is("Sign in to Freshbites signage")', 'its sign-in wears the brand');
+await portalPage.getByLabel('Email').fill(BRAND_ADMIN.email);
+await portalPage.getByLabel('Password', { exact: false }).first().fill(BRAND_ADMIN.password);
+await portalPage.getByRole('button', { name: 'Sign in' }).click();
+await portalPage.waitForURL(/freshbites\.localhost:\d+\/freshbites\/corporate$/, { timeout: TIMEOUT });
+record('and signing in there stays on the portal', true, portalPage.url());
+
+await portalPage.goto(`${PORTAL}/corporate`, { waitUntil: 'networkidle' });
+await expectVisible(portalPage, 'text=Brand control across all locations', 'the short path /corporate is the dashboard');
+const portalAdmin = await portalPage.goto(`${PORTAL}/admin`, { waitUntil: 'networkidle' });
+record('the console is not served on a brand address', portalAdmin?.status() === 404, `status ${portalAdmin?.status()}`);
+const portalOther = await portalPage.goto(`${PORTAL}/otherbrand`, { waitUntil: 'networkidle' });
+record('nor another brand', portalOther?.status() === 404, `status ${portalOther?.status()}`);
+
+// The session belongs to the portal's address: the same browser is signed out
+// on the plain one.
+const plainDashboard = await portalPage.goto(`${BASE}/freshbites/corporate`, { waitUntil: 'networkidle' });
+record(
+  'and the portal session does not carry to another address',
+  portalPage.url().includes('/sign-in') && plainDashboard?.status() === 200,
+  portalPage.url(),
+);
+await portal.close();
+
+// Only the proxy may say a request is on a portal.
+const spoofed = await fetch(`${BASE}/sign-in`, { headers: { 'x-brand-portal': 'freshbites' } });
+record(
+  'a client cannot claim to be on a portal',
+  !(await spoofed.text()).includes('Sign in to Freshbites signage'),
+);
 
 // ------------------------------------------------------------ dead-link copy
 // Every 404 in this build means the same thing — a token did not resolve — and

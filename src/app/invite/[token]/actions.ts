@@ -29,6 +29,7 @@ import {
   recordFailedSignIn,
 } from '@/lib/auth/password';
 import { transaction } from '@/lib/db/pool';
+import { portalSlug } from '@/lib/portal-request';
 import type { SubmitFailure } from '@/lib/forms';
 
 export interface NewAccountFields {
@@ -199,7 +200,7 @@ async function continueAfterAcceptance(
   const memberships = await membershipsFor(profileId);
   const brandSlug = invitation.brandSlug;
   const destination = !brandSlug
-    ? homeFor(memberships)
+    ? homeFor(memberships, await portalSlug())
     : invitation.role === 'franchisee_owner'
       ? hasSite
         ? `/${brandSlug}/setup`

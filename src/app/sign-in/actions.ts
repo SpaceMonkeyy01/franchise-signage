@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 
 import { homeFor, membershipsFor, requiresSecondFactor, safeNext } from '@/lib/auth/access';
 import { endSession, signInWithPassword } from '@/lib/auth/identity';
+import { portalSlug } from '@/lib/portal-request';
 import {
   LOCKOUT_MINUTES,
   clearFailedSignIns,
@@ -51,7 +52,7 @@ export async function signIn(
   // Read by id rather than from the session just created: the cookie was set in
   // this request, and the session is the next request's to read.
   const memberships = await membershipsFor(userId);
-  const destination = safeNext(next, homeFor(memberships));
+  const destination = safeNext(next, homeFor(memberships, await portalSlug()));
   if (requiresSecondFactor(memberships)) {
     redirect(`/two-factor?next=${encodeURIComponent(destination)}`);
   }
