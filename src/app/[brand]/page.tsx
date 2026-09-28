@@ -103,8 +103,18 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
         <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-gray-600">
           {scope.kind === 'all'
             ? 'You are viewing as Signage.com: every store of the brand, whoever owns it.'
-            : 'Each store keeps a record of its installed signage — brand specs stay locked, so replacements and additions take minutes.'}
+            : scope.locationIds
+              ? 'The stores your franchisee account has given you. Order signage and answer change requests here; the owner accepts quotes.'
+              : 'Each store keeps a record of its installed signage — brand specs stay locked, so replacements and additions take minutes.'}
         </p>
+        {scope.kind === 'franchisee' && scope.canCreateStore && (
+          <Link
+            href={`/${slug}/staff`}
+            className="mt-3 inline-block text-xs font-medium text-gray-500 underline underline-offset-2 hover:text-gray-900"
+          >
+            Store staff — invite your managers
+          </Link>
+        )}
       </div>
 
       {locations.length === 0 ? (

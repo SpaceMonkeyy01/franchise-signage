@@ -73,6 +73,7 @@ const PERSON = {
 
 const A1 = '10000000-0000-4000-8000-000000000001';
 const A2 = '10000000-0000-4000-8000-000000000002';
+const B1 = '10000000-0000-4000-8000-000000000003';
 
 /** Store ids captured while seeding: Alpha has three, Beta one. */
 const store = { a1Main: '', a1Second: '', a2: '', beta: '' };
@@ -164,6 +165,9 @@ async function seed(db: PGlite): Promise<void> {
       select '${A1}', id, 'A1 Holdings' from brands where slug = 'alpha';
     insert into franchisees (id, brand_id, name)
       select '${A2}', id, 'A2 Foods' from brands where slug = 'alpha';
+    -- A company at the other brand, so a brand admin's reach can be asked.
+    insert into franchisees (id, brand_id, name)
+      select '${B1}', id, 'B1 Partners' from brands where slug = 'beta';
 
     update locations set franchisee_id = '${A1}'
      where brand_id = (select id from brands where slug = 'alpha');
@@ -200,6 +204,12 @@ async function seed(db: PGlite): Promise<void> {
     insert into membership_locations (membership_id, location_id)
       select m.id, l.id from memberships m, locations l
        where m.profile_id = '${PERSON.staffA1}' and l.name = 'Alpha Second';
+
+    -- Phase D: one open staff invitation at A1, so an owner's read of their
+    -- company's invitations is askable, and a sibling owner's is not.
+    insert into invitations (brand_id, email, role, franchisee_id, token_hash, expires_at)
+      select id, 'invited@a1.test', 'franchisee_staff', '${A1}', 'fixture-a1-staff', now() + interval '14 days'
+        from brands where slug = 'alpha';
   `);
 
   const stores = await db.query<{ name: string; id: string }>(`select name, id from locations`);
@@ -713,14 +723,23 @@ const checks: NamedCheck[] = [
     },
   },
   {
+    // Phase D: an owner also reads their own company's staff (A1 has one; A2
+    // none), so A2's owner is the one who must see exactly themselves.
     label: "a person reads their own profile and memberships, and nobody else's",
     run: async (db) => {
-      await asAuthenticated(db, PERSON.ownerA1);
-      const profiles = await count(db, `select count(*) as n from profiles`);
-      const memberships = await count(db, `select count(*) as n from memberships`);
+      const seen: string[] = [];
+      for (const [who, id] of [
+        ['A1 owner', PERSON.ownerA1],
+        ['A2 owner', PERSON.ownerA2],
+      ] as const) {
+        await asAuthenticated(db, id);
+        const profiles = await count(db, `select count(*) as n from profiles`);
+        const memberships = await count(db, `select count(*) as n from memberships`);
+        seen.push(`${who} ${profiles}/${memberships}`);
+      }
       return expect(
-        profiles === 1 && memberships === 1,
-        `${profiles} profile(s) and ${memberships} membership(s) visible, expected 1 and 1`,
+        seen.join(', ') === 'A1 owner 2/2, A2 owner 1/1',
+        `${seen.join(', ')} (profiles/memberships), expected A1 owner 2/2 (self and staff), A2 owner 1/1`,
       );
     },
   },
@@ -828,6 +847,51 @@ const checks: NamedCheck[] = [
           reviewerProfiles === 1 &&
           reviewerInvites === 0,
         `admin ${adminMembers}/${adminOther} memberships, ${adminProfiles} profiles; reviewer ${reviewerMembers} memberships, ${reviewerProfiles} profiles, ${reviewerInvites} invitations`,
+      );
+    },
+  },
+  {
+    // Phase D (§10.2 "invite or deactivate store staff: own stores"): an owner
+    // reads their own company's staff store scopes and invitations, and a
+    // sibling company's owner reads neither. Staff read their own scope only.
+    label: "an owner reads their own staff's stores and invitations; a sibling owner neither",
+    run: async (db) => {
+      const seen: string[] = [];
+      for (const [who, id] of [
+        ['A1 owner', PERSON.ownerA1],
+        ['A2 owner', PERSON.ownerA2],
+        ['A1 staff', PERSON.staffA1],
+      ] as const) {
+        await asAuthenticated(db, id);
+        const scopes = await count(db, `select count(*) as n from membership_locations`);
+        const invites = await count(db, `select count(*) as n from invitations`);
+        seen.push(`${who} ${scopes}/${invites}`);
+      }
+      const want = 'A1 owner 1/1, A2 owner 0/0, A1 staff 1/0';
+      return expect(seen.join(', ') === want, `${seen.join(', ')} (scopes/invitations), expected ${want}`);
+    },
+  },
+  {
+    // DECISIONS #140: the corporate People tab lists every franchisee company in
+    // the brand with its staff's stores. A reviewer manages nobody.
+    label: "a brand admin reads their brand's franchisee companies and staff stores; a reviewer neither",
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const companies = (
+        await db.query<{ name: string }>(`select name from franchisees order by name`)
+      ).rows
+        .map((row) => row.name)
+        .join(',');
+      const scopes = await count(db, `select count(*) as n from membership_locations`);
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewerCompanies = await count(db, `select count(*) as n from franchisees`);
+      const reviewerScopes = await count(db, `select count(*) as n from membership_locations`);
+      return expect(
+        companies === 'A1 Holdings,A2 Foods' &&
+          scopes === 1 &&
+          reviewerCompanies === 0 &&
+          reviewerScopes === 0,
+        `admin sees ${companies || 'no companies'} and ${scopes} store scope(s); reviewer ${reviewerCompanies} companies, ${reviewerScopes} scopes`,
       );
     },
   },

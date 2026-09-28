@@ -20,6 +20,13 @@ import { sendWelcomeEmail } from '@/lib/email/welcome';
 import type { SubmitFailure } from '@/lib/forms';
 import { registerFranchisee } from '@/lib/registrations';
 import { recordChangeRequest, recordDecision, type Reviewer } from '@/lib/review/decide';
+import {
+  franchiseeOnBrand,
+  inviteStaff,
+  setStaffActive,
+  setStaffStores,
+  withdrawStaffInvitation,
+} from '@/lib/staff';
 
 type Result = SubmitFailure | undefined;
 
@@ -167,8 +174,8 @@ export async function resendWelcomeAction(brandSlug: string, registrationId: str
 export type CorporateInviteRole = 'brand_admin' | 'brand_reviewer';
 
 /**
- * Invite a brand admin or reviewer (§10.2). Brand admins manage these two roles
- * only: franchisees arrive by the §8d registration, staff by their owner.
+ * Invite a brand admin or reviewer (§10.2). Franchisee owners arrive by the §8d
+ * registration instead; store staff by the franchisee section below.
  */
 export async function inviteBrandMemberAction(
   brandSlug: string,
@@ -223,6 +230,113 @@ export async function setBrandMemberActiveAction(
       );
       if (changed.length === 0) return 'That person is not one of this brand’s admins or reviewers.';
     },
+    { manage: true },
+  );
+}
+
+// ---------------------------------------------------------- franchisee people
+// A brand admin reaches every franchisee company in the brand (§10.2 "invite or
+// deactivate store staff: brand_admin ✓", DECISIONS #140). The staff rules are
+// the owner's own, from src/lib/staff.ts; what is added here is the reach — the
+// company named must be one of this brand's.
+
+/** Deactivate or reactivate a franchisee owner. Takes effect on their next click. */
+export async function setFranchiseeOwnerActiveAction(
+  brandSlug: string,
+  membershipId: string,
+  active: boolean,
+): Promise<Result> {
+  return run(
+    brandSlug,
+    async (access) => {
+      const changed = await query<{ id: string }>(
+        `update memberships
+            set active = $3, deactivated_at = case when $3 then null else now() end
+          where id = $1 and brand_id = $2 and role = 'franchisee_owner'
+          returning id`,
+        [membershipId, access.brand.id, active],
+      );
+      if (changed.length === 0) return 'That person is not one of this brand’s franchisee owners.';
+    },
+    { manage: true },
+  );
+}
+
+async function franchiseeScope(access: CorporateAccess, franchiseeId: string) {
+  return (await franchiseeOnBrand(franchiseeId, access.brand.id))
+    ? { brand: access.brand, franchiseeId }
+    : null;
+}
+
+const NOT_ON_BRAND = 'That franchisee is not part of this brand.';
+
+export async function inviteFranchiseeStaffAction(
+  brandSlug: string,
+  franchiseeId: string,
+  email: string,
+  locationIds: string[],
+): Promise<{ sentTo: string; warning: string | null } | SubmitFailure> {
+  const access = await checkCorporate(brandSlug, { manage: true });
+  if ('error' in access) return access;
+  const scope = await franchiseeScope(access, franchiseeId);
+  if (!scope) return { error: NOT_ON_BRAND };
+  try {
+    const result = await inviteStaff(scope, {
+      email,
+      locationIds,
+      invitedBy: access.membership.id,
+      inviterName: access.viewer.profile.name ?? access.viewer.profile.email,
+    });
+    if (!('error' in result)) revalidatePath(`/${brandSlug}/corporate`, 'page');
+    return result;
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'The invitation could not be sent.' };
+  }
+}
+
+export async function setFranchiseeStaffStoresAction(
+  brandSlug: string,
+  franchiseeId: string,
+  membershipId: string,
+  locationIds: string[],
+): Promise<Result> {
+  return run(
+    brandSlug,
+    async (access) =>
+      (await franchiseeScope(access, franchiseeId))
+        ? setStaffStores(franchiseeId, membershipId, locationIds)
+        : NOT_ON_BRAND,
+    { manage: true },
+  );
+}
+
+export async function setFranchiseeStaffActiveAction(
+  brandSlug: string,
+  franchiseeId: string,
+  membershipId: string,
+  active: boolean,
+): Promise<Result> {
+  return run(
+    brandSlug,
+    async (access) =>
+      (await franchiseeScope(access, franchiseeId))
+        ? setStaffActive(franchiseeId, membershipId, active)
+        : NOT_ON_BRAND,
+    { manage: true },
+  );
+}
+
+export async function withdrawFranchiseeStaffInvitationAction(
+  brandSlug: string,
+  franchiseeId: string,
+  invitationId: string,
+): Promise<Result> {
+  return run(
+    brandSlug,
+    async (access) =>
+      (await franchiseeScope(access, franchiseeId))
+        ? withdrawStaffInvitation(franchiseeId, invitationId)
+        : NOT_ON_BRAND,
     { manage: true },
   );
 }

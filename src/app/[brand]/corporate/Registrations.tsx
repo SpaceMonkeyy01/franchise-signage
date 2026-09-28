@@ -10,6 +10,10 @@
 //
 // One email address is the whole of the lift, and saving it IS the trigger —
 // the welcome email goes at once, so there is no send button here to forget.
+//
+// It appears twice for a brand admin: on the Dashboard, and inside the People
+// tab's Franchisees section (`embedded`), where it covers the people who have
+// been registered but have not yet created the account that makes a company.
 
 import { useState, useTransition } from 'react';
 
@@ -21,11 +25,15 @@ export function Registrations({
   brandSlug,
   brandName,
   registrations,
+  embedded = false,
 }: {
   brandSlug: string;
   brandName: string;
   registrations: RegistrationWithBrand[];
+  /** Inside the People tab's Franchisees section: a sub-heading, not a section title. */
+  embedded?: boolean;
 }) {
+  const Heading = embedded ? 'h3' : 'h2';
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +59,13 @@ export function Registrations({
   };
 
   return (
-    <section className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
-      <h2 className="text-sm font-semibold text-gray-900">Franchisee registrations</h2>
+    <section
+      data-registrations={embedded ? 'people' : 'dashboard'}
+      className={`${embedded ? 'mt-2' : 'mt-5'} rounded-xl border border-gray-200 bg-white p-4`}
+    >
+      <Heading className="text-sm font-semibold text-gray-900">
+        {embedded ? 'Register a new franchisee' : 'Franchisee registrations'}
+      </Heading>
       <p className="mt-1 text-xs leading-relaxed text-gray-500">
         Register a franchisee&apos;s email when they sign their agreement — before there is a lease
         or a location. Saving one sends them the {brandName} welcome email straight away, carrying

@@ -2,10 +2,10 @@
 
 // The brand's own people (SPEC v2.3 §10.2): its admins and reviewers.
 //
-// A brand admin invites and deactivates these two roles; nobody else appears
-// here. Franchisees arrive by the §8d registration on the dashboard tab, and
-// store staff are their owner's to invite (phase D). Deactivating takes effect
-// on the person's next click, as it does for the Signage.com team.
+// A brand admin invites and deactivates these two roles here. Franchisee owners
+// and store staff are listed per company below them (./Franchisees.tsx).
+// Deactivating takes effect on the person's next click, as it does for the
+// Signage.com team.
 
 import { useState, useTransition } from 'react';
 

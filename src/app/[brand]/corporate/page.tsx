@@ -34,7 +34,10 @@ import {
 } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 
+import { brandFranchiseePeople } from '@/lib/staff';
+
 import { Approvals } from './Approvals';
+import { Franchisees } from './Franchisees';
 import { People, type InvitedRow, type PersonRow } from './People';
 import { Registrations } from './Registrations';
 
@@ -181,9 +184,9 @@ export default async function CorporateDashboard({
   );
 }
 
-/** The brand's admins and reviewers, and their open invitations. */
+/** The brand's admins and reviewers, then every franchisee company's people. */
 async function PeopleTab({ access }: { access: CorporateAccess }) {
-  const [members, invitations] = await Promise.all([
+  const [members, invitations, franchisees, registrations] = await Promise.all([
     query<{
       membership_id: string;
       profile_id: string;
@@ -199,6 +202,8 @@ async function PeopleTab({ access }: { access: CorporateAccess }) {
       [access.brand.id],
     ),
     pendingInvitations(access.brand.id),
+    brandFranchiseePeople(access.brand.id),
+    getRegistrationsForBrand(access.brand.id),
   ]);
 
   const people: PersonRow[] = members.map((row) => ({
@@ -214,12 +219,22 @@ async function PeopleTab({ access }: { access: CorporateAccess }) {
     .map((row) => ({ ...row, role: row.role as InvitedRow['role'] }));
 
   return (
-    <People
-      brandSlug={access.brand.slug}
-      brandName={access.brand.name}
-      people={people}
-      invited={invited}
-    />
+    <>
+      <People
+        brandSlug={access.brand.slug}
+        brandName={access.brand.name}
+        people={people}
+        invited={invited}
+      />
+      <div className="mt-8">
+        <Franchisees
+          brandSlug={access.brand.slug}
+          brandName={access.brand.name}
+          franchisees={franchisees}
+          registrations={registrations}
+        />
+      </div>
+    </>
   );
 }
 

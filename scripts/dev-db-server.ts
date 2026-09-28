@@ -29,9 +29,11 @@ import {
   DEV_BRAND_ADMIN,
   DEV_BRAND_REVIEWER,
   DEV_FRANCHISEE,
+  DEV_STAFF,
   seedDevAdmin,
   seedDevCorporate,
   seedDevFranchisee,
+  seedDevStaff,
 } from '../src/lib/auth/dev-auth';
 import { seedFreshbites, seedMasterCatalog, seedPilotFranchisee } from './seed/apply';
 import { seedDemoRequests } from './seed/demo-requests';
@@ -142,10 +144,13 @@ async function main() {
   await migrateAndSeed(db);
   // Every start, so an existing database gains them too (SPEC v2.3 §10.6).
   await seedDevAdmin(db);
-  await seedDevFranchisee(db, await seedPilotFranchisee(db));
+  const pilotFranchisee = await seedPilotFranchisee(db);
+  await seedDevFranchisee(db, pilotFranchisee);
+  await seedDevStaff(db, pilotFranchisee);
   await seedDevCorporate(db, 'freshbites');
   console.log(`[dev-db] Signage.com: ${DEV_ADMIN.email} / ${DEV_ADMIN.password}`);
   console.log(`[dev-db] franchisee:  ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}`);
+  console.log(`[dev-db] staff:       ${DEV_STAFF.email} / ${DEV_STAFF.password} (${DEV_STAFF.store} only)`);
   console.log(`[dev-db] brand admin: ${DEV_BRAND_ADMIN.email} / ${DEV_BRAND_ADMIN.password}`);
   console.log(`[dev-db] reviewer:    ${DEV_BRAND_REVIEWER.email} / ${DEV_BRAND_REVIEWER.password}`);
 

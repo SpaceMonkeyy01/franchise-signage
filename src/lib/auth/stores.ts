@@ -112,3 +112,49 @@ export async function acceptQuoteAccess(
   if (scope.kind === 'none' || !scope.canAcceptQuotes) return 'not_owner';
   return (await scopeCoversLocation(scope, locationId)) ? 'allowed' : 'not_owner';
 }
+
+// ------------------------------------------------------------ store staff
+// Phase D (§10.2 "invite or deactivate store staff: own stores"). The owner of
+// a franchisee company manages that company's staff here. A brand admin manages
+// every company's, from the corporate People tab (DECISIONS #140).
+
+export interface OwnerAccess {
+  viewer: Viewer;
+  brand: BrandRef & { name: string };
+  /** The owner's membership — recorded as `invited_by`. */
+  membershipId: string;
+  franchiseeId: string;
+}
+
+function ownerOf(viewer: Viewer, brandId: string) {
+  return viewer.memberships.find(
+    (m) => m.brandId === brandId && m.role === 'franchisee_owner' && m.franchiseeId,
+  );
+}
+
+async function brandWithName(slug: string) {
+  return queryOne<BrandRef & { name: string }>(`select id, slug, name from brands where slug = $1`, [
+    slug,
+  ]);
+}
+
+export async function requireOwner(brandSlug: string): Promise<OwnerAccess> {
+  const viewer = await requireViewer(`/${brandSlug}/staff`);
+  const brand = await brandWithName(brandSlug);
+  if (!brand) notFound();
+  const owner = ownerOf(viewer, brand.id);
+  if (!owner?.franchiseeId) notFound();
+  return { viewer, brand, membershipId: owner.id, franchiseeId: owner.franchiseeId };
+}
+
+export async function checkOwner(brandSlug: string): Promise<OwnerAccess | { error: string }> {
+  const viewer = await getViewer();
+  if (!viewer || owesSecondFactor(viewer)) return { error: SIGNED_OUT };
+  const brand = await brandWithName(brandSlug);
+  if (!brand) return { error: 'Unknown brand.' };
+  const owner = ownerOf(viewer, brand.id);
+  if (!owner?.franchiseeId) {
+    return { error: 'Only the owner of a franchisee account can manage store staff.' };
+  }
+  return { viewer, brand, membershipId: owner.id, franchiseeId: owner.franchiseeId };
+}

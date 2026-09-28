@@ -59,6 +59,18 @@ export const DEV_FRANCHISEE = {
 } as const;
 
 /**
+ * A store manager at Freshbites Austin, assigned to Oak Plaza only — §9b phase
+ * D's demo is "a manager sees one store of two". Dev only; on a real project the
+ * owner invites staff from their Store staff page.
+ */
+export const DEV_STAFF = {
+  email: 'riley@freshbites-austin.com',
+  name: 'Riley Chen',
+  password: 'staff-dev-password',
+  store: 'Freshbites — Oak Plaza',
+} as const;
+
+/**
  * The pilot brand's corporate people (SPEC v2.3 §10.6): a brand admin at the
  * address the brand was configured with, and a reviewer. Dev only, like the
  * others; on a real project they come from `npm run invite -- <email>
@@ -174,4 +186,25 @@ export async function seedDevCorporate(db: Db, brandSlug: string): Promise<void>
       [userId, brandSlug, role],
     );
   }
+}
+
+/** Riley, staff at the pilot company, assigned one store. Same rules as seedDevAdmin. */
+export async function seedDevStaff(db: Db, franchiseeId: string): Promise<void> {
+  const userId = await ensureDevAccount(db, DEV_STAFF);
+  const existing = await db.query<{ id: string }>(
+    `select id from memberships where profile_id = $1 and role = 'franchisee_staff'`,
+    [userId],
+  );
+  if (existing.rows.length > 0) return;
+  const inserted = await db.query<{ id: string }>(
+    `insert into memberships (profile_id, brand_id, role, franchisee_id)
+     select $1, f.brand_id, 'franchisee_staff', f.id from franchisees f where f.id = $2
+     returning id`,
+    [userId, franchiseeId],
+  );
+  await db.query(
+    `insert into membership_locations (membership_id, location_id)
+     select $1, l.id from locations l where l.franchisee_id = $2 and l.name = $3`,
+    [inserted.rows[0].id, franchiseeId, DEV_STAFF.store],
+  );
 }
