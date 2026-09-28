@@ -10,7 +10,7 @@
 // it must be: the team allowlist, the same one that decides who may route a
 // package or mark a sign installed. That is not a new exposure. /admin/outbox
 // already renders these same credentials in full — a franchisee's status token,
-// a corporate dashboard link, a reviewer's signed approval link — which is why
+// an invitation, a reviewer's signed approval link — which is why
 // Session 6c moved it behind this guard rather than an environment flag (#97).
 // This page is a shortcut to things a signed-in operator can already read.
 //
@@ -32,7 +32,6 @@ import Link from 'next/link';
 import { requireTeamMember } from '@/lib/auth/team';
 import { getBrandsWithPackages, getRegistrations, getRequestQueue } from '@/lib/db/queries';
 
-import { CorporateLinkPanel } from './CorporateLinkPanel';
 
 const INTENT_LABEL: Record<string, string> = {
   initial_setup: 'Initial setup',
@@ -75,7 +74,7 @@ export default async function EntryPoints() {
             />
             <Row
               label={`${brand.name} — corporate sign-in`}
-              detail="Asks for a dashboard link by email; says the same thing whichever address is given"
+              detail="Brand admins and reviewers sign in; as Signage.com you see what a brand admin sees"
               href={`/${brand.slug}/corporate`}
             />
           </div>
@@ -122,16 +121,6 @@ export default async function EntryPoints() {
             detail={`${reg.brand_name}${reg.welcome_sent_at ? '' : ' · welcome not sent'}`}
             href={`/${reg.brand_slug}/welcome/${reg.access_token}`}
           />
-        ))}
-      </Section>
-
-      {/* --------------------------------------------------------- corporate */}
-      <Section
-        title="Corporate dashboard"
-        blurb="A 30-day, read-only link. Only an address already configured on the brand can be issued one, and that rule is not relaxed here."
-      >
-        {brands.map((brand) => (
-          <CorporateLinkPanel key={brand.id} brandSlug={brand.slug} brandName={brand.name} />
         ))}
       </Section>
 

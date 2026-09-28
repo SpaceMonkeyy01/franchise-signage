@@ -8,7 +8,7 @@
 
 import { getRequestById } from '../db/queries';
 import { query, queryOne } from '../db/pool';
-import { mintReviewLink } from '../review/links';
+import { mintReviewLinks } from '../review/links';
 import { fileUrl } from '../storage/url';
 import type { QuotePackagePlan } from '../db/routing';
 import { render } from './layout';
@@ -47,9 +47,14 @@ function addressLines(address: {
  * Ask corporate to review a request (SPEC §9 interface 3).
  *
  * Called when a request lands on `needs_review` — from package prep, and again
- * from resubmission, which is the re-review email. Both mint a fresh link, and
- * minting revokes the previous one so the older email in the reviewer's inbox
+ * from resubmission, which is the re-review email. Both mint fresh links, and
+ * minting revokes the previous ones so the older email in a reviewer's inbox
  * cannot approve a package that has since changed.
+ *
+ * Who gets it (SPEC v2.3 §10.7 D4): every active `brand_reviewer` on the brand,
+ * one email and one link each. While a brand has none, the address configured
+ * on the brand, with its secondary copied, as before accounts. That address
+ * stays the SLA's escalation target either way.
  */
 export async function notifyReviewNeeded(requestId: string): Promise<NotifyOutcome> {
   const request = await getRequestById(requestId);
@@ -74,9 +79,26 @@ export async function notifyReviewNeeded(requestId: string): Promise<NotifyOutco
        from brands where id = (select brand_id from requests where id = $1)`,
     [requestId],
   );
-  if (!brand?.reviewer_email) return { sent: false, reason: 'no_reviewer' };
+  if (!brand) return { sent: false, reason: 'not_found' };
 
-  const link = await mintReviewLink(requestId, brand.reviewer_email);
+  const reviewers = await query<{ email: string }>(
+    `select p.email from memberships m join profiles p on p.id = m.profile_id
+      where m.brand_id = (select brand_id from requests where id = $1)
+        and m.role = 'brand_reviewer' and m.active
+      order by p.email`,
+    [requestId],
+  );
+  const recipients = reviewers.length
+    ? reviewers.map((row) => ({ to: row.email, cc: null as string | null }))
+    : brand.reviewer_email
+      ? [{ to: brand.reviewer_email, cc: brand.reviewer_email_secondary }]
+      : [];
+  if (recipients.length === 0) return { sent: false, reason: 'no_reviewer' };
+
+  const links = await mintReviewLinks(
+    requestId,
+    recipients.map((recipient) => recipient.to),
+  );
   const base = process.env.APP_URL ?? 'http://localhost:3000';
 
   const items: ReviewItem[] = pending.map((item) => {
@@ -105,57 +127,64 @@ export async function notifyReviewNeeded(requestId: string): Promise<NotifyOutco
     };
   });
 
-  const html = await render(
-    <ReviewRequestedEmail
-      brand={brand}
-      locationName={request.location.name}
-      requestCode={request.code}
-      packageVersion={request.package_version}
-      autoApprovedCount={
-        request.items.filter(
-          (item) => item.item_status === 'auto_approved' || item.item_status === 'approved',
-        ).length
-      }
-      items={items}
-      reviewUrl={link.url}
-      expiresAt={link.expiresAt}
-      slaDays={brand.review_sla_days}
-    />,
-  );
-
   const resubmission = request.package_version > 1;
-  const result = await sendEmail({
-    kind: resubmission ? 'review_requested_again' : 'review_requested',
-    to: brand.reviewer_email,
-    cc: brand.reviewer_email_secondary,
-    subject: resubmission
-      ? `Updated: ${pending.length} sign(s) back for approval — ${request.location.name}`
-      : `${pending.length} sign(s) need approval — ${request.location.name}`,
-    html,
-    // Sent AS the brand (SPEC §8d): the reviewer works for the franchisor, and
-    // this is their own program writing to them.
-    from: brandSender(brand.name),
-    requestId,
-  });
+  const autoApprovedCount = request.items.filter(
+    (item) => item.item_status === 'auto_approved' || item.item_status === 'approved',
+  ).length;
 
+  let result: SendResult | undefined;
+  let failed = false;
+  for (const [index, recipient] of recipients.entries()) {
+    const link = links[index];
+    const html = await render(
+      <ReviewRequestedEmail
+        brand={brand}
+        locationName={request.location.name}
+        requestCode={request.code}
+        packageVersion={request.package_version}
+        autoApprovedCount={autoApprovedCount}
+        items={items}
+        reviewUrl={link.url}
+        expiresAt={link.expiresAt}
+        slaDays={brand.review_sla_days}
+      />,
+    );
+    result = await sendEmail({
+      kind: resubmission ? 'review_requested_again' : 'review_requested',
+      to: recipient.to,
+      cc: recipient.cc,
+      subject: resubmission
+        ? `Updated: ${pending.length} sign(s) back for approval — ${request.location.name}`
+        : `${pending.length} sign(s) need approval — ${request.location.name}`,
+      html,
+      // Sent AS the brand (SPEC §8d): the reviewer works for the franchisor, and
+      // this is their own program writing to them.
+      from: brandSender(brand.name),
+      requestId,
+    });
+    if (result.error) failed = true;
+  }
+
+  const to = recipients.map((recipient) => recipient.to);
+  const whom = to.length === 1 ? 'corporate reviewer' : `${to.length} corporate reviewers`;
   await queryOne(
     `insert into request_events (request_id, kind, actor, summary, detail)
      values ($1,'review_email_sent','system',$2,$3) returning id`,
     [
       requestId,
       resubmission
-        ? `Re-review email sent to corporate reviewer (package v${request.package_version})`
-        : 'Approval email sent to corporate reviewer',
-      JSON.stringify({ to: brand.reviewer_email, emailId: result.id, provider: result.provider }),
+        ? `Re-review email sent to ${whom} (package v${request.package_version})`
+        : `Approval email sent to ${whom}`,
+      JSON.stringify({ to, emailId: result?.id ?? null, provider: result?.provider ?? null }),
     ],
   );
 
-    // `sent` means dispatched without a provider error, not delivered — the same
+  // `sent` means dispatched without a provider error, not delivered — the same
   // reading `welcome_sent_at` takes (DECISIONS #62). With no RESEND_API_KEY
   // nothing is ever delivered, so the delivery flag would report every message
   // in this build as a failure; `result` still carries it for a caller that
   // wants the stronger claim.
-  return { sent: !result.error, result };
+  return { sent: !failed, result };
 }
 
 /**

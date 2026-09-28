@@ -7,9 +7,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useTransition } from 'react';
-
-import { demoCorporateLinkAction } from './actions';
+import { useEffect, useState } from 'react';
 
 export interface DemoRequest {
   id: string;
@@ -68,10 +66,7 @@ export function Walkthrough({
   );
   // Sub-views: the request itself, or where that participant starts from.
   const [atHome, setAtHome] = useState(false);
-  const [corporatePaths, setCorporatePaths] = useState<Record<string, string>>({});
-  const [corporateError, setCorporateError] = useState<string | null>(null);
   const [nonce, setNonce] = useState(0);
-  const [minting, startMint] = useTransition();
 
   // Keep the address in step, so a reload or a shared URL lands on this view.
   useEffect(() => {
@@ -83,22 +78,6 @@ export function Walkthrough({
   const request = requests.find((r) => r.id === requestId) ?? null;
   const brandSlug = request?.brandSlug ?? brands[0]?.slug ?? null;
   const brandName = request?.brandName ?? brands[0]?.name ?? '';
-  const corporatePath = brandSlug ? corporatePaths[brandSlug] : undefined;
-
-  // Mint the corporate link the first time the tab is opened for a brand, and
-  // keep it for the session: one link per brand, not one per click.
-  useEffect(() => {
-    if (persona !== 'corporate' || !brandSlug || corporatePath) return;
-    startMint(async () => {
-      const result = await demoCorporateLinkAction(brandSlug);
-      if ('error' in result) {
-        setCorporateError(result.error);
-        return;
-      }
-      setCorporateError(null);
-      setCorporatePaths((paths) => ({ ...paths, [brandSlug]: result.path }));
-    });
-  }, [persona, brandSlug, corporatePath]);
 
   const src = frameSource();
   const current = PERSONAS.find((p) => p.id === persona)!;
@@ -114,7 +93,9 @@ export function Walkthrough({
       case 'reviewer':
         return request?.approvalEmailId ? `/admin/outbox/${request.approvalEmailId}` : null;
       case 'corporate':
-        return corporatePath ?? null;
+        // Behind sign-in since phase C; the operator's own session opens it,
+        // and Signage.com sees what a brand admin sees.
+        return brandSlug ? `/${brandSlug}/corporate` : null;
     }
   }
 
@@ -225,8 +206,7 @@ export function Walkthrough({
             ) : (
               'No request selected.'
             ))}
-          {persona === 'corporate' &&
-            (corporateError ?? (minting ? 'Issuing a dashboard link…' : 'No brand to show.'))}
+          {persona === 'corporate' && 'No brand to show.'}
           {persona === 'franchisee' && 'No brand configured.'}
         </div>
       )}

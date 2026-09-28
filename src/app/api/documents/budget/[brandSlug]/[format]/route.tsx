@@ -4,16 +4,11 @@
 // trivial", and the sheet holds nothing about any franchisee — but it does hold
 // a brand's whole standard-package price list, and publishing a franchisor's
 // pricing is their call to make, not ours to assume (DECISIONS #44). So it
-// stays behind a credential, and there are now two that count:
-//
-//   · the team allowlist, for exporting on a brand's behalf;
-//   · a corporate dashboard token for THIS brand — §8b's actual actor, whose
-//     dashboard arrived in Session 6.
-//
-// The token is checked against the brand in the URL, so one franchisor's link
-// cannot fetch another's price list.
+// stays behind sign-in: Signage.com, for exporting on a brand's behalf, and
+// anyone with a role on THIS brand — corporate, §8b's actual actor, and its
+// franchisees (#127). The corporate dashboard link that also counted until
+// phase C is retired (SPEC v2.3 §10.3.4).
 
-import { corporateSession } from '@/lib/corporate/session';
 import { getBrandBySlug, getPackageForFormat } from '@/lib/db/queries';
 import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
 import { getTeamMember } from '@/lib/auth/team';
@@ -35,7 +30,7 @@ export async function GET(
   const { brandSlug, format } = await params;
   if (!isFormat(format)) return new Response('Unknown location format', { status: 400 });
 
-  if (!(await mayExport(request, brandSlug))) return new Response('Not found', { status: 404 });
+  if (!(await mayExport(brandSlug))) return new Response('Not found', { status: 404 });
 
   const brand = await getBrandBySlug(brandSlug);
   if (!brand) return new Response('Not found', { status: 404 });
@@ -66,28 +61,15 @@ export async function GET(
   });
 }
 
-/**
- * Either credential will do, and neither is inferred from the other.
- *
- * A team member may export any brand's sheet — that is what the allowlist means
- * (see the RLS header: membership IS the scope). A corporate token may export
- * exactly one brand's, and `corporateSession` is what enforces the match.
- */
-async function mayExport(request: Request, brandSlug: string): Promise<boolean> {
+/** Signage.com for any brand; otherwise a role on this one. */
+async function mayExport(brandSlug: string): Promise<boolean> {
   if (await getTeamMember()) return true;
 
-  // SPEC v2.3: anyone signed in with a role on this brand. A franchisee could
-  // already download it from their §8d welcome page; this is the same sheet
-  // reached through their account instead of their registration link.
+  // SPEC v2.3: anyone signed in with a role on this brand — brand admins and
+  // reviewers, and franchisees, who could already download it from their §8d
+  // welcome page.
   const viewer = await getViewer();
-  if (viewer && !owesSecondFactor(viewer)) {
-    const brand = await queryOne<{ id: string }>(`select id from brands where slug = $1`, [brandSlug]);
-    if (brand && (await storeScope(viewer, brand.id)).kind !== 'none') return true;
-  }
-
-  const token = new URL(request.url).searchParams.get('token');
-  if (!token) return false;
-
-  const session = await corporateSession(brandSlug, token);
-  return session.ok;
+  if (!viewer || owesSecondFactor(viewer)) return false;
+  const brand = await queryOne<{ id: string }>(`select id from brands where slug = $1`, [brandSlug]);
+  return Boolean(brand && (await storeScope(viewer, brand.id)).kind !== 'none');
 }

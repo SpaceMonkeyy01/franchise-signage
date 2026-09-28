@@ -172,9 +172,18 @@ export function createPgStatusStore(
     async setLineItemReview(lineItemId, review) {
       await exec.query(
         `update line_items
-            set item_status = $2, review_note = $3, reviewed_at = now(), reviewed_via_token = $4
+            set item_status = $2, review_note = $3, reviewed_at = now(), reviewed_via_token = $4,
+                reviewed_by_email = $5, reviewed_by = $6, reviewed_route = $7
           where id = $1`,
-        [lineItemId, review.status, review.note, review.reviewedVia ?? null],
+        [
+          lineItemId,
+          review.status,
+          review.note,
+          review.reviewedVia ?? null,
+          review.reviewer?.email ?? null,
+          review.reviewer?.profileId ?? null,
+          review.reviewer?.route ?? null,
+        ],
       );
     },
 

@@ -17,8 +17,8 @@
 //     lifted out of it. Clicking through from there is exactly what the reviewer
 //     does, and the narrowest credential in the build stays gettable only where
 //     the email that carries it is (#75).
-//   · The corporate tab mints a dashboard link for an address already on the
-//     brand, as entry points does.
+//   · The corporate tab is the dashboard itself, behind sign-in since phase C;
+//     the operator's session opens it and sees what a brand admin sees.
 //
 // It is not a login-as. Every tab shows what that participant's link opens, and
 // nothing else.

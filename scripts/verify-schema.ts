@@ -169,11 +169,14 @@ const checks: Check[] = [
     // check is that it is still one of THOSE — an accidental `using (true)`
     // here would publish every franchisee's address in the pilot.
     label: 'anon reaches a registration only through a credential',
-    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr
+    // Read by role, not by policy name (#126): phase C added a signed-in
+    // policy here, and a name-based filter took it for an anon one.
+    sql: `select polname, pg_get_expr(polqual, polrelid) as using_expr,
+                 array(select rolname from pg_roles where oid = any(p.polroles))::text as roles
           from pg_policy p join pg_class c on c.oid = p.polrelid
           where c.relname = 'franchisee_registrations'`,
     expect: (rows) => {
-      const anon = rows.filter((r) => !String(r.polname).startsWith('team'));
+      const anon = rows.filter((r) => String(r.roles).includes('anon'));
       return (
         anon.length > 0 &&
         anon.every(

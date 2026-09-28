@@ -488,8 +488,12 @@ const checks: NamedCheck[] = [
   },
 
   // -------------------------------------------------- the corporate link
+  // Retired in phase C (SPEC v2.3 §10.3.4). The fixture writes its links AFTER
+  // the migrations, so they are live rows the retiring migration never saw —
+  // which is the point: what must refuse them is app.corporate_brand(), not
+  // the one-off revocation.
   {
-    label: "a corporate link reads its own brand's whole program",
+    label: 'a retired corporate link, even one still live in the table, opens nothing',
     run: async (db) => {
       await asAnon(db, CORPORATE_ALPHA);
       const requests = await count(db, `select count(*) as n from requests`);
@@ -499,8 +503,7 @@ const checks: NamedCheck[] = [
         `select count(*) as n from franchisee_registrations`,
       );
       return expect(
-        // Three: the fixture's own, plus the two stores the accounts fixture adds.
-        requests === 2 && locations === 3 && registrations === 1,
+        requests === 0 && locations === 0 && registrations === 0,
         `${requests} request(s), ${locations} location(s), ${registrations} registration(s)`,
       );
     },
@@ -768,6 +771,82 @@ const checks: NamedCheck[] = [
       const names = await db.query<{ name: string }>(`select name from franchisees order by name`);
       const seen = names.rows.map((row) => row.name).join(',');
       return expect(seen === 'A1 Holdings', `A1's owner sees companies: ${seen || 'none'}`);
+    },
+  },
+  {
+    label: "brand admins and reviewers read their brand's registrations, and no other brand's",
+    run: async (db) => {
+      const seen: string[] = [];
+      for (const [who, id] of [
+        ['admin', PERSON.alphaAdmin],
+        ['reviewer', PERSON.alphaReviewer],
+      ] as const) {
+        await asAuthenticated(db, id);
+        const own = await count(
+          db,
+          `select count(*) as n from franchisee_registrations where brand_id = '${alphaBrandId}'`,
+        );
+        const other = await count(
+          db,
+          `select count(*) as n from franchisee_registrations where brand_id <> '${alphaBrandId}'`,
+        );
+        if (own !== 1 || other !== 0) seen.push(`${who}: ${own} own, ${other} other`);
+      }
+      // An owner is not corporate, and reads nobody's registration.
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await count(db, `select count(*) as n from franchisee_registrations`);
+      if (owner !== 0) seen.push(`owner: ${owner}`);
+      return seen.length === 0 ? null : seen.join('; ');
+    },
+  },
+  {
+    // §10.2: a brand admin manages the brand's people; a reviewer does not.
+    label: "a brand admin reads their brand's people and invitations; a reviewer only their own",
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const adminMembers = await count(
+        db,
+        `select count(*) as n from memberships where brand_id = '${alphaBrandId}'`,
+      );
+      const adminOther = await count(
+        db,
+        `select count(*) as n from memberships where brand_id is distinct from '${alphaBrandId}'`,
+      );
+      const adminProfiles = await count(db, `select count(*) as n from profiles`);
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewerMembers = await count(db, `select count(*) as n from memberships`);
+      const reviewerProfiles = await count(db, `select count(*) as n from profiles`);
+      const reviewerInvites = await count(db, `select count(*) as n from invitations`);
+      return expect(
+        // Alpha holds seven memberships in the fixture: admin, reviewer, two
+        // owners, staff, and a deactivated owner — and the platform admins,
+        // who have no brand, are not among them.
+        adminMembers === 6 &&
+          adminOther === 0 &&
+          adminProfiles === 6 &&
+          reviewerMembers === 1 &&
+          reviewerProfiles === 1 &&
+          reviewerInvites === 0,
+        `admin ${adminMembers}/${adminOther} memberships, ${adminProfiles} profiles; reviewer ${reviewerMembers} memberships, ${reviewerProfiles} profiles, ${reviewerInvites} invitations`,
+      );
+    },
+  },
+  {
+    // §10.2: corporate approves; it never edits a franchisee's request. Every
+    // corporate write runs server-side; the policies grant none.
+    label: 'a brand admin cannot write a request',
+    run: async (db) => {
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const updated = await affected(
+        db,
+        `update requests set requester_phone = '555-0100' where brand_id = '${alphaBrandId}'`,
+      );
+      const decided = await affected(
+        db,
+        `update line_items set item_status = 'approved'
+          where request_id in (select id from requests where brand_id = '${alphaBrandId}')`,
+      );
+      return expect(updated === 0 && decided === 0, `updated ${updated} request(s), ${decided} item(s)`);
     },
   },
   {

@@ -15,7 +15,7 @@
 // which is required of it. A franchisee owner goes into store setup when the
 // lease is signed, and otherwise to the §8d level-1 page — their store list,
 // empty, with the budget figures and "Set up a store" (§10.3.2, §10.7 D7).
-// Everyone else goes home.
+// A brand admin or reviewer goes to the dashboard. Everyone else goes home.
 
 import { redirect } from 'next/navigation';
 
@@ -197,14 +197,16 @@ async function continueAfterAcceptance(
 ): Promise<never> {
   // By id, not from the session: its cookie was set in this very request.
   const memberships = await membershipsFor(profileId);
-  const destination =
-    invitation.role === 'franchisee_owner' && invitation.brandSlug
+  const brandSlug = invitation.brandSlug;
+  const destination = !brandSlug
+    ? homeFor(memberships)
+    : invitation.role === 'franchisee_owner'
       ? hasSite
-        ? `/${invitation.brandSlug}/setup`
-        : `/${invitation.brandSlug}`
-      : invitation.brandSlug
-        ? `/${invitation.brandSlug}`
-        : homeFor(memberships);
+        ? `/${brandSlug}/setup`
+        : `/${brandSlug}`
+      : invitation.role === 'brand_admin' || invitation.role === 'brand_reviewer'
+        ? `/${brandSlug}/corporate`
+        : `/${brandSlug}`;
   if (requiresSecondFactor(memberships)) {
     redirect(`/two-factor?next=${encodeURIComponent(destination)}`);
   }

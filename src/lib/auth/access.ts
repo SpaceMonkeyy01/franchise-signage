@@ -201,14 +201,17 @@ export async function scopeCoversLocation(scope: StoreScope, locationId: string)
 /**
  * Where a person goes after signing in, when nothing asked for somewhere else.
  *
- * Phase A gives only Signage.com a destination of its own; brand and franchisee
- * homes arrive with phases B and C, and until then they land on their brand.
+ * Signage.com to the console; a brand's admins and reviewers to its dashboard
+ * (§10.3.2); franchisees to their stores. Memberships arrive strongest role
+ * first, so someone holding two lands where the stronger one works.
  */
 export function homeFor(memberships: Membership[]): string {
   if (memberships.some((m) => m.role === 'platform_admin')) return '/admin';
   const first = memberships[0];
-  if (first?.brandSlug) return `/${first.brandSlug}`;
-  return '/';
+  if (!first?.brandSlug) return '/';
+  return first.role === 'brand_admin' || first.role === 'brand_reviewer'
+    ? `/${first.brandSlug}/corporate`
+    : `/${first.brandSlug}`;
 }
 
 /** A same-origin path, or the fallback. `next` arrives in URLs, so it is never trusted. */

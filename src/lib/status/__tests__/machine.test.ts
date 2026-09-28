@@ -284,6 +284,47 @@ describe('line-item decisions (SPEC §7)', () => {
     expect(outcome.transition).toBeUndefined();
     expect(store.request.status).toBe('needs_review');
   });
+
+  // SPEC v2.3 §10.3.4: the link and the dashboard write the same events, with
+  // the route and the person recorded.
+  it('records who decided, and by which route', async () => {
+    const store = twoPending();
+    await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'approved',
+      itemLabel: 'Neon Leaf',
+      reviewer: { route: 'session', email: 'r@brand.test', profileId: 'p1', name: 'Jordan Reyes' },
+    });
+    await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'c',
+      decision: 'approved',
+      itemLabel: 'Menu Board',
+      reviewer: { route: 'link', email: 'r@brand.test', profileId: null },
+    });
+
+    const [first, second, review] = store.events;
+    expect(first.actor).toBe('reviewer');
+    expect(first.summary).toBe('Neon Leaf approved by corporate (Jordan Reyes)');
+    expect(first.detail).toMatchObject({ via: 'session', by: 'r@brand.test', profileId: 'p1' });
+    expect(second.detail).toMatchObject({ via: 'link', by: 'r@brand.test' });
+    expect(review.toStatus).toBe('approved');
+    expect(store.reviewers.get('b')?.route).toBe('session');
+  });
+
+  it('says when Signage.com decides on the brand’s behalf', async () => {
+    const store = twoPending();
+    await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'declined',
+      itemLabel: 'Neon Leaf',
+      reviewer: { route: 'session', email: 'team@signage.test', profileId: 'p0', actor: 'team' },
+    });
+    expect(store.events[0].actor).toBe('team');
+    expect(store.events[0].summary).toBe("Neon Leaf declined by Signage.com on the brand's behalf");
+  });
 });
 
 describe('the change-request loop (SPEC §6/§7)', () => {

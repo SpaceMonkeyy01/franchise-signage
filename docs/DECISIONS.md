@@ -1190,6 +1190,87 @@ about how they hid as about how they were fixed.
     franchisee could already get it from their welcome page with the
     registration link; this is the same sheet through their account.
 
+## Session 9c — corporate in-app, phase C (spec v2.3 §9b)
+
+128. **The dashboard decides, and #75 is answered as §10.3.4 said it would
+    be.** Behind sign-in the credential is the person, not a 30-day bookmark,
+    so the Approvals tab carries the same Approve / Request changes / Decline
+    cards the email's page does — one component, `src/components/ReviewPanel`,
+    with each route passing its own actions already bound to its credential.
+
+129. **One decision function for both routes.** `src/lib/review/decide.ts`
+    owns everything after the credential: the state machine call, the event,
+    retiring the emailed link when nothing is left pending, and the one
+    franchisee email per review (#39). The link resolves its token; the
+    dashboard checks the membership; neither does anything else. Line items
+    gained `reviewed_by_email`, `reviewed_by` and `reviewed_route` (`link` |
+    `session`), and each event's detail carries `via` and `by`. `event_actor`
+    was NOT extended with `via_link` / `via_session` as §10.3.4's wording might
+    suggest: the actor is still who (reviewer, or `team` when Signage.com
+    decides on a brand's behalf, which §10.2 allows) and the route is a fact
+    about how, so it sits beside the actor rather than multiplying it.
+
+130. **An item settled elsewhere says so, by whom and how.** The email's
+    per-item buttons deep-link with `?item=`; when that item was decided
+    since the email went out, the review page opens with "Neon Leaf was
+    already approved by Jordan Reyes from the dashboard on Sep 28." A click
+    that races the other route gets the same sentence instead of the state
+    machine's "not awaiting review". This is §9b phase C's demo, and the
+    smoke suite drives it end to end.
+
+131. **`corporate_links` retired by making the helper answer nothing.** The
+    migration revokes every live row, and redefines `app.corporate_brand()` to
+    return null — the move #109 made with `app.is_team_member()` — so every
+    anon policy that called it goes quiet at once without being re-created.
+    The table stays, read-only, for one release (§10.5). The RLS suite's
+    fixture writes its links AFTER the migrations, so a link that is still
+    live in the table is what proves the retirement; weakening the function
+    back turned that check red. The public "email me a link" form, the link
+    email template, the operator's link panel and the walkthrough's minting
+    are deleted, not hidden.
+
+132. **An old dashboard link lands on "Dashboard links have been replaced",
+    not a 404.** They sit in bookmarks and inboxes; the page offers sign-in
+    and looks nothing up, because the answer is the same whether the token
+    was ever real.
+
+133. **Approval emails go to every active `brand_reviewer`, one link each
+    (§10.7 D4).** `mintReviewLinks` revokes the previous sending once, then
+    mints a link per reviewer, so the reviewers of one sending hold live links
+    side by side and whichever decides first, the others' pages then say so.
+    Brand admins are not mailed — D4 names reviewers, and D3 gives admins the
+    dashboard, not the inbox. A brand with no reviewer accounts still mails
+    `reviewer_email` with its secondary copied, and that address stays the SLA
+    escalation target either way. Visible change: in the dev seed the approval
+    email now goes to `reviewer@freshbites.com`, not `brand@freshbites.com`.
+
+134. **What each corporate role sees (src/lib/auth/corporate.ts).** Reviewers:
+    the dashboard, Approvals (deciding), the budget sheets. Brand admins, and
+    Signage.com: those plus the §8d registration panel and a People tab. A
+    signed-in person with no corporate role on the brand gets a 404, the same
+    answer every other miss in this build gets. The brand home now sends
+    corporate to the dashboard (retiring #124's read-only store list); Signage.com
+    keeps the store list, because it orders there.
+
+135. **People manages exactly two roles.** A brand admin invites and
+    deactivates brand admins and reviewers — franchisees arrive by the §8d
+    registration, staff by their owner (phase D). Nobody can deactivate
+    themselves, as on `/admin/team`. Two-factor reset and lockout clearing
+    stay with Signage.com: they touch the auth provider, and a brand admin
+    resetting a reviewer's second factor is a recovery path worth a
+    conversation before it exists.
+
+136. **Brand roles gained read policies, and still no write policy.**
+    Registrations for admins and reviewers; memberships, invitations and the
+    matching profiles for admins. Every corporate write runs server-side and
+    checks the membership itself; a brand admin writing a request directly is
+    refused, and the suite checks that by attempting it.
+
+137. **The pilot seed gains `brand@freshbites.com` (brand admin, Morgan Ellis)
+    and `reviewer@freshbites.com` (reviewer, Jordan Reyes)**, dev passwords
+    only, per §10.6. On a real project they come from `npm run invite --
+    <email> --role brand_admin --brand freshbites`.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

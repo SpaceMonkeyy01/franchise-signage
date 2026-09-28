@@ -9,7 +9,7 @@
 //
 // The flag was never the right guard. This page renders whole emails, and those
 // emails carry live credentials: a reviewer's signed approval link, a
-// franchisee's status token, a corporate dashboard link. Anyone who set
+// franchisee's status token, an invitation. Anyone who set
 // DEV_CONSOLE=1 in production to look at something would have published every
 // one of them. An allowlist is what a page like that needs — the same one that
 // decides who may approve a package or mark a sign installed.

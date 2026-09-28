@@ -1,16 +1,12 @@
 // The root — the front door.
 //
-// There is still no login here for anyone but the team, and there must not be:
-// franchisees and corporate reviewers hold tokenized links, and nobody signs up
-// (SPEC §10). What this page does is say, for each participant, where their way
-// in actually is — which for three of them is "the link in your email", and for
-// the franchisor also "ask for a fresh one".
+// Everyone but vendors has an account since SPEC v2.3, and nobody signs up:
+// accounts come from invitations (§10). What this page does is say, for each
+// participant, where their way in is.
 //
-// Every link on it is an ADDRESS, not a credential, and costs nothing: /admin
-// and /admin/demo refuse anyone not on the allowlist, a brand's home page is
-// where a franchisee is meant to start, and the corporate page says the same
-// sentence whichever address is typed into it. What must never appear here is a
-// token. The operator's index of live links is /admin/entry-points, and the
+// Every link on it is an ADDRESS, not a credential, and costs nothing: each one
+// asks for sign-in and shows nothing before it. What must never appear here is
+// a token. The operator's index of live links is /admin/entry-points, and the
 // walkthrough that frames every participant's view is /admin/demo — both behind
 // the allowlist, for that reason.
 
@@ -31,16 +27,16 @@ const DOORS = [
   {
     who: `${PILOT.name} franchisee`,
     what: 'Order signage for a location, and follow every request from submission to install.',
-    how: 'No account. Start here, or open the private link in any email about your request.',
+    how: 'Sign in with the account your invitation created. A link in an email about a request also opens it.',
     href: `/${PILOT.slug}`,
     cta: `Go to ${PILOT.name} signage`,
   },
   {
     who: `${PILOT.name} corporate`,
     what: 'Your program dashboard: every location, what is installed, what is committed.',
-    how: 'No account. Enter your brand email and a dashboard link is sent to you.',
+    how: 'Sign in with the account your invitation created. Approvals also work straight from email.',
     href: `/${PILOT.slug}/corporate`,
-    cta: 'Email me my dashboard link',
+    cta: 'Sign in to the dashboard',
   },
 ];
 
@@ -54,8 +50,8 @@ export default function Home() {
         Signage workflow for franchise brands.
       </h1>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-600">
-        Choose who you are. Only the Signage.com team signs in — everyone else reaches their page by
-        a private link, and corporate approvals happen straight from email.
+        Choose who you are. Everyone signs in with the account their invitation created, and
+        corporate approvals still work straight from email.
       </p>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-3">

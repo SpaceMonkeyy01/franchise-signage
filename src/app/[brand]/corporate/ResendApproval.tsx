@@ -2,10 +2,9 @@
 
 // "Send the approval email again."
 //
-// The only control in the approvals view, and it moves mail rather than a
-// decision. It goes to the reviewer address configured on the brand and nowhere
-// else — the person clicking cannot redirect it to themselves, which is what
-// keeps a read-only credential read-only.
+// For the reviewer who would rather decide from their inbox, or a colleague
+// nudging one. It goes to the brand's reviewers and nowhere else — the person
+// clicking cannot redirect it to themselves.
 
 import { useState, useTransition } from 'react';
 
@@ -13,11 +12,9 @@ import { resendApprovalEmailAction } from './actions';
 
 export function ResendApproval({
   brandSlug,
-  token,
   requestId,
 }: {
   brandSlug: string;
-  token: string;
   requestId: string;
 }) {
   const [state, setState] = useState<'idle' | 'sent'>('idle');
@@ -27,7 +24,7 @@ export function ResendApproval({
   const resend = () => {
     setError(null);
     startTransition(async () => {
-      const failure = await resendApprovalEmailAction(brandSlug, token, requestId);
+      const failure = await resendApprovalEmailAction(brandSlug, requestId);
       if (failure) return setError(failure.error);
       setState('sent');
     });

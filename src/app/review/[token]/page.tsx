@@ -8,10 +8,12 @@
 import { notFound } from 'next/navigation';
 
 import { BrandTheme } from '@/components/BrandChrome';
+import { ReviewPanel } from '@/components/ReviewPanel';
 import { getRequestById } from '@/lib/db/queries';
+import { alreadyDecided } from '@/lib/review/decide';
 import { resolveReviewLink, type LinkFailure } from '@/lib/review/links';
 
-import { ReviewPanel } from './ReviewPanel';
+import { decideItemAction, requestChangesAction } from './actions';
 
 export default async function ReviewPage({
   params,
@@ -29,6 +31,13 @@ export default async function ReviewPage({
   const request = await getRequestById(resolved.link.requestId);
   if (!request) notFound();
 
+  // The button in the email names one item. If that item was settled since the
+  // email went out — on the dashboard, or by a colleague — say so first, and by
+  // whom, rather than leaving the reviewer hunting for a card that is gone.
+  const focused = item ? request.items.find((candidate) => candidate.id === item) : undefined;
+  const settledNotice =
+    focused && focused.item_status !== 'pending_review' ? await alreadyDecided(focused.id) : null;
+
   return (
     <>
       <BrandTheme brand={request.brand} />
@@ -45,9 +54,16 @@ export default async function ReviewPage({
           reviewing as {resolved.link.reviewerEmail}
         </p>
 
+        {settledNotice && (
+          <p className="mt-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            {settledNotice} Nothing more is needed on it.
+          </p>
+        )}
+
         <ReviewPanel
-          token={token}
           request={request}
+          decide={decideItemAction.bind(null, token)}
+          sendBack={requestChangesAction.bind(null, token)}
           focusItemId={item ?? null}
           focusAction={action === 'changes' || action === 'decline' ? action : 'approve'}
         />

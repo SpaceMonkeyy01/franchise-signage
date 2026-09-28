@@ -2,7 +2,7 @@
 // (loads, plans, writes, logs) rather than only through its pure pieces.
 
 import type { RequestEventInput } from '../events';
-import type { StatusStore } from '../transition';
+import type { Reviewer, StatusStore } from '../transition';
 import type {
   InstalledSignState,
   LineItemState,
@@ -28,6 +28,7 @@ export interface MemoryStore extends StatusStore {
   events: RequestEventInput[];
   /** lineItemId → the reviewer's note, so decisions are assertable. */
   reviewNotes: Map<string, string | null>;
+  reviewers: Map<string, Reviewer | null>;
   changeRequests: Array<{
     requestId: string;
     lineItemIds: string[];
@@ -48,6 +49,7 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
     packages: (seed.packages ?? []).map((p) => ({ ...p })),
     events: [],
     reviewNotes: new Map(),
+    reviewers: new Map(),
     changeRequests: [],
     submittedAt: null,
 
@@ -88,6 +90,7 @@ export function createMemoryStore(seed: MemoryStoreSeed): MemoryStore {
       if (!item) throw new Error(`No line item ${lineItemId}`);
       item.itemStatus = review.status;
       store.reviewNotes.set(lineItemId, review.note);
+      store.reviewers.set(lineItemId, review.reviewer ?? null);
     },
     async insertEvent(event) {
       store.events.push(event);

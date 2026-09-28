@@ -58,6 +58,24 @@ export const DEV_FRANCHISEE = {
   password: 'franchisee-dev-password',
 } as const;
 
+/**
+ * The pilot brand's corporate people (SPEC v2.3 §10.6): a brand admin at the
+ * address the brand was configured with, and a reviewer. Dev only, like the
+ * others; on a real project they come from `npm run invite -- <email>
+ * --role brand_admin --brand freshbites`.
+ */
+export const DEV_BRAND_ADMIN = {
+  email: 'brand@freshbites.com',
+  name: 'Morgan Ellis',
+  password: 'corporate-dev-password',
+} as const;
+
+export const DEV_BRAND_REVIEWER = {
+  email: 'reviewer@freshbites.com',
+  name: 'Jordan Reyes',
+  password: 'reviewer-dev-password',
+} as const;
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
   return `scrypt:${salt}:${scryptSync(password, salt, 64).toString('hex')}`;
@@ -137,4 +155,23 @@ export async function seedDevFranchisee(db: Db, franchiseeId: string): Promise<v
            where m.profile_id = $1 and m.brand_id = f.brand_id and m.role = 'franchisee_owner')`,
     [userId, franchiseeId],
   );
+}
+
+/** Freshbites' brand admin and reviewer. Same rules as seedDevAdmin. */
+export async function seedDevCorporate(db: Db, brandSlug: string): Promise<void> {
+  for (const [account, role] of [
+    [DEV_BRAND_ADMIN, 'brand_admin'],
+    [DEV_BRAND_REVIEWER, 'brand_reviewer'],
+  ] as const) {
+    const userId = await ensureDevAccount(db, account);
+    await db.query(
+      `insert into memberships (profile_id, brand_id, role)
+       select $1, b.id, $3::member_role from brands b
+        where b.slug = $2
+          and not exists (
+            select 1 from memberships m
+             where m.profile_id = $1 and m.brand_id = b.id and m.role = $3::member_role)`,
+      [userId, brandSlug, role],
+    );
+  }
 }

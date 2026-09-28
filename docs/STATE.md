@@ -1,5 +1,45 @@
 # Where the build is
 
+## 28 Sep 2026: phase C is built — corporate signs in, and approves from the dashboard
+
+**§9b phase C, corporate in-app, is done and demoable:** a reviewer approves
+an item from the dashboard, and that item's button in the approval email then
+opens a page that says "Neon Leaf was already approved by Jordan Reyes from the
+dashboard". The smoke suite drives exactly that.
+
+- **Sign in as corporate:** brand admin `brand@freshbites.com` /
+  `corporate-dev-password` (Morgan Ellis), reviewer `reviewer@freshbites.com` /
+  `reviewer-dev-password` (Jordan Reyes). Both land on `/freshbites/corporate`.
+- **The dashboard is behind sign-in** and decides: the Approvals tab uses the
+  same cards as the email's page, and both routes call one decision function
+  (`src/lib/review/decide.ts`), which records who decided and whether by link
+  or by session (#128–130).
+- **Brand admins manage their own people** on a People tab: invite and
+  deactivate brand admins and reviewers. They also keep the §8d registration
+  panel. Reviewers read, decide and export the budget sheet (#134–135).
+- **`corporate_links` is retired** (#131–132): every link revoked, the RLS
+  helper that honoured them answers nothing, the "email me a link" form and its
+  email are deleted, and an old link lands on "Dashboard links have been
+  replaced — sign in". The table stays read-only for one release.
+- **Approval emails go to every reviewer account (§10.7 D4, #133)**, one link
+  each; `reviewer_email` is the fallback and the SLA escalation address. In dev
+  that means the approval email now goes to `reviewer@freshbites.com`.
+- Checks: **214 smoke** (the corporate section rewritten; letting a franchisee
+  through the dashboard guard was tried on purpose and went red), **143 unit**,
+  **55 schema** (35 behavioural — a retired link still live in the table, and a
+  weakened registrations policy, each went red), typecheck, lint, green build.
+  Decisions #128–137.
+
+**Still not proven: the Supabase half of accounts** (phases A–C). Same
+checklist, `docs/SUPABASE.md` §7. On the live project, also invite the pilot's
+corporate people: `npm run invite -- <email> --role brand_admin --brand freshbites`
+(and `brand_reviewer`).
+
+**Next: phase D — staff and brand portals** (§9b): `franchisee_staff` screens
+with store assignment, owners inviting staff, and `{brand}.signage.com`
+routing. Phase D's subdomains need wildcard DNS and a Supabase redirect URL
+from outside the code; the staff half needs nothing.
+
 ## 26 Sep 2026: phase B is built — franchisees have accounts
 
 **§9b phase B, franchisee accounts, is done and demoable:** corporate (or the
@@ -29,9 +69,7 @@ company.
 checklist, `docs/SUPABASE.md` §7; on the live project also run
 `npm run backfill-owners` to give the already-seeded stores their owner.
 
-**Next: phase C — corporate in-app** (§9b): brand admins and reviewers sign in,
-the dashboard moves behind sign-in, reviewers can approve from it, and brand
-admins invite and deactivate their own people. `corporate_links` retires.
+*(Phase C followed on 28 Sep — see above.)*
 
 ## 25 Sep 2026 (later): phase A is built — everyone signs in with a password
 
@@ -426,8 +464,8 @@ npm run dev          # starts the dev database AND the web server
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | `dana@freshbites-austin.com` / `franchisee-dev-password`; request links still open one request |
 | Signage.com team | http://localhost:3000/sign-in | `team@signage.com` / `signage-dev-password` + code |
-| Corporate reviewer | from a link in the approval email | no login, ever |
-| Corporate dashboard | http://localhost:3000/freshbites/corporate | magic link to `brand@freshbites.com` |
+| Corporate reviewer | from a link in the approval email, or the dashboard | `reviewer@freshbites.com` / `reviewer-dev-password` |
+| Corporate dashboard | http://localhost:3000/freshbites/corporate | `brand@freshbites.com` / `corporate-dev-password` (brand admin) |
 | Outbox | http://localhost:3000/admin/outbox | what was (or would have been) emailed; team sign-in |
 
 Sign in as `team@signage.com` / `signage-dev-password`, then the six-digit
@@ -440,10 +478,10 @@ local database; the code is displayed only because this is dev (DECISIONS #112).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 206 checks (needs `npm run dev` up, and Supabase mode OFF) |
+| `npm run smoke` | drive the real flows in a browser — 214 checks (needs `npm run dev` up, and Supabase mode OFF) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 141 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres — 52 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
+| `npm test` | 143 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres — 55 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |

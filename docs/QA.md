@@ -24,7 +24,7 @@ Four windows, one per participant, is the fastest way to run this:
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | `dana@freshbites-austin.com` / `franchisee-dev-password`. Request links still open a single request. |
 | Team | http://localhost:3000/admin | `team@signage.com` / `signage-dev-password`, then the code the page shows (dev only). |
-| Corporate | http://localhost:3000/freshbites/corporate | No login. Magic link. |
+| Corporate | http://localhost:3000/freshbites/corporate | Brand admin `brand@freshbites.com` / `corporate-dev-password`, or reviewer `reviewer@freshbites.com` / `reviewer-dev-password`. |
 | Outbox | http://localhost:3000/admin/outbox | Every message that was or would be sent. Team sign-in required. |
 
 **No mail is delivered.** With no `RESEND_API_KEY` every message is rendered and
@@ -41,14 +41,13 @@ the links a reviewer would click. That is the intended way to run this pass.
 
 Corporate registers a franchisee at agreement signing. This is the front door.
 
-1. **Corporate → Franchisee registrations.** You need a dashboard link first:
-   at `/freshbites/corporate`, enter `brand@freshbites.com` (the brand's
-   configured reviewer) and press **Email me a link**. Open `/admin/outbox`, find
-   *Your Freshbites signage dashboard*, and follow the link inside it.
-   - ✅ The page says it is read-only and names who opened it.
-   - ✅ An address that is *not* on file gets the identical "check your inbox"
-     message and no email. Try `nobody@example.com` and confirm nothing appears
-     in `/admin/outbox`.
+1. **Corporate → Franchisee registrations.** Sign in at `/freshbites/corporate`
+   as the brand admin, `brand@freshbites.com`.
+   - ✅ It lands on the dashboard, with Dashboard, Approvals and People tabs.
+   - ✅ Signed in as the reviewer instead, there is no People tab and no
+     registration panel.
+   - ✅ An old `/freshbites/corporate/<anything>` link says dashboard links have
+     been replaced, and offers sign-in.
 2. In **Franchisee registrations**, register any address (`you@example.com` is
    fine) and press **Register & welcome**.
    - ✅ The row appears marked `welcomed`, immediately — saving *is* the send.
@@ -98,16 +97,20 @@ Corporate registers a franchisee at agreement signing. This is the front door.
    - ✅ Opening the link decides nothing — the decision happens on the page.
      (Mail scanners follow links; a scanner must not approve a sign.)
    - ✅ A note is required before the button works.
-10. Click **Approve** on the other.
+10. **Corporate dashboard → Approvals tab** (§9 interface 6, §10.3.4), signed in
+    as the reviewer, `reviewer@freshbites.com`. Approve the other item HERE.
+    - ✅ The same cards as the email's page, with the same three buttons.
     - ✅ Declines and change loops never block siblings — the approved item is
       not waiting on the reopened one.
-11. **Corporate dashboard → Approvals tab** (§9 interface 6):
-    - ✅ It shows what the reviewer sees.
-    - ✅ It offers **no way to approve, decline, or request changes**. The
-      dashboard link is a 30-day multi-use bookmark; approvals stay in the
-      signed, single-use, 7-day links sent by email.
-    - ✅ **Send the approval email again** works, and the new message replaces
-      the previous link.
+    - ✅ Now click that item's **Approve** button in the email in
+      `/admin/outbox`: the page says it was already approved, by Jordan Reyes,
+      from the dashboard.
+    - ✅ The request's timeline names who decided each item.
+11. **Corporate dashboard → People**, signed in as the brand admin:
+    - ✅ Invite a reviewer; the invitation appears under *Invited* and in the
+      outbox, from Freshbites.
+    - ✅ Deactivate Jordan Reyes; in the reviewer's window, the next click is a
+      404. Reactivate, and the next click works again.
 
 ## 5 · The franchisee fixes it (§6 change loop)
 

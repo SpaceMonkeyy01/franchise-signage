@@ -643,7 +643,7 @@ export function getRegistrations(): Promise<RegistrationWithBrand[]> {
 
 // ------------------------------------------------------- corporate dashboard
 // SPEC §9 interface 6. Brand-wide and read-only: every query here is scoped by
-// brand_id, which is what the corporate link authorises, and none of them
+// brand_id, which is what a corporate role is scoped by, and none of them
 // returns a franchisee's access token — corporate oversees the program, they do
 // not act inside a franchisee's request.
 

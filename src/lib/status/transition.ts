@@ -50,10 +50,15 @@ export interface StatusStore {
     },
   ): Promise<void>;
   setLineItemStatus(lineItemId: string, status: LineItemStatus): Promise<void>;
-  /** A reviewer's decision on one item: status, their note, and when. */
+  /** A reviewer's decision on one item: status, their note, who, and by which route. */
   setLineItemReview(
     lineItemId: string,
-    review: { status: LineItemStatus; note: string | null; reviewedVia?: string | null },
+    review: {
+      status: LineItemStatus;
+      note: string | null;
+      reviewedVia?: string | null;
+      reviewer?: Reviewer | null;
+    },
   ): Promise<void>;
   insertEvent(event: RequestEventInput): Promise<void>;
   insertInstalledSign(row: {
@@ -402,6 +407,34 @@ export interface DecisionOutcome {
 }
 
 /**
+ * Who made a review decision, and by which route (SPEC v2.3 §10.3.4).
+ *
+ * A reviewer can decide from the emailed link or from the signed-in dashboard,
+ * and both land here: the same code, the same events, with the route recorded.
+ * `actor` is `reviewer` for the brand's own people and `team` when Signage.com
+ * decides on a brand's behalf, which §10.2 allows and the timeline should say.
+ */
+export interface Reviewer {
+  route: 'link' | 'session';
+  email: string | null;
+  profileId: string | null;
+  name?: string | null;
+  actor?: 'reviewer' | 'team';
+}
+
+function reviewerLabel(reviewer: Reviewer | null): string {
+  if (!reviewer) return 'corporate';
+  if (reviewer.actor === 'team') return "Signage.com on the brand's behalf";
+  const who = reviewer.name?.trim() || reviewer.email;
+  return who ? `corporate (${who})` : 'corporate';
+}
+
+function reviewerDetail(reviewer: Reviewer | null): Record<string, unknown> {
+  if (!reviewer) return {};
+  return { via: reviewer.route, by: reviewer.email, profileId: reviewer.profileId };
+}
+
+/**
  * A reviewer approves or declines ONE item (SPEC §7).
  *
  * Approval is line-item level, so nothing about this touches the siblings: a
@@ -422,6 +455,8 @@ export async function decideLineItem(
     note?: string | null;
     /** The single-use review token the decision arrived on, when there is one. */
     reviewedVia?: string | null;
+    /** Who decided, and whether from the emailed link or a signed-in session. */
+    reviewer?: Reviewer | null;
     itemLabel?: string;
   },
 ): Promise<DecisionOutcome> {
@@ -436,10 +471,12 @@ export async function decideLineItem(
   }
 
   const note = options.note?.trim() || null;
+  const reviewer = options.reviewer ?? null;
   await store.setLineItemReview(item.id, {
     status: options.decision,
     note,
     reviewedVia: options.reviewedVia ?? null,
+    reviewer,
   });
 
   const label = options.itemLabel ?? 'Item';
@@ -447,9 +484,9 @@ export async function decideLineItem(
     requestId: request.id,
     lineItemId: item.id,
     kind: options.decision === 'approved' ? 'item_approved' : 'item_declined',
-    actor: 'reviewer',
-    summary: `${label} ${options.decision} by corporate${note ? `: "${note}"` : ''}`,
-    detail: { lineItemId: item.id, note },
+    actor: reviewer?.actor ?? 'reviewer',
+    summary: `${label} ${options.decision} by ${reviewerLabel(reviewer)}${note ? `: "${note}"` : ''}`,
+    detail: { lineItemId: item.id, note, ...reviewerDetail(reviewer) },
   });
 
   const next = items.map((candidate) =>
@@ -465,7 +502,7 @@ export async function decideLineItem(
   const transition = await transitionRequest(store, {
     requestId: request.id,
     to: derived.status,
-    actor: 'reviewer',
+    actor: reviewer?.actor ?? 'reviewer',
     summary: `Corporate review complete · ${derived.approvedCount} approved${
       derived.declinedCount ? `, ${derived.declinedCount} declined` : ''
     }`,
@@ -480,6 +517,7 @@ export async function requestChanges(
   requestId: string,
   flaggedItemIds: string[],
   comment: string,
+  reviewer: Reviewer | null = null,
 ): Promise<TransitionResult> {
   if (!comment.trim()) {
     throw new Error('Request-changes requires a note (SPEC §7).');
@@ -505,10 +543,10 @@ export async function requestChanges(
   return transitionRequest(store, {
     requestId,
     to: 'changes_requested',
-    actor: 'reviewer',
+    actor: reviewer?.actor ?? 'reviewer',
     kind: 'changes_requested',
     summary: `Changes requested on ${flaggedItemIds.length} item(s): ${comment}`,
-    detail: { lineItemIds: flaggedItemIds, comment },
+    detail: { lineItemIds: flaggedItemIds, comment, ...reviewerDetail(reviewer) },
   });
 }
 

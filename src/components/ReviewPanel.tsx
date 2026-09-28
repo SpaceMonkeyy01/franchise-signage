@@ -2,11 +2,16 @@
 
 // The decision surface. One card per pending item, three buttons, one note.
 //
-// The email's per-item buttons deep-link here with ?item=&action=, so the item
-// they clicked is expanded with that action pre-selected — but nothing has
-// happened yet. The click that decides is the one on this page (see
-// ./actions.ts: mail scanners follow links, and a scanner must not be able to
-// approve a sign).
+// Shared by the two routes a decision can take (SPEC v2.3 §10.3.4): the page an
+// approval email opens (/review/[token]) and the signed-in dashboard's
+// approvals tab. Each passes its own actions, already bound to its credential —
+// the link's token, or the brand — so this component never holds one.
+//
+// The email's per-item buttons deep-link to the review page with
+// ?item=&action=, so the item they clicked is expanded with that action
+// pre-selected — but nothing has happened yet. The click that decides is the
+// one on the page (mail scanners follow links, and a scanner must not be able
+// to approve a sign).
 
 import { useState, useTransition } from 'react';
 
@@ -15,20 +20,32 @@ import { formatPrice, ItemStatusChip, VendorChip } from '@/components/StatusChip
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
 import { fileUrl } from '@/lib/storage/url';
 
-import { decideItemAction, requestChangesAction } from './actions';
-
 type Action = 'approve' | 'changes' | 'decline';
+type Outcome = Promise<{ error: string } | undefined>;
+
+export type DecideFn = (input: {
+  lineItemId: string;
+  decision: 'approved' | 'declined';
+  note: string;
+}) => Outcome;
+export type SendBackFn = (input: { lineItemIds: string[]; comment: string }) => Outcome;
 
 export function ReviewPanel({
-  token,
   request,
-  focusItemId,
-  focusAction,
+  decide,
+  sendBack,
+  focusItemId = null,
+  focusAction = 'approve',
+  showProceeding = true,
+  showSettled = true,
 }: {
-  token: string;
   request: RequestDetail;
-  focusItemId: string | null;
-  focusAction: Action;
+  decide: DecideFn;
+  sendBack: SendBackFn;
+  focusItemId?: string | null;
+  focusAction?: Action;
+  showProceeding?: boolean;
+  showSettled?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
@@ -55,7 +72,7 @@ export function ReviewPanel({
   return (
     <div className={pending ? 'mt-6 pointer-events-none opacity-60' : 'mt-6'}>
       {/* Said first, because it is the argument the program makes. */}
-      {proceeding.length > 0 && (
+      {showProceeding && proceeding.length > 0 && (
         <p
           className="rounded-xl px-4 py-3 text-sm"
           style={{ background: 'var(--color-brand-light)', color: 'var(--color-brand-dark)' }}
@@ -77,8 +94,9 @@ export function ReviewPanel({
           {waiting.map((item) => (
             <DecisionCard
               key={item.id}
-              token={token}
               request={request}
+              decide={decide}
+              sendBack={sendBack}
               item={item}
               defaultOpen={item.id === focusItemId}
               defaultAction={item.id === focusItemId ? focusAction : 'approve'}
@@ -88,7 +106,7 @@ export function ReviewPanel({
         </div>
       )}
 
-      {settled.length > 0 && (
+      {showSettled && settled.length > 0 && (
         <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
           <h2 className="mb-2 text-sm font-semibold text-gray-900">Already decided</h2>
           <ul className="space-y-1.5">
@@ -110,15 +128,17 @@ export function ReviewPanel({
 }
 
 function DecisionCard({
-  token,
   request,
+  decide,
+  sendBack,
   item,
   defaultOpen,
   defaultAction,
   act,
 }: {
-  token: string;
   request: RequestDetail;
+  decide: DecideFn;
+  sendBack: SendBackFn;
   item: LineItemRow;
   defaultOpen: boolean;
   defaultAction: Action;
@@ -234,12 +254,12 @@ function DecisionCard({
         onClick={() => {
           if (action === 'changes') {
             act(`Sent back to the franchisee: ${item.brand_item_name}.`, () =>
-              requestChangesAction({ token, lineItemIds: [item.id], comment: note }),
+              sendBack({ lineItemIds: [item.id], comment: note }),
             );
           } else {
             const decision = action === 'approve' ? 'approved' : 'declined';
             act(`${item.brand_item_name} ${decision}.`, () =>
-              decideItemAction({ token, lineItemId: item.id, decision, note }),
+              decide({ lineItemId: item.id, decision, note }),
             );
           }
         }}

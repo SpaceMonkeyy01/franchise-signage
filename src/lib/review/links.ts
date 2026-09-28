@@ -1,8 +1,8 @@
 // The reviewer's credential (SPEC §10).
 //
-// A corporate reviewer never signs in. They act from a link in an email, so that
-// link has to carry the whole authorization by itself, and the design follows
-// from what can go wrong with one:
+// A reviewer never NEEDS to sign in (SPEC v2.3 §10.3.4): they can act from a
+// link in an email, so that link has to carry the whole authorization by
+// itself, and the design follows from what can go wrong with one:
 //
 //   · stored hashed, so a database dump is not a set of working approvals;
 //   · expiring, because an approval link found in an inbox two years later
@@ -57,6 +57,20 @@ export async function mintReviewLink(
   requestId: string,
   reviewerEmail: string,
 ): Promise<MintedLink> {
+  const [link] = await mintReviewLinks(requestId, [reviewerEmail]);
+  return link;
+}
+
+/**
+ * One link per reviewer, for one sending (SPEC v2.3 §10.7 D4: the approval
+ * email goes to every reviewer on the brand). Earlier links are revoked once,
+ * first — the reviewers of ONE sending hold live links side by side, and
+ * whichever of them decides an item, the others' pages then say it is decided.
+ */
+export async function mintReviewLinks(
+  requestId: string,
+  reviewerEmails: string[],
+): Promise<MintedLink[]> {
   await revokeReviewLinks(requestId);
 
   const request = await queryOne<{ package_version: number }>(
@@ -65,16 +79,19 @@ export async function mintReviewLink(
   );
   if (!request) throw new Error('Unknown request');
 
-  const token = randomBytes(32).toString('base64url');
-  const row = await queryOne<{ expires_at: string }>(
-    `insert into review_links
-       (request_id, reviewer_email, token_hash, package_version, expires_at)
-     values ($1,$2,$3,$4, now() + ($5 || ' days')::interval)
-     returning expires_at`,
-    [requestId, reviewerEmail, hash(token), request.package_version, REVIEW_LINK_TTL_DAYS],
-  );
-
-  return { token, url: reviewUrl(token), reviewerEmail, expiresAt: row!.expires_at };
+  const minted: MintedLink[] = [];
+  for (const reviewerEmail of reviewerEmails) {
+    const token = randomBytes(32).toString('base64url');
+    const row = await queryOne<{ expires_at: string }>(
+      `insert into review_links
+         (request_id, reviewer_email, token_hash, package_version, expires_at)
+       values ($1,$2,$3,$4, now() + ($5 || ' days')::interval)
+       returning expires_at`,
+      [requestId, reviewerEmail, hash(token), request.package_version, REVIEW_LINK_TTL_DAYS],
+    );
+    minted.push({ token, url: reviewUrl(token), reviewerEmail, expiresAt: row!.expires_at });
+  }
+  return minted;
 }
 
 /**

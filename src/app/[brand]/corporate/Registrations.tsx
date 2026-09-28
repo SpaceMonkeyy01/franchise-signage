@@ -20,12 +20,10 @@ import { registerFranchiseeAction, resendWelcomeAction } from './actions';
 export function Registrations({
   brandSlug,
   brandName,
-  token,
   registrations,
 }: {
   brandSlug: string;
   brandName: string;
-  token: string;
   registrations: RegistrationWithBrand[];
 }) {
   const [email, setEmail] = useState('');
@@ -37,7 +35,7 @@ export function Registrations({
     event.preventDefault();
     setError(null);
     startTransition(async () => {
-      const failure = await registerFranchiseeAction(brandSlug, token, email, name);
+      const failure = await registerFranchiseeAction(brandSlug, email, name);
       if (failure) return setError(failure.error);
       setEmail('');
       setName('');
@@ -47,7 +45,7 @@ export function Registrations({
   const resend = (registrationId: string) => {
     setError(null);
     startTransition(async () => {
-      const failure = await resendWelcomeAction(brandSlug, token, registrationId);
+      const failure = await resendWelcomeAction(brandSlug, registrationId);
       if (failure) setError(failure.error);
     });
   };

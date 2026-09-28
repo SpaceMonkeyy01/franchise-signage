@@ -15,10 +15,11 @@
 //                 store yet, the §8d level-1 view: the signage number for the
 //                 business plan, and "Set up a store" for when the lease is
 //                 signed (§10.7 D7).
-//   Signage.com, corporate — every store of the brand, said so on the page.
+//   Signage.com — every store of the brand, said so on the page.
+//   corporate   — sent to the dashboard, which shows every store (phase C).
 
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
@@ -55,6 +56,9 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
   if (!viewer || owesSecondFactor(viewer)) return <SignedOut brand={brand} />;
 
   const scope = await storeScope(viewer, brand.id);
+  // Corporate's home is the dashboard, which shows every store and more
+  // (phase C). Signage.com keeps this view: it orders on a store's behalf here.
+  if (scope.kind === 'all' && !scope.canOrder) redirect(`/${brand.slug}/corporate`);
   const account = <AccountBadge name={viewer.profile.name} email={viewer.profile.email} />;
 
   if (scope.kind === 'none') {
@@ -98,9 +102,7 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
         </h1>
         <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-gray-600">
           {scope.kind === 'all'
-            ? scope.canOrder
-              ? 'You are viewing as Signage.com: every store of the brand, whoever owns it.'
-              : 'You are viewing as corporate: every store of the brand. Franchisees order; you approve.'
+            ? 'You are viewing as Signage.com: every store of the brand, whoever owns it.'
             : 'Each store keeps a record of its installed signage — brand specs stay locked, so replacements and additions take minutes.'}
         </p>
       </div>
