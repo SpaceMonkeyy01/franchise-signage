@@ -1271,6 +1271,86 @@ about how they hid as about how they were fixed.
     only, per §10.6. On a real project they come from `npm run invite --
     <email> --role brand_admin --brand freshbites`.
 
+## Session 9d — staff and brand portals, phase D (spec v2.3 §9b)
+
+138. **Brand portals are a rewrite, not a second app.** `src/proxy.ts` reads the
+     host; on `{brand}.<BRAND_PORTAL_DOMAINS>` it serves `/{brand}/…` (so
+     `/corporate` is the dashboard) and every page is the one that already
+     exists. The decisions inside it are all in `src/lib/portal.ts`, which is
+     pure and unit-tested:
+     - **Path-based URLs keep working everywhere**, on the portal too, because
+       every link the app builds and every email already sent uses them.
+     - **Shared routes pass through untouched**: sign-in, two-factor, password
+       reset, invitations, the reviewer's link, `/api`. They are not brand
+       pages, and prefixing them would break every link that points at them.
+     - **The console is not served on a brand's address** (404), nor another
+       brand's pages: one brand per address (§10.4).
+     - **No database in the proxy.** An unknown subdomain rewrites to a slug
+       that does not exist and 404s like `/nosuch` does, so the proxy stays
+       fast and never fails on a database outage.
+     - **A page learns it is on a portal only from the proxy**: the
+       `x-brand-portal` header is set on a portal host and stripped on every
+       other, so a client cannot claim one. Sign-in uses it to wear the brand
+       and to land the person on that brand (`homeFor(…, portal)`), including
+       someone with roles at two brands.
+     - **Each brand's session is separate** for free: cookies are host-only.
+     - **In development, `*.localhost` is always a portal domain**, so
+       `freshbites.localhost:3000` works with no DNS; production uses only what
+       `BRAND_PORTAL_DOMAINS` names.
+
+     SPEC §10.4 expected a Supabase redirect URL per brand. None is needed:
+     invitations and resets are our own tokens, and Supabase never redirects to
+     the app (DEPLOY §3). What remains outside the code is wildcard DNS and a
+     wildcard custom domain on the host.
+
+139. **Store staff are managed as a company's, one role per person per brand.**
+     An owner invites a manager to named stores from `/{brand}/staff` (linked
+     from their home), changes the stores, deactivates them, or withdraws an
+     invitation; each takes effect on the manager's next click, because scope
+     is read on every request. Inside that:
+     - **Someone already staff at another franchisee of the brand cannot be
+       invited**; they belong to that company, and the memberships index allows
+       one staff role per person per brand. A deactivated manager is
+       reactivated, not re-invited, so their history stays one membership.
+     - **Changing stores replaces the set** (at least one store), and every
+       store id must be one of the company's; the form having offered only
+       those is not the check.
+     - **Staff order and answer change requests for their stores; they do not
+       accept quotes or set up stores** (§10.2, §10.7 D1–D2), and they have no
+       staff page.
+     - RLS lets an owner read their company's staff, store scopes and staff
+       invitations, and a staff member their own scope; every write is
+       server-side. The pilot seed gains Riley Chen
+       (`riley@freshbites-austin.com`, Oak Plaza only): the phase D demo is "a
+       manager sees one store of two".
+
+140. **A brand admin sees and manages every franchisee company's people**, from
+     a Franchisees section on the corporate People tab: each company's owners
+     (deactivate, reactivate) and its store staff (invite to named stores,
+     change stores, deactivate, withdraw an invitation). Asked for directly on
+     28 Sep, and it is what §10.2 already said — "invite or deactivate store
+     staff: brand_admin ✓", brand-wide — which phase D's first cut had narrowed
+     to the owner alone. The staff rules live once, in `src/lib/staff.ts`,
+     scoped by franchisee company; the owner's `/staff` screen and the corporate
+     tab both call them, and the same `StaffManager` renders both. What the
+     corporate side adds is only the reach: the company named must be one of
+     the brand's. Two calls inside it worth your view:
+     - **Deactivating an owner is allowed**, though §10.2 has no row for it. A
+       franchisor whose franchisee leaves the system needs a way to cut access
+       that is not a phone call to Signage.com. The confirmation says the cost:
+       nobody at that company can accept quotes until an owner is active again.
+     - **A brand admin cannot add a second owner or invite a new one here.**
+       Owners still arrive only by the §8d registration, because the welcome
+       email is the franchisee's first contact and must not have a second path.
+     RLS gains two read policies for the backstop (companies and staff store
+     scopes); every write stays server-side, checking the membership itself.
+     **The §8d registration panel appears in the section too** (asked for the
+     same day), as well as on the Dashboard. A company exists only once its
+     owner accepts, so without it a registered-but-not-yet-signed-up franchisee
+     would be invisible from the one place a brand admin manages franchisees.
+     Same component and action, so it still writes `registered_by = corporate`
+     and sends the unchanged welcome email.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

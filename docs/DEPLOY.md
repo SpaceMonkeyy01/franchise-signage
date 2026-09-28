@@ -104,6 +104,30 @@ DATABASE_URL=… APP_URL=https://<service>.onrender.com npm run invite -- you@si
 It prints the accept link as well as mailing it. Open it, choose a password,
 set up the authenticator, and invite everyone else from `/admin/team`.
 
+### Brand portals: `{brand}.signage.com` (optional)
+
+Each brand can have its own address (SPEC v2.3 §10.4): `freshbites.signage.com`
+serves what `/freshbites` serves, with a branded sign-in and a session of its
+own. The path-based addresses keep working everywhere, so this is optional,
+and the deployment works the same without it. To switch it on:
+
+| Variable | Value |
+|---|---|
+| `BRAND_PORTAL_DOMAINS` | the parent domain(s), comma-separated — e.g. `signage.com` |
+| `PLATFORM_SUBDOMAINS` | optional: more subdomains that are never brands (`www`, `franchise`, `app`, `admin`, `api` are built in) |
+
+Outside the code:
+
+- **Wildcard DNS**: `*.signage.com` pointing at the service.
+- **A wildcard custom domain on the host** (Render → Settings → Custom Domains
+  → `*.signage.com`), which also issues the certificate.
+- **Nothing in Supabase.** It never redirects to us (above), so there is no
+  redirect URL to add per brand.
+
+Emails still link to `APP_URL`'s path-based addresses, which keep working; they
+do not yet point at a brand's own address. In development none of this is
+needed: `http://freshbites.localhost:3000` is a portal with no configuration.
+
 ## 4 · The review SLA
 
 `/api/cron/review-sla` is a plain HTTP route on purpose — Vercel Cron drives it

@@ -1,5 +1,49 @@
 # Where the build is
 
+## 28 Sep 2026 (later): phase D is built — staff, brand portals, and corporate manages franchisees
+
+**§9b phase D is done and demoable, and with it all four accounts phases.** A
+store manager sees one store of two; the owner changes that from Store staff and
+the manager sees the change on their next click; and `freshbites.localhost:3000`
+serves the brand at its root with a branded sign-in.
+
+- **Sign in as store staff:** `riley@freshbites-austin.com` /
+  `staff-dev-password` (Riley Chen, Oak Plaza only). Staff order and answer
+  change requests for their stores; they cannot accept quotes or set up a store.
+- **Owners manage their staff** at `/freshbites/staff`, linked from their home:
+  invite to named stores, change stores, deactivate, withdraw (#139).
+- **Brand admins manage every franchisee's people** (#140), from a Franchisees
+  section on the corporate People tab: register a new franchisee (the same §8d
+  panel as the Dashboard's), then per company deactivate or reactivate owners
+  and manage store staff with the owner's own screen. Asked for on 28 Sep, and
+  what §10.2 already said. Two calls for your view: brand admins **can
+  deactivate an owner** (§10.2 is silent), and **cannot add an owner** —
+  owners arrive only by the welcome email.
+- **Brand portals** (#138): `src/proxy.ts` serves `/{brand}/…` on
+  `{brand}.<BRAND_PORTAL_DOMAINS>`; `/corporate` is the dashboard, the console
+  404s there, path-based URLs keep working, and each brand's session is its own.
+  In development `*.localhost` needs no setup.
+- Checks: **253 smoke** (sections for store staff, franchisee people from
+  corporate, and portals), **154 unit** (the portal routing among them), **57
+  schema** (37 behavioural — weakening the owner's invitation read and the
+  brand admin's company read each went red), typecheck, lint, green build.
+  Decisions #138–140.
+
+**Correction to the phase C note below:** the portals need **no Supabase
+redirect URL** — Supabase never redirects to this app. What they need is
+wildcard DNS and a wildcard custom domain on the host; `docs/DEPLOY.md` §3 now
+has the section. Emails still link to the path-based addresses.
+
+**Still not proven: the Supabase half of accounts** (phases A–D). Same
+checklist, `docs/SUPABASE.md` §7. That, and a real Resend key, are now the two
+things between this build and a pilot.
+
+**Next:** with §9b finished, Sessions 7 and 8 are what remain, and both are
+still blocked outside the code — Session 7 on the Design Studio answers from
+Usman, Session 8 on the v13 flow demo, corporate template sign-off and a Stripe
+account. Meanwhile the most valuable work is proving accounts against the live
+Supabase project.
+
 ## 28 Sep 2026: phase C is built — corporate signs in, and approves from the dashboard
 
 **§9b phase C, corporate in-app, is done and demoable:** a reviewer approves
@@ -463,6 +507,8 @@ npm run dev          # starts the dev database AND the web server
 | Surface | URL | Who |
 |---|---|---|
 | Franchisee | http://localhost:3000/freshbites | `dana@freshbites-austin.com` / `franchisee-dev-password`; request links still open one request |
+| Store staff | http://localhost:3000/freshbites | `riley@freshbites-austin.com` / `staff-dev-password` — Oak Plaza only |
+| Brand portal | http://freshbites.localhost:3000 | any Freshbites account; the brand at its own address |
 | Signage.com team | http://localhost:3000/sign-in | `team@signage.com` / `signage-dev-password` + code |
 | Corporate reviewer | from a link in the approval email, or the dashboard | `reviewer@freshbites.com` / `reviewer-dev-password` |
 | Corporate dashboard | http://localhost:3000/freshbites/corporate | `brand@freshbites.com` / `corporate-dev-password` (brand admin) |
@@ -478,10 +524,10 @@ local database; the code is displayed only because this is dev (DECISIONS #112).
 | `npm run dev` | dev database (port 5433) + Next (port 3000), together |
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
-| `npm run smoke` | drive the real flows in a browser — 214 checks (needs `npm run dev` up, and Supabase mode OFF) |
+| `npm run smoke` | drive the real flows in a browser — 253 checks (needs `npm run dev` up, and Supabase mode OFF) |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
-| `npm test` | 143 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
-| `npm run db:verify` | apply all migrations to a throwaway Postgres — 55 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
+| `npm test` | 154 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
+| `npm run db:verify` | apply all migrations to a throwaway Postgres — 57 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |
 | `npm run build` | production build — green as of Session 6, and worth keeping that way |
 | `npm run migrate` | apply `supabase/migrations` to `DATABASE_URL` — `--dry-run` to look, `--baseline` for a database that already has the schema |
 | `npm run seed` | seed a real target; set `DATABASE_URL` first |
