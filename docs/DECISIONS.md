@@ -1351,6 +1351,41 @@ about how they hid as about how they were fixed.
      Same component and action, so it still writes `registered_by = corporate`
      and sends the unchanged welcome email.
 
+## 29 Sep — ideas taken from an outside concept page
+
+A "Freshbites Signage Studio" concept page was shared on 29 Sep. What it adds is
+presentation, not model: every fact it shows we already hold. Two ideas were
+taken on the user's go-ahead; its product name, its "local codes verified" and
+compliance claims, and its self-serve "start a package" button were not (CLAUDE.md
+names, the never-promise-compliance rule, invitation-only accounts).
+
+141. **Package readiness is derived, never stored, and never gates.**
+     `src/lib/readiness.ts` reads the request the pages already load — location
+     address and opening date, a photo per sign, sizing and TBD flags, the item
+     decisions, the lease exhibit and the latest `landlord_criteria_reviewed`
+     event — into rows with three states: done, to follow up, with corporate.
+     Rows follow the intent: `initial_setup` gets all five, `add` its photos,
+     sizing and approvals, `replace_like` its condition photo and approvals (its
+     sizing is inherited). One `ReadinessCard` renders on the franchisee's
+     status page and the team's console, until a quote is accepted. The spec is
+     silent on a readiness view; it is built only from §3's TBD rule and §8b's
+     criteria flag, and its copy says Signage.com follows up — a flag is never a
+     condition. `EventRow` now carries `detail` so the criteria result is read
+     from data, not parsed from the summary.
+
+142. **The brand portal's signed-out root is a landing page.** Hero, an
+     example readiness card labelled as an example, five steps from invitation
+     to installed signs, and sign-in — written entirely from the brand record,
+     so it serves any brand. The rules of v2.3 §10.2 hold: no store, no request
+     link, and no "start" button, since accounts come only by invitation. Its
+     warm off-white ground is local to this page; the app's screens are
+     unchanged.
+
+143. **Signs grouped by site zone (storefront, roadside, drive-thru, entry,
+     interior) is NOT built.** The taxonomy only splits indoor/outdoor, so it
+     needs a zone on brand items — a schema and seed change, waiting on a yes.
+     The concept's numbered elevation is input for the §8c DID (Session 8).
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

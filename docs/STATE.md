@@ -1,5 +1,26 @@
 # Where the build is
 
+## 29 Sep 2026: package readiness, and a real front page for the brand portal
+
+- **Package readiness** (#141): a card on the franchisee's request page and the
+  team's console reading what the request already holds — location details,
+  photos per sign, sizes/TBD, approvals, landlord criteria — as done, to follow
+  up, or with corporate. Never gates; hides once a quote is accepted.
+- **The brand portal's signed-out page is a landing page** (#142):
+  `freshbites.localhost:3000` (and `/freshbites` signed out) now explains the
+  program before asking for a password. Still invitation-only, still no store
+  data.
+- **`/` is a landing page with the sign-in form on it**, and the dev server no
+  longer logs Server Action arguments (passwords appeared in the log).
+- Both ideas came from an outside concept page; what was deliberately not taken,
+  and the zone grouping waiting on a yes, is #143.
+- Checks: **265 smoke**, **163 unit**, typecheck, lint, green build.
+- **Supabase accounts check:** 7.0 done (all 15 migrations on the live
+  project), 7.1 step 1 done (your platform admin). Steps 7.1.2–7.4 remain, in a
+  browser, per `docs/SUPABASE.md` §7. Note `RESEND_API_KEY` is set in
+  `.env.local`, so invitations are really sent — to the Resend account's own
+  address only while the shared test sender is used.
+
 ## 28 Sep 2026 (later): phase D is built — staff, brand portals, and corporate manages franchisees
 
 **§9b phase D is done and demoable, and with it all four accounts phases.** A
