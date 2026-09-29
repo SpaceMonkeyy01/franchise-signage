@@ -23,6 +23,16 @@ import { SignOutButton } from './sign-in/SignOutButton';
 
 export const dynamic = 'force-dynamic';
 
+// TEMPORARY (29 Sep): quick links to each view while the product is being
+// shown; remove this list and its "Go straight to" block when done. Addresses,
+// not credentials: each asks for sign-in and shows nothing before it.
+const PILOT = { slug: 'freshbites', name: 'Freshbites' };
+const DOORS = [
+  { label: `${PILOT.name} franchisee`, href: `/${PILOT.slug}` },
+  { label: `${PILOT.name} corporate`, href: `/${PILOT.slug}/corporate` },
+  { label: 'Signage.com console', href: '/admin' },
+];
+
 const WHO = [
   {
     who: 'Franchisees',
@@ -91,6 +101,23 @@ export default async function Home() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-8">
+            <p className="text-xs font-medium uppercase tracking-widest text-gray-500">
+              Go straight to
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {DOORS.map((door) => (
+                <Link
+                  key={door.href}
+                  href={door.href}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 transition-colors hover:border-gray-500"
+                >
+                  {door.label} &rarr;
+                </Link>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="order-first w-full max-w-md justify-self-center rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-xl shadow-gray-300/40 backdrop-blur sm:p-8 md:order-none md:justify-self-end">
