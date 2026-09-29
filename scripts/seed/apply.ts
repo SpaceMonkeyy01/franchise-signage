@@ -88,7 +88,7 @@ export async function seedFreshbites(
         corporate_cc, corporate_email, default_tat, did_allowed_email_domains, did_fee_cents)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
      on conflict (slug) do update set
-       name = excluded.name, brand_colors = excluded.brand_colors,
+       name = excluded.name, logo_url = excluded.logo_url, brand_colors = excluded.brand_colors,
        status = excluded.status, approval_mode = excluded.approval_mode,
        reviewer_email = excluded.reviewer_email, vendor_policy = excluded.vendor_policy,
        vendor_name = excluded.vendor_name, vendor_email = excluded.vendor_email,

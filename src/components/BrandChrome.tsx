@@ -39,25 +39,36 @@ export function BrandHeader({
   return (
     <header className="border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          style={{ background: 'var(--color-brand-light)' }}
-        >
-          {brand.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={brand.logo_url} alt="" className="h-6 w-6 object-contain" />
-          ) : (
-            <LeafMark />
-          )}
-        </div>
-        <div className="min-w-0">
-          <p className="truncate text-base font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
-            {brand.name}
-          </p>
-          <p className="text-[10px] uppercase tracking-wider text-gray-400">
-            Powered by <span className="font-semibold text-gray-500">Signage.com</span>
-          </p>
-        </div>
+        {brand.logo_url ? (
+          // A brand's own wordmark says its name; Signage.com follows it, smaller.
+          <div className="flex min-w-0 items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={brand.logo_url} alt={brand.name} className="h-8 w-auto shrink-0 sm:h-9" />
+            <span className="h-7 w-px shrink-0 bg-gray-200" aria-hidden="true" />
+            <p className="text-[10px] uppercase leading-tight tracking-wider text-gray-400">
+              Powered by
+              <br />
+              <span className="font-semibold text-gray-500">Signage.com</span>
+            </p>
+          </div>
+        ) : (
+          <>
+            <div
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+              style={{ background: 'var(--color-brand-light)' }}
+            >
+              <LeafMark />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
+                {brand.name}
+              </p>
+              <p className="text-[10px] uppercase tracking-wider text-gray-400">
+                Powered by <span className="font-semibold text-gray-500">Signage.com</span>
+              </p>
+            </div>
+          </>
+        )}
         <div className="ml-auto flex items-center gap-4">
           {backHref && (
             <Link href={backHref} className="text-sm text-gray-500 transition-colors hover:text-gray-900">

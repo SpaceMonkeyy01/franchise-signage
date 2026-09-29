@@ -149,14 +149,21 @@ export default async function Home() {
                     href={brandSignIn(brand, host)}
                     className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
                   >
-                    <span
-                      className="flex h-10 w-10 flex-none items-center justify-center rounded-lg text-sm font-bold text-white"
-                      style={{ background: brand.brand_colors?.primary ?? 'var(--color-brand)' }}
-                    >
-                      {brand.name.charAt(0)}
-                    </span>
+                    {!brand.logo_url && (
+                      <span
+                        className="flex h-10 w-10 flex-none items-center justify-center rounded-lg text-sm font-bold text-white"
+                        style={{ background: brand.brand_colors?.primary ?? 'var(--color-brand)' }}
+                      >
+                        {brand.name.charAt(0)}
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-gray-900">{brand.name}</span>
+                      {brand.logo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={brand.logo_url} alt={brand.name} className="mb-1 block h-8 w-auto" />
+                      ) : (
+                        <span className="block text-sm font-semibold text-gray-900">{brand.name}</span>
+                      )}
                       <span className="block text-xs text-gray-500">
                         Franchisees, store staff and {brand.name} corporate
                       </span>

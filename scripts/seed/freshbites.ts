@@ -17,7 +17,8 @@ export const FRESHBITES_GREEN = '#2E7D32';
 export const brand = {
   name: 'Freshbites',
   slug: 'freshbites',
-  logo_url: null as string | null,
+  // Served from public/; the wordmark the brand supplied on 29 Sep.
+  logo_url: '/brands/freshbites/logo.png' as string | null,
   brand_colors: { primary: FRESHBITES_GREEN, primaryDark: '#1B5E20', primaryLight: '#E8F5E9' },
   status: 'live' as const,
   approval_mode: 'standard_model' as const,
