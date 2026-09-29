@@ -157,23 +157,63 @@ matters.
 Repeat the same pair with a corporate dashboard token against `locations`, which
 should return one brand's locations and never another's.
 
-## 7 · Prove the Auth path (rewritten for spec v2.3 accounts)
+## 7 · Prove the Auth path (spec v2.3 accounts, phases A–D)
 
 With no Supabase project the app uses the dev identity provider: real passwords
 and TOTP codes, stored in a `dev_auth` schema in the local database. With a
 project configured it uses Supabase Auth — **and that path has not yet executed
 against a real project.** The magic-link flow proven on 28 Aug is gone.
 
-1. Apply the settings in `docs/DEPLOY.md` §3 (email provider, TOTP, password
-   length, service-role key).
-2. `npm run invite -- you@signage.com`, open the printed link, choose a
+Everything below runs the app on this machine against the live project: set the
+four Supabase lines in `.env.local` (URL, anon key, `DATABASE_URL`,
+`SUPABASE_STORAGE_BUCKET`) and restart `npm run dev`. `npm run smoke` cannot run
+in this mode; put the four lines back afterwards. With no `RESEND_API_KEY`
+nothing is delivered, and every link below is read from `/admin/outbox` instead,
+which reads the live database. Use addresses you do not mind leaving in the
+project's Auth users (`you+franchisee@…` aliases work).
+
+**7.0 · Settings and schema.** Apply `docs/DEPLOY.md` §3 in the Supabase
+dashboard (sign-ups OFF, TOTP on, minimum length 10, email provider on), then
+`npm run migrate -- --dry-run` and `npm run migrate`: the accounts migrations
+(`20260925…` to `20260929…`) are the ones a project stood up before 25 Sep lacks.
+
+**7.1 · Phase A — Signage.com.**
+1. `npm run invite -- you@signage.com`, open the printed link, choose a
    password, and set up the authenticator. You should land on `/admin`.
-3. Sign out and in again: password, then code.
-4. Invite a second address from `/admin/team`, accept it in another browser,
+2. Sign out and in again: password, then code.
+3. Invite a second address from `/admin/team`, accept it in another browser,
    then deactivate it from the first. **The second browser should be signed out
    on its next click.**
-5. `/forgot-password` for the second address: the reset link arrives by our
-   mail, works on a different device, and the old password stops working.
+4. `/forgot-password` for the second address: the reset link works on a
+   different device, and the old password stops working.
+
+**7.2 · Phase B — franchisees.**
+1. `npm run backfill-owners`, read the inferred owners, then `-- --apply`. It
+   prints an accept link per owner.
+2. Accept one: the account lands on "My stores" and lists that company's stores
+   only.
+3. Open one of that company's request links in a signed-out browser: it opens
+   (links are a shortcut) but shows "Sign in to accept", never the Accept
+   button.
+
+**7.3 · Phase C — corporate.**
+1. `npm run invite -- <email> --role brand_admin --brand freshbites`, and the
+   same with `--role brand_reviewer`. Accept both.
+2. As the reviewer, approve an item from the dashboard's Approvals tab; then
+   open that item's button from the approval email in the outbox. **It should
+   say the item was already approved, by whom, from the dashboard.**
+3. As the brand admin, register a franchisee from People → Franchisees. The
+   welcome email is in the outbox; its "Create your account" link signs them up.
+
+**7.4 · Phase D — staff.**
+1. As the owner from 7.2, open Store staff and invite a manager to one store.
+   Accept it: **the manager sees that store and no other.**
+2. As the brand admin, change the manager's stores from People → Franchisees;
+   the manager sees the change on their next click. Deactivate them: the next
+   click shows nothing.
+3. Portals need nothing from Supabase: `http://freshbites.localhost:3000` works
+   in this mode too, with a session of its own. The deployed address needs DNS
+   (`docs/DEPLOY.md` §3).
 
 ## 8 · Send one real email
 
