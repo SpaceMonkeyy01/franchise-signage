@@ -1386,6 +1386,21 @@ names, the never-promise-compliance rule, invitation-only accounts).
      needs a zone on brand items — a schema and seed change, waiting on a yes.
      The concept's numbered elevation is input for the §8c DID (Session 8).
 
+144. **Signage.com and each brand have their own sign-in, and `/` asks which**
+     (asked for on 29 Sep, for demos). The team signs in at `/sign-in`, now
+     "Sign in to Signage.com"; a brand's franchisees and corporate sign in on
+     the brand's portal, whose sign-in already wore the brand and kept its own
+     session (§10.4). `/` lists Signage.com and every brand from the database;
+     a brand's card points at its portal (`portalOrigin`: `*.localhost` in
+     development, `{brand}.<portal domain>` deployed) and falls back to the
+     path-based pages on a host outside every portal domain. Signing in stays
+     one mechanism: the page's look follows the portal, or a brand page named
+     in `next` (so "sign in to accept" on a request still shows the brand), and
+     the account still decides where it lands — a franchisee on Signage.com's
+     sign-in is not refused, just sent to their stores. The development hint
+     lists only the accounts that belong on each page. This replaces the
+     temporary quick links of the same day.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

@@ -600,7 +600,7 @@ await page.getByRole('button', { name: 'Sign out' }).click();
 await page.waitForURL('**/sign-in**', { timeout: TIMEOUT });
 
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'h1:text-is("Sign in")', '/admin sends anyone not signed in to sign in');
+await expectVisible(page, 'h1:text-is("Sign in to Signage.com")', '/admin sends anyone not signed in to Signage.com’s sign-in');
 
 await page.getByLabel('Email').fill(DEV_ADMIN.email);
 await page.getByLabel('Password', { exact: false }).first().fill('not-the-password');
@@ -2016,24 +2016,51 @@ await ownerContext.close();
 await staffContext.close();
 
 // ------------------------------------------------ the landing page at /
-// Signed out, `/` is the sign-in; signing in there lands each role on its own
-// view, and a signed-in visit to `/` goes straight there.
+// Signed out, `/` asks where to sign in: Signage.com's own sign-in, or a
+// brand's, on that brand's portal. Each role picks its brand and lands on its
+// own view there; a signed-in visit to `/` goes straight to the account's home.
+{
+  const LANDING_PORTAL = BASE.replace('://localhost', '://freshbites.localhost');
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const chooser = await context.newPage();
+  chooser.on('pageerror', (error) => pageErrors.push(error.message));
+  await chooser.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await expectVisible(chooser, 'h2:text-is("Where do you sign in?")', 'signed out, / asks where to sign in');
+  await expectCount(chooser, 'input[type="password"]', 0, 'and holds no sign-in form of its own');
+  await expectCount(chooser, `a[href="${LANDING_PORTAL}/sign-in"]`, 1, 'Freshbites is offered on its own portal');
+  await chooser.locator('a[href="/sign-in"]').click();
+  await expectVisible(chooser, 'h1:text-is("Sign in to Signage.com")', 'the Signage.com choice is Signage.com’s own sign-in');
+  await chooser.goto(`${BASE}/sign-in?next=${encodeURIComponent('/freshbites/request/x')}`, { waitUntil: 'networkidle' });
+  await expectVisible(chooser, 'h1:text-is("Sign in to Freshbites signage")', 'a sign-in headed for a brand page wears that brand');
+  await context.close();
+}
 for (const [who, account, landing] of [
-  ['a franchisee', DEV_FRANCHISEE, /\/freshbites$/],
-  ['a brand admin', BRAND_ADMIN, /\/freshbites\/corporate$/],
-  ['store staff', DEV_STAFF, /\/freshbites$/],
+  ['a franchisee', DEV_FRANCHISEE, /freshbites\.localhost:\d+\/freshbites$/],
+  ['a brand admin', BRAND_ADMIN, /freshbites\.localhost:\d+\/freshbites\/corporate$/],
+  ['store staff', DEV_STAFF, /freshbites\.localhost:\d+\/freshbites$/],
 ]) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const landingPage = await context.newPage();
   landingPage.on('pageerror', (error) => pageErrors.push(error.message));
   await landingPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await landingPage.locator('a[href$="/sign-in"]').filter({ hasText: 'Freshbites' }).click();
+  await landingPage.waitForURL(/freshbites\.localhost:\d+\/sign-in/, { timeout: TIMEOUT });
   await landingPage.getByLabel('Email').fill(account.email);
   await landingPage.getByLabel('Password').fill(account.password);
   await landingPage.getByRole('button', { name: 'Sign in' }).click();
   await landingPage.waitForURL(landing, { timeout: TIMEOUT }).catch(() => {});
-  record(`signing in at / lands ${who} on their own view`, landing.test(landingPage.url()), landingPage.url());
-  await landingPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
-  record(`and / sends ${who} there once signed in`, landing.test(landingPage.url()), landingPage.url());
+  record(`choosing Freshbites at / lands ${who} on their own view, on the portal`, landing.test(landingPage.url()), landingPage.url());
+  await context.close();
+}
+{
+  // Signed in on the main address, `/` is not a chooser: it is the way home.
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const home = await context.newPage();
+  home.on('pageerror', (error) => pageErrors.push(error.message));
+  await signInWithPassword(home, DEV_FRANCHISEE);
+  await home.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+  await home.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  record('and / sends a signed-in franchisee to their stores', /\/freshbites$/.test(home.url()), home.url());
   await context.close();
 }
 

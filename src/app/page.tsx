@@ -1,10 +1,11 @@
-// The root — the landing page, and the way in.
+// The root — the landing page, and the choice of where to sign in.
 //
-// Signed out, it says what the product is and offers the sign-in form right
-// here: one form serves everyone, because signing in already lands each person
-// where their role works (homeFor — the console, the corporate dashboard, or
-// "My stores"). Signed in, it goes straight there, so `/` is always the right
-// address to hand someone.
+// Signage.com and each brand have their own way in (SPEC v2.3 §10.4): the team
+// signs in to Signage.com here, and a brand's franchisees and corporate sign in
+// on that brand's portal — `{brand}.signage.com`, `freshbites.localhost` in
+// development — with its own header, colours and session. So, signed out, this
+// page asks which. Signed in, it goes straight to the account's home, so `/` is
+// always the right address to hand someone.
 //
 // Nobody signs up: accounts come from invitations (SPEC v2.3 §10), and the page
 // says so rather than offering a button that cannot exist. Nothing here is a
@@ -12,26 +13,28 @@
 // the walkthrough is /admin/demo — both behind sign-in, for that reason.
 
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { FormNotice } from '@/components/AuthCard';
 import { getViewer, homeFor, owesSecondFactor } from '@/lib/auth/access';
+import { getBrandsPublic, type BrandPublic } from '@/lib/db/queries';
+import { portalConfig, portalOrigin } from '@/lib/portal';
 
-import { devSignInHint } from './sign-in/dev-hint';
-import { SignInForm } from './sign-in/SignInForm';
 import { SignOutButton } from './sign-in/SignOutButton';
 
 export const dynamic = 'force-dynamic';
 
-// TEMPORARY (29 Sep): quick links to each view while the product is being
-// shown; remove this list and its "Go straight to" block when done. Addresses,
-// not credentials: each asks for sign-in and shows nothing before it.
-const PILOT = { slug: 'freshbites', name: 'Freshbites' };
-const DOORS = [
-  { label: `${PILOT.name} franchisee`, href: `/${PILOT.slug}` },
-  { label: `${PILOT.name} corporate`, href: `/${PILOT.slug}/corporate` },
-  { label: 'Signage.com console', href: '/admin' },
-];
+/**
+ * Where a brand's people sign in: its own portal when this deployment serves
+ * portals, else the path-based sign-in, which still wears the brand (it reads
+ * the brand from `next`).
+ */
+function brandSignIn(brand: BrandPublic, host: string | null): string {
+  const origin = portalOrigin(brand.slug, host, portalConfig());
+  if (origin) return `${origin}/sign-in`;
+  return `/sign-in?next=${encodeURIComponent(`/${brand.slug}`)}`;
+}
 
 const WHO = [
   {
@@ -59,6 +62,9 @@ export default async function Home() {
     if (home !== '/') redirect(home);
     signedInWithoutAccess = true;
   }
+
+  const host = (await headers()).get('host');
+  const brands = signedInWithoutAccess ? [] : await getBrandsPublic();
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden bg-gray-50">
@@ -101,23 +107,6 @@ export default async function Home() {
               </li>
             ))}
           </ul>
-
-          <div className="mt-8">
-            <p className="text-xs font-medium uppercase tracking-widest text-gray-500">
-              Go straight to
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {DOORS.map((door) => (
-                <Link
-                  key={door.href}
-                  href={door.href}
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 transition-colors hover:border-gray-500"
-                >
-                  {door.label} &rarr;
-                </Link>
-              ))}
-            </div>
-          </div>
         </section>
 
         <section className="order-first w-full max-w-md justify-self-center rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-xl shadow-gray-300/40 backdrop-blur sm:p-8 md:order-none md:justify-self-end">
@@ -132,13 +121,52 @@ export default async function Home() {
             </div>
           ) : (
             <>
-              <h2 className="text-lg font-bold text-gray-900">Sign in</h2>
+              <h2 className="text-lg font-bold text-gray-900">Where do you sign in?</h2>
               <p className="mt-1 text-sm text-gray-500">
-                You&rsquo;ll go straight to your stores, your dashboard or the console.
+                Signage.com and each brand have their own sign-in.
               </p>
-              <div className="mt-6">
-                <SignInForm next={null} devHint={devSignInHint()} />
-              </div>
+              <nav aria-label="Choose where to sign in" className="mt-6 space-y-3">
+                <Link
+                  href="/sign-in"
+                  className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
+                >
+                  <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">
+                    S
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900">Signage.com</span>
+                    <span className="block text-xs text-gray-500">
+                      The team: queue, pricing, routing and fulfilment
+                    </span>
+                  </span>
+                  <span className="text-gray-400 group-hover:text-gray-900" aria-hidden="true">
+                    &rarr;
+                  </span>
+                </Link>
+                {brands.map((brand) => (
+                  <a
+                    key={brand.id}
+                    href={brandSignIn(brand, host)}
+                    className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
+                  >
+                    <span
+                      className="flex h-10 w-10 flex-none items-center justify-center rounded-lg text-sm font-bold text-white"
+                      style={{ background: brand.brand_colors?.primary ?? 'var(--color-brand)' }}
+                    >
+                      {brand.name.charAt(0)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-gray-900">{brand.name}</span>
+                      <span className="block text-xs text-gray-500">
+                        Franchisees, store staff and {brand.name} corporate
+                      </span>
+                    </span>
+                    <span className="text-gray-400 group-hover:text-gray-900" aria-hidden="true">
+                      &rarr;
+                    </span>
+                  </a>
+                ))}
+              </nav>
               <div className="mt-6 space-y-2 border-t border-gray-100 pt-4 text-xs leading-relaxed text-gray-500">
                 <p>
                   Accounts are created by invitation. If you were invited, open that email to

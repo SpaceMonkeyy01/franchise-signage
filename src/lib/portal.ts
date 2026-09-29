@@ -80,6 +80,26 @@ export function brandFromHost(host: string | null, config: PortalConfig): string
   return null;
 }
 
+/**
+ * A brand portal's address, as seen from the address the visitor is on — or
+ * null when that host is not under a portal domain (a bare hosting address, say),
+ * in which case the caller falls back to the path-based pages.
+ *
+ *   localhost:3000          → http://freshbites.localhost:3000   (development)
+ *   franchise.signage.com   → https://freshbites.signage.com
+ *   portal.onrender.com     → null
+ */
+export function portalOrigin(slug: string, host: string | null, config: PortalConfig): string | null {
+  if (!host) return null;
+  const [hostname, port] = host.toLowerCase().split(':');
+  for (const domain of config.domains) {
+    if (hostname !== domain && !hostname.endsWith(`.${domain}`)) continue;
+    const local = domain === 'localhost';
+    return `${local ? 'http' : 'https'}://${slug}.${domain}${port ? `:${port}` : ''}`;
+  }
+  return null;
+}
+
 export type PortalRoute =
   | { kind: 'pass' }
   | { kind: 'rewrite'; path: string }

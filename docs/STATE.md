@@ -10,11 +10,13 @@
   `freshbites.localhost:3000` (and `/freshbites` signed out) now explains the
   program before asking for a password. Still invitation-only, still no store
   data.
-- **`/` is a landing page with the sign-in form on it**, and the dev server no
+- **`/` asks where to sign in** (#144): Signage.com (`/sign-in`, now "Sign in
+  to Signage.com") or a brand, which opens that brand's portal sign-in
+  (`freshbites.localhost:3000/sign-in` in development). The dev server no
   longer logs Server Action arguments (passwords appeared in the log).
 - Both ideas came from an outside concept page; what was deliberately not taken,
   and the zone grouping waiting on a yes, is #143.
-- Checks: **265 smoke**, **163 unit**, typecheck, lint, green build.
+- Checks: **268 smoke**, **166 unit**, typecheck, lint, green build.
 - **Supabase accounts check:** 7.0 done (all 15 migrations on the live
   project), 7.1 step 1 done (your platform admin). Steps 7.1.2–7.4 remain, in a
   browser, per `docs/SUPABASE.md` §7. Note `RESEND_API_KEY` is set in

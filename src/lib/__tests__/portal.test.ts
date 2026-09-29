@@ -1,6 +1,26 @@
 import { describe, expect, it } from 'vitest';
 
-import { brandFromHost, portalConfig, routePortal } from '../portal';
+import { brandFromHost, portalConfig, portalOrigin, routePortal } from '../portal';
+
+describe('portalOrigin', () => {
+  const prod = portalConfig({ NODE_ENV: 'production', BRAND_PORTAL_DOMAINS: 'signage.com' });
+  const dev = portalConfig({ NODE_ENV: 'development' });
+
+  it('points development at *.localhost, keeping the port', () => {
+    expect(portalOrigin('freshbites', 'localhost:3000', dev)).toBe('http://freshbites.localhost:3000');
+  });
+
+  it('points a deployment at the brand under the same domain', () => {
+    expect(portalOrigin('freshbites', 'franchise.signage.com', prod)).toBe('https://freshbites.signage.com');
+    expect(portalOrigin('freshbites', 'signage.com', prod)).toBe('https://freshbites.signage.com');
+  });
+
+  it('gives up on a host outside every portal domain, so the caller uses paths', () => {
+    expect(portalOrigin('freshbites', 'portal.onrender.com', prod)).toBeNull();
+    expect(portalOrigin('freshbites', 'localhost:3000', prod)).toBeNull();
+    expect(portalOrigin('freshbites', null, prod)).toBeNull();
+  });
+});
 
 describe('brandFromHost (SPEC v2.3 §10.4)', () => {
   const prod = portalConfig({ NODE_ENV: 'production', BRAND_PORTAL_DOMAINS: 'signage.com' });

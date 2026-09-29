@@ -48,6 +48,15 @@ export function getBrandBySlug(slug: string): Promise<BrandPublic | null> {
   );
 }
 
+/** Every brand, for the front door's "where do you sign in" choice. Public fields only. */
+export function getBrandsPublic(): Promise<BrandPublic[]> {
+  return rows<BrandPublic>(
+    `select id, name, slug, logo_url, brand_colors, vendor_policy, vendor_name, default_tat,
+            corporate_cc
+       from brands_public order by name`,
+  );
+}
+
 export interface BrandWithFormats {
   id: string;
   name: string;
