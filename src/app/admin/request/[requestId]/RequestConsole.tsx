@@ -10,10 +10,12 @@
 import { useState, useTransition } from 'react';
 
 import { PhotoUpload } from '@/components/PhotoUpload';
+import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
 import { PACKAGE_STAGE_LABEL, packageName, quoteStage } from '@/lib/packages';
+import { packageReadiness } from '@/lib/readiness';
 import { fileUrl } from '@/lib/storage/url';
 
 import {
@@ -67,6 +69,12 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
       </div>
 
       {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+
+      {/* The franchisee's own card, read the same way — what to chase before
+          the package goes out, until a quote is accepted. */}
+      {!request.quotes.some((quote) => quote.accepted_at) && (
+        <ReadinessCard readiness={packageReadiness(request)} audience="team" />
+      )}
 
       <ActionPanel request={request} act={act} />
       <InvoicePanel request={request} act={act} />

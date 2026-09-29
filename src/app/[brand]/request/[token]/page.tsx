@@ -9,11 +9,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { ReadinessCard } from '@/components/ReadinessCard';
 import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
+import { packageReadiness } from '@/lib/readiness';
 import type { RequestStatus } from '@/lib/status/types';
 import { fileUrl } from '@/lib/storage';
 
@@ -68,6 +70,11 @@ export default async function RequestStatusPage({
   // change request named: a reviewer can flag an item and the franchisee can
   // have answered it already.
   const reopened = request.items.filter((item) => item.item_status === 'changes_requested');
+  // Readiness is about getting to a quote; once a package is accepted the
+  // production bar and the history say more, so the card steps aside.
+  const readiness = request.quotes.some((candidate) => candidate.accepted_at)
+    ? null
+    : packageReadiness(request);
 
   return (
     <>
@@ -100,6 +107,8 @@ export default async function RequestStatusPage({
             </p>
           </section>
         )}
+
+        {readiness && <ReadinessCard readiness={readiness} audience="franchisee" />}
 
         {/* §8b: the documents come with the quote, but the franchisee told us a
             lender is involved at submission — so acknowledge it from the start

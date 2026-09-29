@@ -252,6 +252,8 @@ export interface EventRow {
   kind: string;
   actor: string;
   summary: string;
+  /** The event's structured payload — `{ result }` on a landlord criteria review, for one. */
+  detail: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -357,7 +359,7 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   );
 
   const events = await rows<EventRow>(
-    `select id, kind, actor, summary, created_at
+    `select id, kind, actor, summary, detail, created_at
        from request_events where request_id = $1 order by created_at`,
     [request.id],
   );
