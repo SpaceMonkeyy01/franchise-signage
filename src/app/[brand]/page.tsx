@@ -35,6 +35,7 @@ import {
   type LocationRow,
 } from '@/lib/db/queries';
 import type { Readiness } from '@/lib/readiness';
+import { openingLine, SETUP_STAGES, setupProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
 
@@ -411,6 +412,11 @@ function LocationCard({
   const address = [location.address.line1, location.address.city, location.address.state]
     .filter(Boolean)
     .join(', ');
+  // A new store's setup, while it is under way: the tracker takes the place of
+  // "setup in progress", and steps aside once the signs are installed.
+  const setupRequest = location.open_requests.find((request) => request.intent === 'initial_setup');
+  const progress = setupRequest ? setupProgress(setupRequest.status) : null;
+  const opening = openingLine(location.opening_date);
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -431,6 +437,14 @@ function LocationCard({
           </Link>
         )}
       </div>
+
+      {progress && setupRequest && (
+        <SetupTracker
+          progress={progress}
+          opening={opening}
+          href={`/${brandSlug}/request/${setupRequest.access_token}`}
+        />
+      )}
 
       {location.installed_signs.length > 0 ? (
         <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -454,7 +468,7 @@ function LocationCard({
             </div>
           ))}
         </div>
-      ) : (
+      ) : progress ? null : (
         <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
           Setup in progress — signs will appear here once installed.
         </p>
@@ -478,6 +492,76 @@ function LocationCard({
         </div>
       )}
     </section>
+  );
+}
+
+/** The six stages of a new store's signage, the current one marked. */
+function SetupTracker({
+  progress,
+  opening,
+  href,
+}: {
+  progress: SetupProgress;
+  opening: string | null;
+  href: string;
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50/70 p-4" data-testid="setup-tracker">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Store setup</h3>
+        {opening && <span className="text-xs font-medium text-gray-600">{opening}</span>}
+      </div>
+
+      {/* Six labels do not fit a phone: there, one line names the stage. */}
+      <p className="mt-2 text-xs text-gray-600 sm:hidden" aria-hidden="true">
+        Step {progress.current + 1} of {SETUP_STAGES.length} ·{' '}
+        <span className="font-semibold text-gray-900">{SETUP_STAGES[progress.current]}</span>
+      </p>
+
+      <ol className="mt-3 grid grid-cols-6 gap-1" aria-label="Setup stages">
+        {SETUP_STAGES.map((stage, index) => {
+          const done = index < progress.current;
+          const current = index === progress.current;
+          return (
+            <li key={stage} aria-current={current ? 'step' : undefined} className="min-w-0">
+              <div
+                className="h-1.5 rounded-full"
+                style={{
+                  background: done || current ? 'var(--color-brand)' : '#e5e7eb',
+                  opacity: current ? 0.55 : 1,
+                }}
+              />
+              <p
+                className={`mt-1.5 truncate text-[11px] max-sm:sr-only ${
+                  current ? 'font-semibold text-gray-900' : done ? 'text-gray-700' : 'text-gray-400'
+                }`}
+              >
+                {done && <span className="sr-only">Done: </span>}
+                {current && <span className="sr-only">Now: </span>}
+                {stage}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-gray-700">{progress.now}</p>
+        {progress.action ? (
+          <Link
+            href={href}
+            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'var(--color-brand)' }}
+          >
+            {progress.action}
+          </Link>
+        ) : (
+          <Link href={href} className="text-xs font-medium text-gray-500 underline underline-offset-2 hover:text-gray-900">
+            View details
+          </Link>
+        )}
+      </div>
+    </div>
   );
 }
 

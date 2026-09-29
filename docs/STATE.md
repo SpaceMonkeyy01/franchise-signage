@@ -14,9 +14,13 @@
   to Signage.com") or a brand, which opens that brand's portal sign-in
   (`freshbites.localhost:3000/sign-in` in development). The dev server no
   longer logs Server Action arguments (passwords appeared in the log).
+- **A store mid-setup shows its six stages on "My stores"** (#145), with the
+  opening-date countdown and a button when the next move is the franchisee's.
+- **Freshbites wears its own logo** (`public/brands/freshbites/logo.png`, the
+  seed's `logo_url`); the live project's brand row still needs it set.
 - Both ideas came from an outside concept page; what was deliberately not taken,
   and the zone grouping waiting on a yes, is #143.
-- Checks: **268 smoke**, **166 unit**, typecheck, lint, green build.
+- Checks: **270 smoke**, **172 unit**, typecheck, lint, green build.
 - **Supabase accounts check:** 7.0 done (all 15 migrations on the live
   project), 7.1 step 1 done (your platform admin). Steps 7.1.2–7.4 remain, in a
   browser, per `docs/SUPABASE.md` §7. Note `RESEND_API_KEY` is set in

@@ -1401,6 +1401,16 @@ names, the never-promise-compliance rule, invitation-only accounts).
      lists only the accounts that belong on each page. This replaces the
      temporary quick links of the same day.
 
+145. **A store mid-setup shows its stages on "My stores"** (asked for on 29
+     Sep, with Cedar Park as the example). The demo only says "Setup in
+     progress"; the card now reads the initial-setup request's status (§6, the
+     least advanced package on a split) as six stages — store set up,
+     approvals, quote, production, shipped, installed — with the opening date
+     counted down, a sentence on what is happening, and a button only when the
+     move is the franchisee's (review the quote, answer a change request). The
+     mapping is `src/lib/setup-progress.ts`, unit-tested; it disappears once
+     the request completes and the installed signs take its place.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

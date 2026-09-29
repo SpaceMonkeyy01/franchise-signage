@@ -407,7 +407,9 @@ await page.getByRole('button', { name: 'Sign in' }).click();
 await page.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
 await expectVisible(page, 'h1:has-text("Dana, your")', 'the franchisee owner signs in to their own stores');
 await expectCount(page, 'text=/installed (Sep|Oct) 2025/', 5, 'Oak Plaza shows its five installed signs');
-await expectCount(page, 'text=Setup in progress', 1, 'Cedar Park shows the empty state');
+await expectCount(page, '[data-testid="setup-tracker"]', 1, 'Cedar Park, mid-setup, shows its setup stages');
+await expectCount(page, '[data-testid="setup-tracker"] li[aria-current="step"]', 1, 'with exactly one stage under way');
+await expectVisible(page, '[data-testid="setup-tracker"] >> text=/Opens|Opened/', 'and its opening date');
 await expectCount(page, 'text=/REQ-00(16|17|18)/', 3, 'the three open requests are listed');
 
 // -------------------------------------------------------------- status page
