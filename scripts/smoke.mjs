@@ -398,7 +398,8 @@ record(
   'a store or a token appeared on the signed-out page',
 );
 
-await page.getByRole('link', { name: 'Sign in' }).click();
+await expectVisible(page, '#how-it-works', 'it is a landing page: what the program is, before the password');
+await page.getByRole('link', { name: 'Sign in', exact: true }).click();
 await page.waitForURL('**/sign-in**', { timeout: TIMEOUT });
 await page.getByLabel('Email').fill(DEV_FRANCHISEE.email);
 await page.getByLabel('Password', { exact: false }).first().fill(DEV_FRANCHISEE.password);
@@ -448,6 +449,7 @@ await page.goto(`${BASE}/freshbites/request/demo-oak-plaza-menu-replacement`, {
   waitUntil: 'networkidle',
 });
 await expectCount(page, 'text=Pre-approved', 1, 'the replacement reads as pre-approved');
+await expectCount(page, '[data-testid="readiness"]', 0, 'readiness steps aside once the quote is accepted');
 // Scoped to the item card's origin chip: the phrase also appears in the
 // timeline summary, which is correct and not what this assertion is about.
 await expectCount(
@@ -543,12 +545,30 @@ await expectVisible(page, 'text=Landlord prohibits illuminated signage', 'the is
 await expectVisible(page, 'text=/Initial setup submitted \\(4 standard \\+ 1 needing review\\)/', 'the submission event counts the split');
 await expectVisible(page, 'text=/lender is funding this location/', 'the §8b financing answer is carried through');
 
+// Package readiness: the request's own facts, read in one place. A new store's
+// first request gets every row; the item needing review is waiting on
+// corporate, not something the franchisee must chase.
+await expectVisible(page, '[data-testid="readiness"]', 'the status page shows package readiness');
+await expectCount(page, '[data-testid="readiness"] li', 5, 'a new store is asked about all five things');
+await expectCount(
+  page,
+  '[data-testid="readiness"] li[data-state="with_corporate"]:has-text("Approved signs")',
+  1,
+  'the item needing review reads as with corporate',
+);
+
 // -------------------------------------------------------- change-request loop
 console.log('\nAnswering a change request (REQ-0019)');
 await page.goto(`${BASE}/freshbites/request/demo-oak-plaza-changes-requested`, {
   waitUntil: 'networkidle',
 });
 await expectVisible(page, 'h2:has-text("Update this item and resubmit")', 'only the flagged item is editable');
+await expectCount(
+  page,
+  '[data-testid="readiness"] li[data-state="follow_up"]:has-text("Approved signs")',
+  1,
+  'readiness flags the item sent back for changes',
+);
 await expectCount(
   page,
   'article span:text-is("Approved")',

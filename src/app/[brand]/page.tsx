@@ -23,6 +23,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
@@ -33,6 +34,7 @@ import {
   type BrandPublic,
   type LocationRow,
 } from '@/lib/db/queries';
+import type { Readiness } from '@/lib/readiness';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
 
@@ -170,32 +172,166 @@ function Shell({
   );
 }
 
-/** Signed out: the way in, and nothing about any store. */
+/**
+ * Signed out: the brand's landing page, and the way in.
+ *
+ * The first page a franchisee reaches from the welcome email or the portal
+ * address, so it says what the program is before it asks for a password. It
+ * still shows nothing about any store and no request link — the example card is
+ * made up, and says so. There is no "start" button: accounts come only by
+ * invitation (SPEC v2.3 §10), so the one action is signing in.
+ */
 function SignedOut({ brand }: { brand: BrandPublic }) {
+  const signIn = `/sign-in?next=${encodeURIComponent(`/${brand.slug}`)}`;
   return (
-    <Shell brand={brand}>
-      <div className="mx-auto max-w-md text-center">
-        <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">
-          <span style={{ color: 'var(--color-brand)' }}>{brand.name}</span> signage
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-gray-600">
-          Order and track signage for your {brand.name} stores. Sign in to see yours.
-        </p>
-        <Link
-          href={`/sign-in?next=${encodeURIComponent(`/${brand.slug}`)}`}
-          className="mt-6 inline-block w-full rounded-lg px-4 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          style={{ background: 'var(--color-brand)' }}
-        >
-          Sign in
-        </Link>
-        <p className="mt-4 text-xs leading-relaxed text-gray-500">
-          New to {brand.name}? Your account is created from the invitation {brand.name} emails you
-          when you sign your franchise agreement. Open it to choose a password.
-        </p>
-      </div>
-    </Shell>
+    <>
+      <BrandTheme brand={brand} />
+      <BrandHeader brand={brand} />
+      <main className="flex-1 bg-[#F7F5EF]">
+        <section className="mx-auto grid w-full max-w-5xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
+          <div>
+            <p
+              className="inline-block rounded-full border bg-white px-3 py-1 text-xs font-semibold"
+              style={{ color: 'var(--color-brand-dark)', borderColor: 'var(--color-brand-light)' }}
+            >
+              {brand.name} franchise signage program
+            </p>
+            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-4xl">
+              Your {brand.name} signage,{' '}
+              <span style={{ color: 'var(--color-brand)' }}>from agreement to install.</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-gray-600">
+              Order and track signage for your {brand.name} stores. Choose from the brand&rsquo;s
+              approved sign packages, send the photos and landlord criteria Signage.com needs, and
+              follow every sign through production to install.
+            </p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <Link
+                href={signIn}
+                className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                Sign in
+              </Link>
+              <a
+                href="#how-it-works"
+                className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 transition-colors hover:border-gray-400"
+              >
+                See how it works
+              </a>
+            </div>
+            <p className="mt-4 max-w-xl text-xs leading-relaxed text-gray-500">
+              New to {brand.name}? Your account is created from the invitation {brand.name} emails
+              you when you sign your franchise agreement. Open it to choose a password.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200/80 bg-white/60 p-3 shadow-sm">
+            <ReadinessCard readiness={EXAMPLE_READINESS} audience="franchisee" className="" />
+            <p className="px-1 pb-1 pt-2 text-[11px] text-gray-500">
+              An example of a new store&rsquo;s package, as you and Signage.com see it.
+            </p>
+          </div>
+        </section>
+
+        <section id="how-it-works" className="border-t border-gray-200/70 bg-white">
+          <div className="mx-auto w-full max-w-5xl px-4 py-14 sm:px-6">
+            <p
+              className="text-center text-xs font-semibold uppercase tracking-widest"
+              style={{ color: 'var(--color-brand)' }}
+            >
+              How it works
+            </p>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
+              One path from signed agreement to installed signs
+            </h2>
+            <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              {HOW_IT_WORKS(brand.name).map((step, index) => (
+                <li
+                  key={step.title}
+                  className="flex flex-col rounded-xl border border-gray-200 bg-[#FBFAF6] p-4"
+                >
+                  <span
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ background: 'var(--color-brand)' }}
+                  >
+                    {index + 1}
+                  </span>
+                  <h3 className="mt-3 text-sm font-semibold text-gray-900">{step.title}</h3>
+                  <p className="mt-1 flex-1 text-xs leading-relaxed text-gray-600">{step.body}</p>
+                  <p className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                    You get: <span className="text-gray-800">{step.output}</span>
+                  </p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full max-w-5xl px-4 py-12 text-center sm:px-6">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900">
+            Already invited? Your stores are one sign-in away.
+          </h2>
+          <Link
+            href={signIn}
+            className="mt-5 inline-block rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: 'var(--color-brand)' }}
+          >
+            Sign in to {brand.name} signage
+          </Link>
+          <p className="mx-auto mt-5 max-w-xl text-[11px] leading-relaxed text-gray-500">
+            Estimates are not quotes: final pricing and timing depend on each site. Signage.com
+            keeps track of landlord approval with you, but cannot guarantee it or any permit.
+          </p>
+        </section>
+      </main>
+    </>
   );
 }
+
+// What the steps say is what the product does today, in the order a new
+// franchisee meets it (SPEC §8d level 1, then level 2, then §6's tail).
+function HOW_IT_WORKS(brandName: string) {
+  return [
+    {
+      title: 'Accept your invitation',
+      body: `${brandName} registers you when you sign your agreement; the email lets you choose a password.`,
+      output: 'Your account',
+    },
+    {
+      title: 'Plan the budget',
+      body: 'See the signage number for each store format, ready for your business plan and lender.',
+      output: 'A signage budget',
+    },
+    {
+      title: 'Set up your store',
+      body: 'Add the address, opening date and your lease sign exhibit. Anything unknown can stay TBD.',
+      output: 'Your location record',
+    },
+    {
+      title: 'Confirm your signs',
+      body: `The standard package loads pre-filled. Add sizes and photos; add-ons go to ${brandName} for approval.`,
+      output: 'An approved sign list',
+    },
+    {
+      title: 'Quote to install',
+      body: 'Accept the Signage.com quote and follow production to install, with the PDFs your lender asks for.',
+      output: 'Signs on record',
+    },
+  ];
+}
+
+const EXAMPLE_READINESS: Readiness = {
+  reviewReady: false,
+  followUps: 2,
+  rows: [
+    { key: 'location', label: 'Location details', state: 'done', value: 'Received' },
+    { key: 'photos', label: 'Site photos', state: 'follow_up', value: '3 of 4 signs' },
+    { key: 'sizing', label: 'Sizes and site details', state: 'done', value: 'All confirmed' },
+    { key: 'approvals', label: 'Approved signs', state: 'done', value: '4 of 4 approved' },
+    { key: 'landlord', label: 'Landlord sign criteria', state: 'follow_up', value: 'Flagged for follow-up' },
+  ],
+};
 
 /**
  * §8d level 1, for an account with no store yet (§10.7 D7): the number for the
