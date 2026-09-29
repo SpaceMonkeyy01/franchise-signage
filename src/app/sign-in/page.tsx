@@ -10,17 +10,10 @@ import { redirect } from 'next/navigation';
 import { AuthCard, FormNotice } from '@/components/AuthCard';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { getViewer, homeFor, owesSecondFactor, safeNext } from '@/lib/auth/access';
-import {
-  DEV_ADMIN,
-  DEV_BRAND_ADMIN,
-  DEV_BRAND_REVIEWER,
-  DEV_FRANCHISEE,
-  DEV_STAFF,
-} from '@/lib/auth/dev-auth';
-import { authProvider } from '@/lib/auth/identity';
 import { getBrandBySlug } from '@/lib/db/queries';
 import { portalSlug } from '@/lib/portal-request';
 
+import { devSignInHint } from './dev-hint';
 import { SignInForm } from './SignInForm';
 import { SignOutButton } from './SignOutButton';
 
@@ -50,10 +43,7 @@ export default async function SignInPage({
     redirect(safeNext(next, homeFor(viewer.memberships, portal)));
   }
 
-  const devHint =
-    authProvider() === 'dev'
-      ? `Seeded accounts: Signage.com ${DEV_ADMIN.email} / ${DEV_ADMIN.password}; franchisee ${DEV_FRANCHISEE.email} / ${DEV_FRANCHISEE.password}; store manager ${DEV_STAFF.email} / ${DEV_STAFF.password}; brand admin ${DEV_BRAND_ADMIN.email} / ${DEV_BRAND_ADMIN.password}; reviewer ${DEV_BRAND_REVIEWER.email} / ${DEV_BRAND_REVIEWER.password}.`
-      : null;
+  const devHint = devSignInHint();
 
   const card = (
     <AuthCard

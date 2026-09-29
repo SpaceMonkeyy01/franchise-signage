@@ -1995,6 +1995,28 @@ await corpPeople.close();
 await ownerContext.close();
 await staffContext.close();
 
+// ------------------------------------------------ the landing page at /
+// Signed out, `/` is the sign-in; signing in there lands each role on its own
+// view, and a signed-in visit to `/` goes straight there.
+for (const [who, account, landing] of [
+  ['a franchisee', DEV_FRANCHISEE, /\/freshbites$/],
+  ['a brand admin', BRAND_ADMIN, /\/freshbites\/corporate$/],
+  ['store staff', DEV_STAFF, /\/freshbites$/],
+]) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const landingPage = await context.newPage();
+  landingPage.on('pageerror', (error) => pageErrors.push(error.message));
+  await landingPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  await landingPage.getByLabel('Email').fill(account.email);
+  await landingPage.getByLabel('Password').fill(account.password);
+  await landingPage.getByRole('button', { name: 'Sign in' }).click();
+  await landingPage.waitForURL(landing, { timeout: TIMEOUT }).catch(() => {});
+  record(`signing in at / lands ${who} on their own view`, landing.test(landingPage.url()), landingPage.url());
+  await landingPage.goto(`${BASE}/`, { waitUntil: 'networkidle' });
+  record(`and / sends ${who} there once signed in`, landing.test(landingPage.url()), landingPage.url());
+  await context.close();
+}
+
 // ------------------------------------------- brand portals (§9b phase D)
 // `{brand}.signage.com`, which in development is `freshbites.localhost` — the
 // browser resolves it to this machine with no DNS. It serves the brand's pages

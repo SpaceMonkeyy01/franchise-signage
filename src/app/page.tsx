@@ -1,83 +1,213 @@
-// The root — the front door.
+// The root — the landing page, and the way in.
 //
-// Everyone but vendors has an account since SPEC v2.3, and nobody signs up:
-// accounts come from invitations (§10). What this page does is say, for each
-// participant, where their way in is.
+// Signed out, it says what the product is and offers the sign-in form right
+// here: one form serves everyone, because signing in already lands each person
+// where their role works (homeFor — the console, the corporate dashboard, or
+// "My stores"). Signed in, it goes straight there, so `/` is always the right
+// address to hand someone.
 //
-// Every link on it is an ADDRESS, not a credential, and costs nothing: each one
-// asks for sign-in and shows nothing before it. What must never appear here is
-// a token. The operator's index of live links is /admin/entry-points, and the
-// walkthrough that frames every participant's view is /admin/demo — both behind
-// the allowlist, for that reason.
+// Nobody signs up: accounts come from invitations (SPEC v2.3 §10), and the page
+// says so rather than offering a button that cannot exist. Nothing here is a
+// credential; the operator's index of live links is /admin/entry-points, and
+// the walkthrough is /admin/demo — both behind sign-in, for that reason.
 
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
-// The pilot brand. Hard-coded rather than queried so the page stays static and
-// builds with no database, as it always has.
-const PILOT = { slug: 'freshbites', name: 'Freshbites' };
+import { FormNotice } from '@/components/AuthCard';
+import { getViewer, homeFor, owesSecondFactor } from '@/lib/auth/access';
 
-const DOORS = [
+import { devSignInHint } from './sign-in/dev-hint';
+import { SignInForm } from './sign-in/SignInForm';
+import { SignOutButton } from './sign-in/SignOutButton';
+
+export const dynamic = 'force-dynamic';
+
+const WHO = [
   {
-    who: 'Signage.com team',
-    what: 'The operator console: the queue, packages, routing, pricing and fulfilment.',
-    how: 'Sign in with your team address.',
-    href: '/admin',
-    cta: 'Sign in',
+    who: 'Franchisees',
+    what: 'Order from your brand’s standard package, follow every request to install, and download the budget and quote documents your lender asks for.',
   },
   {
-    who: `${PILOT.name} franchisee`,
-    what: 'Order signage for a location, and follow every request from submission to install.',
-    how: 'Sign in with the account your invitation created. A link in an email about a request also opens it.',
-    href: `/${PILOT.slug}`,
-    cta: `Go to ${PILOT.name} signage`,
+    who: 'Brand corporate',
+    what: 'See every location’s signage in one place, and approve add-ons and exceptions line by line — from the dashboard, or straight from the email.',
   },
   {
-    who: `${PILOT.name} corporate`,
-    what: 'Your program dashboard: every location, what is installed, what is committed.',
-    how: 'Sign in with the account your invitation created. Approvals also work straight from email.',
-    href: `/${PILOT.slug}/corporate`,
-    cta: 'Sign in to the dashboard',
+    who: 'Signage.com',
+    what: 'Prepare, price, route and fulfil each package, and record every installed sign against its location.',
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const viewer = await getViewer();
+  let signedInWithoutAccess = false;
+  if (viewer) {
+    const home = homeFor(viewer.memberships);
+    if (owesSecondFactor(viewer)) redirect(`/two-factor?next=${encodeURIComponent(home)}`);
+    // An account whose every role was deactivated has no home; `/` is where
+    // homeFor sends it, so redirecting would loop. Say so instead.
+    if (home !== '/') redirect(home);
+    signedInWithoutAccess = true;
+  }
+
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-16 sm:px-6">
-      <p className="text-xs font-medium uppercase tracking-widest text-brand">
-        Franchise by Signage
-      </p>
-      <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-        Signage workflow for franchise brands.
-      </h1>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-gray-600">
-        Choose who you are. Everyone signs in with the account their invitation created, and
-        corporate approvals still work straight from email.
-      </p>
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-gray-50">
+      <Backdrop />
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-3">
-        {DOORS.map((door) => (
-          <Link
-            key={door.href}
-            href={door.href}
-            className="group flex flex-col rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
-          >
-            <span className="text-sm font-semibold text-gray-900">{door.who}</span>
-            <span className="mt-1 text-xs leading-relaxed text-gray-600">{door.what}</span>
-            <span className="mt-2 flex-1 text-xs leading-relaxed text-gray-400">{door.how}</span>
-            <span className="mt-4 text-sm font-medium text-brand group-hover:underline">
-              {door.cta} →
-            </span>
+      <header className="relative border-b border-gray-200/80 bg-white/70 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <span className="text-sm font-semibold tracking-tight text-gray-900">
+            Franchise <span className="font-normal text-gray-500">by</span> Signage
+          </span>
+          <span className="text-xs text-gray-500">Operated by Signage.com</span>
+        </div>
+      </header>
+
+      <main className="relative mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:py-20">
+        <section>
+          <p className="text-xs font-medium uppercase tracking-widest text-brand">
+            Signage for franchise brands
+          </p>
+          <h1 className="mt-3 text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-4xl">
+            Every location&rsquo;s signage, from agreement to install.
+          </h1>
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-gray-600">
+            One portal for a brand&rsquo;s whole signage program. Franchisees order against
+            brand-approved packages, corporate approves what needs approving, and Signage.com
+            delivers it.
+          </p>
+
+          <ul className="mt-8 space-y-4">
+            {WHO.map((row) => (
+              <li key={row.who} className="flex gap-3">
+                <span
+                  className="mt-1.5 h-2 w-2 flex-none rounded-full"
+                  style={{ background: 'var(--color-brand)' }}
+                  aria-hidden="true"
+                />
+                <p className="text-sm leading-relaxed text-gray-600">
+                  <span className="font-semibold text-gray-900">{row.who}.</span> {row.what}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="order-first w-full max-w-md justify-self-center rounded-2xl border border-gray-200 bg-white/95 p-6 shadow-xl shadow-gray-300/40 backdrop-blur sm:p-8 md:order-none md:justify-self-end">
+          {signedInWithoutAccess && viewer ? (
+            <div className="space-y-4">
+              <h2 className="text-lg font-bold text-gray-900">No access right now</h2>
+              <FormNotice>
+                You&rsquo;re signed in as {viewer.profile.email}, but this account has no active
+                role. If that&rsquo;s unexpected, ask whoever invited you.
+              </FormNotice>
+              <SignOutButton />
+            </div>
+          ) : (
+            <>
+              <h2 className="text-lg font-bold text-gray-900">Sign in</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                You&rsquo;ll go straight to your stores, your dashboard or the console.
+              </p>
+              <div className="mt-6">
+                <SignInForm next={null} devHint={devSignInHint()} />
+              </div>
+              <div className="mt-6 space-y-2 border-t border-gray-100 pt-4 text-xs leading-relaxed text-gray-500">
+                <p>
+                  Accounts are created by invitation. If you were invited, open that email to
+                  set your password first.
+                </p>
+                <p>
+                  Reviewing signage for your brand? The buttons in the approval email work without
+                  signing in.
+                </p>
+              </div>
+            </>
+          )}
+        </section>
+      </main>
+
+      <footer className="relative border-t border-gray-200/80 bg-white/70 backdrop-blur">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-gray-500 sm:px-6">
+          <span>Franchise by Signage · Signage.com</span>
+          <Link href="/admin/demo" className="hover:text-gray-900 hover:underline">
+            Product walkthrough (Signage.com team)
           </Link>
-        ))}
-      </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
 
-      <p className="mt-6 text-xs leading-relaxed text-gray-500">
-        Showing the product?{' '}
-        <Link href="/admin/demo" className="font-medium text-gray-900 underline underline-offset-2">
-          The walkthrough
-        </Link>{' '}
-        puts every participant&rsquo;s view of one request side by side. Team sign-in required.
-      </p>
-    </main>
+/**
+ * Behind everything: soft washes of the brand colour, a dot grid that fades
+ * out, and a few faint outlines of signs — a fascia, a blade sign, a pylon —
+ * kept to the edges so the text and the form stay the only things to read.
+ */
+function Backdrop() {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+      <div
+        className="absolute -left-40 -top-40 h-[36rem] w-[36rem] rounded-full blur-3xl"
+        style={{ background: 'radial-gradient(closest-side, color-mix(in srgb, var(--color-brand) 14%, transparent), transparent)' }}
+      />
+      <div
+        className="absolute -bottom-48 -right-32 h-[40rem] w-[40rem] rounded-full blur-3xl"
+        style={{ background: 'radial-gradient(closest-side, color-mix(in srgb, var(--color-brand) 12%, transparent), transparent)' }}
+      />
+      <div
+        className="absolute right-1/3 top-1/4 h-72 w-72 rounded-full opacity-70 blur-3xl"
+        style={{ background: 'radial-gradient(closest-side, #E0F2FE, transparent)' }}
+      />
+      <div
+        className="absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)',
+          backgroundSize: '24px 24px',
+          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
+        }}
+      />
+
+      <svg
+        className="absolute bottom-[4%] left-[2%] hidden h-36 w-36 md:block"
+        viewBox="0 0 160 160"
+        fill="none"
+        style={{ color: 'var(--color-brand)' }}
+      >
+        {/* A pylon sign. */}
+        <rect x="46" y="14" width="68" height="84" rx="10" stroke="currentColor" strokeOpacity="0.14" strokeWidth="2" />
+        <rect x="56" y="26" width="48" height="12" rx="3" fill="currentColor" fillOpacity="0.08" />
+        <rect x="56" y="46" width="48" height="8" rx="3" fill="currentColor" fillOpacity="0.06" />
+        <rect x="56" y="62" width="48" height="8" rx="3" fill="currentColor" fillOpacity="0.06" />
+        <path d="M74 98v48M86 98v48" stroke="currentColor" strokeOpacity="0.14" strokeWidth="2" />
+      </svg>
+
+      <svg
+        className="absolute right-[4%] top-[8%] hidden h-24 w-72 lg:block"
+        viewBox="0 0 288 96"
+        fill="none"
+        style={{ color: 'var(--color-brand)' }}
+      >
+        {/* A fascia sign on its raceway. */}
+        <rect x="4" y="18" width="280" height="60" rx="14" stroke="currentColor" strokeOpacity="0.12" strokeWidth="2" />
+        <rect x="28" y="38" width="20" height="20" rx="6" fill="currentColor" fillOpacity="0.08" />
+        <rect x="60" y="40" width="190" height="16" rx="4" fill="currentColor" fillOpacity="0.06" />
+      </svg>
+
+      <svg
+        className="absolute bottom-[10%] right-[38%] hidden h-24 w-24 lg:block"
+        viewBox="0 0 96 96"
+        fill="none"
+        style={{ color: 'var(--color-brand)' }}
+      >
+        {/* A blade sign on its bracket. */}
+        <path d="M8 20h30" stroke="currentColor" strokeOpacity="0.14" strokeWidth="2" strokeLinecap="round" />
+        <rect x="38" y="10" width="34" height="72" rx="8" stroke="currentColor" strokeOpacity="0.12" strokeWidth="2" />
+        <circle cx="55" cy="32" r="7" fill="currentColor" fillOpacity="0.08" />
+        <rect x="47" y="48" width="16" height="4" rx="2" fill="currentColor" fillOpacity="0.07" />
+        <rect x="47" y="57" width="16" height="4" rx="2" fill="currentColor" fillOpacity="0.07" />
+      </svg>
+    </div>
   );
 }

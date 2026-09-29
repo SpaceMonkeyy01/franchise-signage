@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
   // is a brand's address, and the dev server refuses its own assets to any
   // origin it was not told about.
   allowedDevOrigins: ['*.localhost'],
+  // The dev server logs every Server Action with its arguments — and sign-in,
+  // sign-up and password reset take passwords as arguments. Found when a real
+  // password appeared in the dev log during the Supabase accounts check.
+  logging: { serverFunctions: false },
 };
 
 export default nextConfig;
