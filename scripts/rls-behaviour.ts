@@ -1010,6 +1010,45 @@ const checks: NamedCheck[] = [
       );
     },
   },
+  // ------------------------------------------- store types (DECISIONS #156)
+  {
+    label: 'a brand admin adds and renames store types in their brand only; a reviewer cannot',
+    run: async (db) => {
+      const add = (brandId: string, key: string) =>
+        `insert into brand_store_types (brand_id, key, label) values ('${brandId}', '${key}', '${key}')`;
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const own = await refusal(db, add(alphaBrandId, 'drive_thru'));
+      const other = await refusal(db, add(betaBrandId, 'drive_thru'));
+      const renamed = await affected(db, `update brand_store_types set label = 'Strip unit' where brand_id = '${alphaBrandId}' and key = 'inline'`);
+      const renamedBeta = await affected(db, `update brand_store_types set label = 'X' where brand_id = '${betaBrandId}'`);
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const byReviewer = await refusal(db, add(alphaBrandId, 'kiosk'));
+      await asOwner(db);
+      await db.exec(`delete from brand_store_types where key in ('drive_thru', 'kiosk');
+                     update brand_store_types set label = 'Inline' where key = 'inline'`);
+      return expect(
+        own === null && !!other && renamed === 1 && renamedBeta === 0 && !!byReviewer,
+        `own: ${own ?? 'ok'}; beta: ${other ?? 'ALLOWED'}; renamed ${renamed}, beta ${renamedBeta}; reviewer: ${byReviewer ?? 'ALLOWED'}`,
+      );
+    },
+  },
+  {
+    label: "a store or package cannot name a type its brand does not have",
+    run: async (db) => {
+      await asOwner(db);
+      const location = await refusal(
+        db,
+        `insert into locations (brand_id, name, format) values ('${alphaBrandId}', 'Nowhere', 'no_such_type')`,
+      );
+      await db.exec(`insert into brand_store_types (brand_id, key, label) values ('${betaBrandId}', 'beta_only', 'Beta only')`);
+      const borrowed = await refusal(
+        db,
+        `insert into brand_packages (brand_id, format, label) values ('${alphaBrandId}', 'beta_only', 'Borrowed')`,
+      );
+      await db.exec(`delete from brand_store_types where key = 'beta_only'`);
+      return expect(!!location && !!borrowed, `unknown: ${location ?? 'ALLOWED'}; another brand's: ${borrowed ?? 'ALLOWED'}`);
+    },
+  },
   {
     label: 'anon reaches no account table, invitation or password reset',
     run: async (db) => {

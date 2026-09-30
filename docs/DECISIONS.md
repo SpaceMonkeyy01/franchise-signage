@@ -1481,10 +1481,8 @@ item 7's "CRUD UI only when onboarding brand #2".
      package entry now covers one line item: an endcap's two storefront sets
      are both standard, a third is an add-on.
 
-153. **Store types stay inline, endcap and freestanding** for now. Brand-defined
-     types (drive-thru, mall in-line, kiosk) would move `location_format` from
-     an enum to a per-brand table, touching setup, locations, the budget
-     one-pager and the portfolio. Asked, not yet answered.
+153. ~~Store types stay inline, endcap and freestanding.~~ Answered: brand-defined,
+     #156.
 
 155. **A retired sign can still be replaced where it is installed — through
      corporate** (asked on 30 Sep: "maybe on a request for approval"). The line
@@ -1494,6 +1492,20 @@ item 7's "CRUD UI only when onboarding brand #2".
      nothing goes to corporate, and it auto-approves as before. Request
      creation accepts an inactive item only for a replacement; everything else
      still needs a live sign.
+
+156. **Store types are the brand's own** (asked for on 30 Sep: "Drive-thru,
+     standalone, mall in-store"). `brand_store_types` holds each brand's list;
+     `locations.format` and `brand_packages.format` became text keys into it,
+     with a composite foreign key so a store cannot name another brand's type.
+     The three existing values are the keys of three default types every brand
+     starts with (a trigger on `brands`), so no row changed and every fixture
+     still works. The key is derived from the first name and never changes (it
+     is on stores and in the budget-sheet URLs); the label is renamed freely.
+     Ordering is the brand's `sort_order` rather than the enum's, and labels
+     come from the table everywhere: setup, budget sheets, the portfolio, the
+     vendor email, the console. A retired type is not offered at setup and has
+     no budget sheet; the last live type cannot be retired. The unused enum
+     type is left in place.
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's

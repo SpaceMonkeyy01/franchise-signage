@@ -13,10 +13,14 @@ import { revalidatePath } from 'next/cache';
 import { checkCorporate, type CorporateAccess } from '@/lib/auth/corporate';
 import {
   CatalogError,
+  addStoreType,
+  moveStoreType,
   proposeSign,
   reviseSign,
   savePackage,
   setSignActive,
+  setStoreTypeActive,
+  updateStoreType,
   withdrawSign,
   type CatalogActor,
   type PackageFormat,
@@ -74,4 +78,28 @@ export async function savePackageAction(
   input: { format: PackageFormat; label: string; description: string | null; items: string[] },
 ) {
   return run(brandSlug, (access, actor) => savePackage(access.brand.id, actor, input));
+}
+
+// Store types (DECISIONS #156): the brand's own list, each with its package.
+
+export async function addStoreTypeAction(brandSlug: string, input: { label: string; description: string | null }) {
+  return run(brandSlug, async (access, actor) => {
+    await addStoreType(access.brand.id, actor, input);
+  });
+}
+
+export async function updateStoreTypeAction(
+  brandSlug: string,
+  key: string,
+  input: { label: string; description: string | null },
+) {
+  return run(brandSlug, (access, actor) => updateStoreType(access.brand.id, key, actor, input));
+}
+
+export async function setStoreTypeActiveAction(brandSlug: string, key: string, active: boolean) {
+  return run(brandSlug, (access, actor) => setStoreTypeActive(access.brand.id, key, actor, active));
+}
+
+export async function moveStoreTypeAction(brandSlug: string, key: string, direction: -1 | 1) {
+  return run(brandSlug, (access) => moveStoreType(access.brand.id, key, direction));
 }

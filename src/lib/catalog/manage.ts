@@ -82,6 +82,13 @@ export interface CatalogEvent {
   created_at: string;
 }
 
+/** `Drive-thru (24h)` → `drive_thru_24h`: keys for store types and new options. */
+const slug = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
 /** Options that describe a sign's size rather than a choice a brand can lock. */
 const NOT_LOCKABLE = new Set(['basic_fields']);
 
@@ -557,7 +564,171 @@ export async function addMasterVariant(actor: CatalogActor, input: NewVariant): 
 
 // ------------------------------------------------------------------ packages
 
-export type PackageFormat = 'inline' | 'endcap' | 'freestanding';
+/** A store type's key: the brand's own list (DECISIONS #156). */
+export type PackageFormat = string;
+
+export interface StoreType {
+  key: string;
+  label: string;
+  description: string | null;
+  sort_order: number;
+  active: boolean;
+  /** Stores set up as this type: why a type is retired, never deleted. */
+  locations: number;
+}
+
+export function listStoreTypes(brandId: string): Promise<StoreType[]> {
+  return query<StoreType>(
+    `select t.key, t.label, t.description, t.sort_order, t.active,
+            (select count(*)::int from locations l where l.brand_id = t.brand_id and l.format = t.key) as locations
+       from brand_store_types t
+      where t.brand_id = $1
+      order by t.active desc, t.sort_order, t.label`,
+    [brandId],
+  );
+}
+
+/**
+ * A brand admin adds a store type — "Drive-thru" — and its empty package, so
+ * the next thing to do is fill it. The key is derived from the name once and
+ * never changes: it is on every store of the type and in document URLs.
+ */
+export async function addStoreType(
+  brandId: string,
+  actor: CatalogActor,
+  input: { label: string; description: string | null },
+): Promise<string> {
+  const label = input.label.trim();
+  if (!label) throw new CatalogError('Name the store type.');
+  const base = slug(label).slice(0, 36) || 'store';
+
+  return transaction(async (exec) => {
+    const taken = new Set(
+      (await exec.query<{ key: string }>(`select key from brand_store_types where brand_id = $1`, [brandId])).map(
+        (row) => row.key,
+      ),
+    );
+    const labels = await exec.query<{ n: string }>(
+      `select count(*) as n from brand_store_types where brand_id = $1 and lower(label) = lower($2)`,
+      [brandId, label],
+    );
+    if (Number(labels[0].n) > 0) throw new CatalogError(`There is already a store type called ${label}.`);
+    let key = /^[a-z0-9]/.test(base) ? base : `t_${base}`;
+    for (let n = 2; taken.has(key); n += 1) key = `${base}_${n}`;
+
+    await exec.query(
+      `insert into brand_store_types (brand_id, key, label, description, sort_order)
+       values ($1, $2, $3, $4,
+               (select coalesce(max(sort_order), 0) + 1 from brand_store_types where brand_id = $1))`,
+      [brandId, key, label, input.description?.trim() || null],
+    );
+    await exec.query(
+      `insert into brand_packages (brand_id, format, label, description, items)
+       values ($1, $2, $3, $4, '[]'::jsonb)`,
+      [brandId, key, label, input.description?.trim() || null],
+    );
+    await record(exec, {
+      brandId,
+      kind: 'store_type_added',
+      actor,
+      summary: `${actor.label} added the store type ${label}`,
+      detail: { key },
+    });
+    return key;
+  });
+}
+
+export async function updateStoreType(
+  brandId: string,
+  key: string,
+  actor: CatalogActor,
+  input: { label: string; description: string | null },
+): Promise<void> {
+  const label = input.label.trim();
+  if (!label) throw new CatalogError('Name the store type.');
+  await transaction(async (exec) => {
+    const clash = await exec.query<{ key: string }>(
+      `select key from brand_store_types where brand_id = $1 and lower(label) = lower($2) and key <> $3`,
+      [brandId, label, key],
+    );
+    if (clash.length > 0) throw new CatalogError(`There is already a store type called ${label}.`);
+    const [before] = await exec.query<{ label: string }>(
+      `select label from brand_store_types where brand_id = $1 and key = $2`,
+      [brandId, key],
+    );
+    if (!before) throw new CatalogError('That store type no longer exists.');
+    await exec.query(
+      `update brand_store_types set label = $3, description = $4 where brand_id = $1 and key = $2`,
+      [brandId, key, label, input.description?.trim() || null],
+    );
+    await record(exec, {
+      brandId,
+      kind: 'store_type_updated',
+      actor,
+      summary:
+        before.label === label
+          ? `${actor.label} edited the ${label} store type`
+          : `${actor.label} renamed the store type ${before.label} to ${label}`,
+    });
+  });
+}
+
+/**
+ * Retire or bring back a store type. A retired type is not offered when a new
+ * store is set up, and has no budget sheet; stores already of that type keep
+ * it. The last live type cannot be retired — setup would have nothing to offer.
+ */
+export async function setStoreTypeActive(
+  brandId: string,
+  key: string,
+  actor: CatalogActor,
+  active: boolean,
+): Promise<void> {
+  await transaction(async (exec) => {
+    if (!active) {
+      const [live] = await exec.query<{ n: string }>(
+        `select count(*) as n from brand_store_types where brand_id = $1 and active`,
+        [brandId],
+      );
+      if (Number(live.n) <= 1) throw new CatalogError('Keep at least one store type, or new stores cannot be set up.');
+    }
+    const [row] = await exec.query<{ label: string }>(
+      `update brand_store_types set active = $3 where brand_id = $1 and key = $2 and active <> $3 returning label`,
+      [brandId, key, active],
+    );
+    if (!row) return;
+    await record(exec, {
+      brandId,
+      kind: active ? 'store_type_reinstated' : 'store_type_retired',
+      actor,
+      summary: `${actor.label} ${active ? 'brought back' : 'retired'} the store type ${row.label}`,
+    });
+  });
+}
+
+/** Move a store type up or down the list setup shows. */
+export async function moveStoreType(brandId: string, key: string, direction: -1 | 1): Promise<void> {
+  await transaction(async (exec) => {
+    const types = await exec.query<{ key: string; sort_order: number }>(
+      `select key, sort_order from brand_store_types where brand_id = $1 and active
+        order by sort_order, label for update`,
+      [brandId],
+    );
+    const index = types.findIndex((t) => t.key === key);
+    const other = types[index + direction];
+    if (index < 0 || !other) return;
+    // Renumber the whole list, so ties from earlier inserts cannot stall a move.
+    const order = types.map((t) => t.key);
+    [order[index], order[index + direction]] = [order[index + direction], order[index]];
+    for (const [n, k] of order.entries()) {
+      await exec.query(`update brand_store_types set sort_order = $3 where brand_id = $1 and key = $2`, [
+        brandId,
+        k,
+        n + 1,
+      ]);
+    }
+  });
+}
 
 export interface ManagedPackage {
   format: PackageFormat;
@@ -570,7 +741,7 @@ export interface ManagedPackage {
 export function listBrandPackages(brandId: string): Promise<ManagedPackage[]> {
   return query<ManagedPackage>(
     `select format, label, description, items from brand_packages
-      where brand_id = $1 order by format`,
+      where brand_id = $1`,
     [brandId],
   );
 }
@@ -587,7 +758,11 @@ export async function savePackage(
 ): Promise<void> {
   const label = input.label.trim();
   if (!label) throw new CatalogError('Give the package a name.');
-  if (!['inline', 'endcap', 'freestanding'].includes(input.format)) throw new CatalogError('Unknown store type.');
+  const storeType = await queryOne<{ key: string }>(
+    `select key from brand_store_types where brand_id = $1 and key = $2 and active`,
+    [brandId, input.format],
+  );
+  if (!storeType) throw new CatalogError('That store type is not one of yours, or it was retired.');
   if (input.items.length > 100) throw new CatalogError('That is more signs than a package can hold.');
   if (input.items.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
     throw new CatalogError('A package can only hold your live signs. Reload and try again.');
@@ -640,12 +815,6 @@ export async function savePackage(
 }
 
 // ------------------------------------------------------ master row options
-
-const slug = (text: string) =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
 
 /**
  * The team edits which choices a master row offers (SPEC v2.4 §2.3): the

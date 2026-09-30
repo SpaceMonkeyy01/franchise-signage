@@ -16,7 +16,11 @@ export type VendorPolicy =
   | 'preferred_vendor'
   | 'corporate_first';
 
-export type LocationFormat = 'inline' | 'endcap' | 'freestanding';
+/**
+ * A store type's key, e.g. `inline` or `drive_thru` — the brand's own list
+ * since DECISIONS #156 (`brand_store_types`), no longer a fixed three.
+ */
+export type LocationFormat = string;
 
 export type RequestIntent =
   | 'initial_setup'

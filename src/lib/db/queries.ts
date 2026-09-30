@@ -61,8 +61,8 @@ export interface BrandWithFormats {
   id: string;
   name: string;
   slug: string;
-  /** Only formats that actually have a package — the rest have no number to give. */
-  formats: LocationFormat[];
+  /** Only store types that actually have a package — the rest have no number to give. */
+  formats: { key: LocationFormat; label: string }[];
 }
 
 /**
@@ -74,18 +74,17 @@ export interface BrandWithFormats {
  */
 export function getBrandsWithPackages(): Promise<BrandWithFormats[]> {
   return rows<BrandWithFormats>(
-    // format::text, not format: pg has no parser registered for the
-    // location_format[] type OID, so an enum array arrives as the raw string
-    // '{endcap,inline}' rather than an array. That is worse than an error — a
-    // string still answers .length, so it survives an emptiness check and only
-    // fails later at .map, away from the query that caused it.
+    // Store types are the brand's own (DECISIONS #156), in the brand's order;
+    // a retired type offers no budget sheet.
     `select b.id, b.name, b.slug,
             coalesce(
-              array_agg(p.format::text order by p.format) filter (where p.format is not null),
-              '{}'::text[]
+              jsonb_agg(jsonb_build_object('key', t.key, 'label', t.label) order by t.sort_order, t.label)
+                filter (where t.key is not null),
+              '[]'::jsonb
             ) as formats
        from brands b
        left join brand_packages p on p.brand_id = b.id
+       left join brand_store_types t on t.brand_id = p.brand_id and t.key = p.format and t.active
       group by b.id, b.name, b.slug
       order by b.name`,
   );
@@ -282,6 +281,9 @@ export interface RequestDetail {
     code: string;
     name: string;
     format: LocationFormat;
+    /** The brand's name for the store type, and its one-line description. */
+    format_label: string;
+    format_description: string | null;
     address: LocationAddress;
     opening_date: string | null;
   };
@@ -315,6 +317,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     location_code: string;
     location_name: string;
     location_format: LocationFormat;
+    format_label: string;
+    format_description: string | null;
     location_address: LocationAddress;
     location_opening_date: string | null;
     brand_slug: string;
@@ -322,11 +326,13 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     `select r.id, r.code, r.intent, r.status, r.access_token, r.package_version,
             r.financing_involved, r.submitted_at,
             l.id as location_id, l.code as location_code, l.name as location_name,
-            l.format as location_format, l.address as location_address,
+            l.format as location_format, t.label as format_label,
+            t.description as format_description, l.address as location_address,
             l.opening_date as location_opening_date, b.slug as brand_slug
        from requests r
        join locations l on l.id = r.location_id
        join brands b on b.id = r.brand_id
+       join brand_store_types t on t.brand_id = l.brand_id and t.key = l.format
       where r.access_token = $1`,
     [token],
   );
@@ -397,6 +403,8 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
       code: request.location_code,
       name: request.location_name,
       format: request.location_format,
+      format_label: request.format_label,
+      format_description: request.format_description,
       address: request.location_address ?? {},
       opening_date: request.location_opening_date,
     },
@@ -498,6 +506,8 @@ export function getBrandCatalog(brandId: string): Promise<BrandItemRow[]> {
 
 export interface PackageRow {
   format: LocationFormat;
+  /** The store type's own name — "Drive-thru" — as the brand calls it. */
+  formatLabel: string;
   label: string;
   description: string | null;
   items: BrandItemRow[];
@@ -510,12 +520,15 @@ export async function getPackageForFormat(
 ): Promise<PackageRow | null> {
   const pkg = await maybeOne<{
     format: LocationFormat;
+    format_label: string;
     label: string;
     description: string | null;
     items: string[];
   }>(
-    `select format, label, description, items
-       from brand_packages where brand_id = $1 and format = $2`,
+    `select p.format, t.label as format_label, p.label, p.description, p.items
+       from brand_packages p
+       join brand_store_types t on t.brand_id = p.brand_id and t.key = p.format and t.active
+      where p.brand_id = $1 and p.format = $2`,
     [brandId, format],
   );
   if (!pkg) return null;
@@ -525,6 +538,7 @@ export async function getPackageForFormat(
 
   return {
     format: pkg.format,
+    formatLabel: pkg.format_label,
     label: pkg.label,
     description: pkg.description,
     // Map rather than filter: an endcap's two storefront sets are two entries.
@@ -540,14 +554,20 @@ export async function getPackageForFormat(
  * endcap should not wait on a round trip to see what changes.
  */
 export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]> {
+  // Live store types only, in the brand's order (DECISIONS #156): a retired
+  // type is not offered to a new store.
   const packages = await rows<{
     format: LocationFormat;
+    format_label: string;
     label: string;
     description: string | null;
     items: string[];
   }>(
-    `select format, label, description, items
-       from brand_packages where brand_id = $1 order by format`,
+    `select p.format, t.label as format_label, p.label, p.description, p.items
+       from brand_packages p
+       join brand_store_types t on t.brand_id = p.brand_id and t.key = p.format and t.active
+      where p.brand_id = $1
+      order by t.sort_order, t.label`,
     [brandId],
   );
   const catalog = await getBrandCatalog(brandId);
@@ -555,6 +575,7 @@ export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]
 
   return packages.map((pkg) => ({
     format: pkg.format,
+    formatLabel: pkg.format_label,
     label: pkg.label,
     description: pkg.description,
     // Map rather than filter: an endcap's two storefront sets are two entries.
@@ -690,6 +711,7 @@ export interface PortfolioLocation {
   name: string;
   address: LocationAddress;
   format: LocationFormat;
+  format_label: string;
   opening_date: string | null;
   installed_count: number;
   /** How many items the brand's standard package for this format holds. */
@@ -748,7 +770,10 @@ export async function getPortfolio(brandId: string): Promise<Portfolio> {
       [brandId],
     ),
     rows<Omit<PortfolioLocation, 'open_requests'>>(
-      `select l.id, l.code, l.name, l.address, l.format, l.opening_date,
+      `select l.id, l.code, l.name, l.address, l.format,
+              (select t.label from brand_store_types t
+                where t.brand_id = l.brand_id and t.key = l.format) as format_label,
+              l.opening_date,
               (l.opening_date - current_date) as days_to_opening,
               (select count(*) from installed_signs s where s.location_id = l.id)
                 as installed_count,

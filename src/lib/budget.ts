@@ -15,12 +15,6 @@ import { getPackagesForBrand, type BrandItemRow } from './db/queries';
 import type { DocumentLine } from './pdf/letterhead';
 import type { LocationFormat } from './status/types';
 
-export const FORMAT_LABEL: Record<LocationFormat, string> = {
-  inline: 'Inline',
-  endcap: 'Endcap',
-  freestanding: 'Freestanding',
-};
-
 /**
  * Collapse a package's item list into quantity lines.
  *
@@ -94,7 +88,7 @@ export async function budgetByFormat(brandId: string): Promise<FormatBudget[]> {
       const lines = toQuantityLines(pkg.items);
       return {
         format: pkg.format,
-        formatLabel: FORMAT_LABEL[pkg.format] ?? pkg.format,
+        formatLabel: pkg.formatLabel,
         packageLabel: pkg.label,
         lineCount: lines.length,
         ...totalsFor(lines),

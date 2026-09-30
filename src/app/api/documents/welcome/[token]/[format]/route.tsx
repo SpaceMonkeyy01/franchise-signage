@@ -18,10 +18,12 @@ import { BudgetOnePager } from '@/lib/pdf/budget-one-pager';
 import { renderPdf } from '@/lib/pdf/letterhead';
 import type { LocationFormat } from '@/lib/status/types';
 
-const FORMATS: LocationFormat[] = ['inline', 'endcap', 'freestanding'];
-
+/**
+ * A store type key's shape (DECISIONS #156). Which keys exist is the brand's
+ * own list, so an unknown one is answered by the package lookup: 404.
+ */
 function isFormat(value: string): value is LocationFormat {
-  return (FORMATS as string[]).includes(value);
+  return /^[a-z0-9][a-z0-9_]{0,39}$/.test(value);
 }
 
 export async function GET(
@@ -38,7 +40,7 @@ export async function GET(
 
   const pkg = await getPackageForFormat(found.brand.id, format);
   if (!pkg || pkg.items.length === 0) {
-    return new Response(`${found.brand.name} has no standard package for ${format} locations.`, {
+    return new Response(`${found.brand.name} has no standard package for that store type.`, {
       status: 404,
     });
   }

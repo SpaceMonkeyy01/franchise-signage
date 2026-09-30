@@ -14,10 +14,14 @@
   is in `catalog_events`.
 - **Fixed on the way:** setup decided `standard` (auto-approve) from a browser
   flag; the server now checks it against the package (#152).
-- **Waiting on you:** whether store types should be brand-defined (#153), and
-  #150 (a retired sign cannot be replaced like-for-like).
-- Checks: **289 smoke**, **187 unit**, **61 schema** (41 behavioural), typecheck, lint.
-- Decisions #148–154.
+- **Then, on your answers:** store types are the brand's own — add
+  "Drive-thru", rename, reorder, retire, each with its package (#156); a
+  retired sign still installed can be replaced, through corporate (#155); the
+  team edits each catalog sign's options on `/admin/catalog` (#154).
+- **Live project:** run `npm run migrate` — two migrations since the last one
+  there (`brand_catalog`, `store_types`).
+- Checks: **298 smoke**, **188 unit**, **63 schema** (43 behavioural), typecheck, lint.
+- Decisions #148–156.
 
 ## 30 Sep 2026: the console and the brands on separate addresses
 

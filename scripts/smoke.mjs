@@ -194,12 +194,13 @@ async function latestLinkTo(to, kind, pattern) {
  */
 async function removeSmokeCatalog() {
   return withDb(async (client) => {
-    await client.query(`delete from catalog_events where summary like '%Smoke %' or kind like 'package_%' or kind = 'master_options_updated'`);
+    await client.query(`delete from catalog_events where summary like '%Smoke %' or kind like 'package_%' or kind = 'master_options_updated' or kind like 'store_type_%'`);
     await client.query(`delete from sent_emails where kind like 'catalog_%' and subject like '%Smoke %'`);
     await client.query(`update brand_packages set items = coalesce((
         select jsonb_agg(e order by n) from jsonb_array_elements(items) with ordinality as t(e, n)
          where e #>> '{}' not in (select id::text from brand_items where name like 'Smoke %')), '[]'::jsonb)`);
     await client.query(`delete from brand_items where name like 'Smoke %'`);
+    await client.query(`delete from brand_store_types where label like 'Smoke %'`);
   });
 }
 
@@ -2224,6 +2225,29 @@ await removeSmokeCatalog();
   } finally {
     await withDb((client) => client.query(`update brand_items set active = true where id = $1`, [retiredInstalled.id]));
   }
+
+  // Store types are the brand's own (#156): add one, fill its package, and a
+  // new store can be set up as it; retire it, and it is no longer offered.
+  await corp.reload({ waitUntil: 'networkidle' });
+  await corp.getByRole('button', { name: 'Add a store type' }).click();
+  await corp.getByLabel('Store type', { exact: true }).fill('Smoke Drive-thru');
+  await corp.getByLabel('What it is (shown at setup)').fill('Pad site with a drive-thru lane');
+  await corp.getByRole('button', { name: 'Add store type', exact: true }).click();
+  const driveThru = corp.locator('[data-package="smoke_drive_thru"]');
+  await expectVisible(corp, '[data-package="smoke_drive_thru"]', 'a brand admin adds a store type, with its own package');
+  await driveThru.getByRole('button', { name: /Edit package|Create package/ }).click();
+  await driveThru.getByLabel('Add a sign').selectOption({ index: 1 });
+  await driveThru.getByRole('button', { name: 'Add', exact: true }).click();
+  await driveThru.getByRole('button', { name: 'Save package' }).click();
+  await expectVisible(corp, '[data-package="smoke_drive_thru"] >> text=1 sign', 'and fills the package');
+  await ownerPage.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
+  await expectVisible(ownerPage, 'button:has-text("Smoke Drive-thru")', 'a franchisee setting up a store can choose it');
+
+  corp.once('dialog', (dialog) => dialog.accept());
+  await driveThru.getByRole('button', { name: 'Retire' }).click();
+  await expectGone(corp, '[data-package="smoke_drive_thru"]', 'a brand admin retires a store type');
+  await ownerPage.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
+  await expectCount(ownerPage, 'button:has-text("Smoke Drive-thru")', 0, 'and it is no longer offered at setup');
 
   // A reviewer reads the tab and changes nothing.
   const reviewerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });

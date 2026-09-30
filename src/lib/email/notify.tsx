@@ -242,7 +242,11 @@ export async function notifyQuotePackages(
         locationName={request.location.name}
         locationCode={request.location.code}
         addressLines={addressLines(request.location.address)}
-        format={request.location.format}
+        format={
+          request.location.format_description
+            ? `${request.location.format_label} (${request.location.format_description})`
+            : request.location.format_label
+        }
         openingDate={request.location.opening_date}
         requestCode={request.code}
         items={items}

@@ -18,7 +18,7 @@ import {
 } from '@/lib/db/queries';
 
 import { Registrations } from './Registrations';
-import type { LocationFormat, RequestStatus } from '@/lib/status/types';
+import type { RequestStatus } from '@/lib/status/types';
 
 const INTENT_LABEL: Record<string, string> = {
   initial_setup: 'Initial setup',
@@ -157,12 +157,6 @@ export default async function AdminQueue({
   );
 }
 
-const FORMAT_LABEL: Record<LocationFormat, string> = {
-  inline: 'Inline',
-  endcap: 'Endcap',
-  freestanding: 'Freestanding',
-};
-
 /**
  * The §8b budget one-pager export.
  *
@@ -190,11 +184,11 @@ function BrandDocuments({ brands }: { brands: BrandWithFormats[] }) {
             <span className="text-sm text-gray-700">{brand.name}</span>
             {brand.formats.map((format) => (
               <a
-                key={format}
-                href={`/api/documents/budget/${brand.slug}/${format}`}
+                key={format.key}
+                href={`/api/documents/budget/${brand.slug}/${format.key}`}
                 className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
               >
-                {FORMAT_LABEL[format]} budget PDF
+                {format.label} budget PDF
               </a>
             ))}
           </div>

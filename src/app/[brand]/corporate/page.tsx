@@ -20,7 +20,6 @@ import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { requireCorporate, type CorporateAccess } from '@/lib/auth/corporate';
 import { pendingInvitations, ROLE_LABEL } from '@/lib/auth/invitations';
-import { FORMAT_LABEL } from '@/lib/budget';
 import { query } from '@/lib/db/pool';
 import {
   getBrandsWithPackages,
@@ -34,7 +33,7 @@ import {
 } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 
-import { listBrandPackages, listBrandSigns, listMasterCatalog } from '@/lib/catalog/manage';
+import { listBrandPackages, listBrandSigns, listMasterCatalog, listStoreTypes } from '@/lib/catalog/manage';
 import { brandFranchiseePeople } from '@/lib/staff';
 
 import { Approvals } from './Approvals';
@@ -194,10 +193,11 @@ export default async function CorporateDashboard({
 
 /** The brand's signs (SPEC v2.4 §2.3): brand admins propose and retire; reviewers read. */
 async function SignsTab({ access }: { access: CorporateAccess }) {
-  const [signs, master, packages] = await Promise.all([
+  const [signs, master, packages, storeTypes] = await Promise.all([
     listBrandSigns(access.brand.id),
     listMasterCatalog(),
     listBrandPackages(access.brand.id),
+    listStoreTypes(access.brand.id),
   ]);
   return (
     <>
@@ -211,10 +211,7 @@ async function SignsTab({ access }: { access: CorporateAccess }) {
       <Packages
         brandSlug={access.brand.slug}
         canManage={access.canManage}
-        formats={(Object.keys(FORMAT_LABEL) as LocationFormat[]).map((format) => ({
-          format,
-          label: FORMAT_LABEL[format],
-        }))}
+        storeTypes={storeTypes}
         packages={packages}
         signs={signs.filter((sign) => sign.review_status === 'approved' && sign.active)}
       />
@@ -423,7 +420,7 @@ function LocationCard({ location }: { location: PortfolioLocation }) {
           {location.installed_count} installed
           {location.package_size > 0 && ` of ${location.package_size} standard`}
         </span>
-        <span className="text-gray-400">{FORMAT_LABEL[location.format]}</span>
+        <span className="text-gray-400">{location.format_label}</span>
         {opening && (
           <span className={urgent ? 'font-medium text-amber-700' : ''}>
             opens {opening.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -451,7 +448,13 @@ function LocationCard({ location }: { location: PortfolioLocation }) {
  * The §8b budget one-pager, in the hands of the person SPEC §8b names. The
  * download route checks the signed-in role on the brand (DECISIONS #44, #127).
  */
-function BudgetDocuments({ brand, formats }: { brand: BrandPublic; formats: LocationFormat[] }) {
+function BudgetDocuments({
+  brand,
+  formats,
+}: {
+  brand: BrandPublic;
+  formats: { key: LocationFormat; label: string }[];
+}) {
   if (formats.length === 0) return null;
 
   return (
@@ -465,11 +468,11 @@ function BudgetDocuments({ brand, formats }: { brand: BrandPublic; formats: Loca
       <div className="mt-3 flex flex-wrap gap-2">
         {formats.map((format) => (
           <a
-            key={format}
-            href={`/api/documents/budget/${brand.slug}/${format}`}
+            key={format.key}
+            href={`/api/documents/budget/${brand.slug}/${format.key}`}
             className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
           >
-            {FORMAT_LABEL[format]} budget PDF ↓
+            {format.label} budget PDF ↓
           </a>
         ))}
       </div>

@@ -18,7 +18,7 @@
 
 import { Text, View } from '@react-pdf/renderer';
 
-import { FORMAT_LABEL, totalsFor, toQuantityLines } from '../budget';
+import { totalsFor, toQuantityLines } from '../budget';
 import type { PackageRow } from '../db/queries';
 import { DocumentShell, LineTable, pdfMoneyRound, styles, type PdfBrand } from './letterhead';
 
@@ -37,7 +37,7 @@ export interface BudgetOnePagerProps {
 export function BudgetOnePager({ brand, pkg, issuedAt }: BudgetOnePagerProps) {
   const lines = toQuantityLines(pkg.items);
   const totals = totalsFor(lines);
-  const formatLabel = FORMAT_LABEL[pkg.format] ?? pkg.format;
+  const formatLabel = pkg.formatLabel;
 
   return (
     <DocumentShell

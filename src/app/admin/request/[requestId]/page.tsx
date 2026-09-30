@@ -25,7 +25,7 @@ export default async function AdminRequestDetail({
         <div>
           <h1 className="text-xl font-bold text-gray-900">{request.code}</h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            {request.brand.name} · {request.location.name} · {request.location.format}
+            {request.brand.name} · {request.location.name} · {request.location.format_label}
             {request.package_version > 1 && ` · package v${request.package_version}`}
           </p>
         </div>

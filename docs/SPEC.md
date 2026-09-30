@@ -102,11 +102,18 @@ Both layers are managed on screen, no longer only by the seed script.
 | corporate_cc | boolean | CC corporate on routed packages |
 | default_tat | text | shown to franchisees for internal fulfillment |
 
-### 3.2 `brand_packages` — standard package per location format
+### 3.2 `brand_packages` — standard package per store type
+
+**Store types are the brand's own (v2.4).** `brand_store_types` (brand_id, key,
+label, description, sort_order, active): every brand starts with Inline, Endcap
+and Freestanding, and a brand admin adds more ("Drive-thru", "Mall in-line"),
+renames, reorders and retires them, each with one package. A store's `format`
+and a package's `format` are keys into it, enforced per brand. A retired type
+is not offered to a new store; stores already of that type keep it.
 | Field | Type | Notes |
 |---|---|---|
 | id, brand_id | | |
-| format | enum | `inline` \| `endcap` \| `freestanding` (extensible per brand) |
+| format | text | a key of the brand's own store types (`brand_store_types`, v2.4) |
 | label / description | | |
 | items | jsonb | ordered brand_item ids; duplicates allowed (endcap = 2× storefront letters) |
 
@@ -576,7 +583,10 @@ Note: a fuller decision list with owners lives in the team workbook (franchise-s
 - **§2.3 (new): the catalog is managed in the app.** Signage.com keeps the
   master catalog and sets every price. A brand admin proposes new brand signs
   (pending until Signage.com reviews and prices them), retires signs, and edits
-  the brand's packages, both effective at once. Proposals will carry a Design
+  the brand's packages, both effective at once. **§3.2:** store types are the
+  brand's own list, managed by brand admins, replacing the fixed three. A
+  retired sign still installed can be replaced like-for-like, through corporate
+  review rather than the fast lane (§7). Proposals will carry a Design
   Studio mockup and engine price once §8 lands.
 - **§7 hardened:** an item's `standard` origin is derived from the brand's
   package on the server.

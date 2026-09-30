@@ -42,6 +42,7 @@ export interface VendorPackageProps {
   locationName: string;
   locationCode: string;
   addressLines: string[];
+  /** The store type as the brand names it, with what it is: "Drive-thru (pad site with a lane)". */
   format: string;
   openingDate: string | null;
   requestCode: string;
@@ -56,12 +57,6 @@ export interface VendorPackageProps {
   pricedCount: number;
   manualCount: number;
 }
-
-const FORMAT_LABEL: Record<string, string> = {
-  inline: 'Inline (in-line storefront)',
-  endcap: 'Endcap (two elevations)',
-  freestanding: 'Freestanding (standalone building)',
-};
 
 const FILE_KIND_LABEL: Record<string, string> = {
   site_photo: 'Site photo',
@@ -159,7 +154,7 @@ export function VendorPackageEmail(props: VendorPackageProps) {
                 </p>
               )}
               <p style={{ margin: '8px 0 0', fontSize: 12, color: '#6b7280' }}>
-                {props.locationCode} · {FORMAT_LABEL[props.format] ?? props.format}
+                {props.locationCode} · {props.format}
                 {props.openingDate &&
                   ` · target opening ${new Date(props.openingDate).toLocaleDateString('en-US')}`}
               </p>
