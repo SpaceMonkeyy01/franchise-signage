@@ -15,6 +15,7 @@
 // form. Not the brand's registered franchisee address (§8d), which is the
 // account-level contact and may be someone else entirely.
 
+import { brandUrl } from '../auth/tokens';
 import { getRequestById, type RequestDetail } from '../db/queries';
 import { query, queryOne } from '../db/pool';
 import { render } from './layout';
@@ -49,14 +50,14 @@ interface Composed {
   element: React.ReactElement;
 }
 
-function baseProps(request: RequestDetail, appUrl: string): FranchiseeEmailBase {
+function baseProps(request: RequestDetail): FranchiseeEmailBase {
   return {
     brand: request.brand,
     // Filled in by the caller from the contact row — see notifyFranchisee.
     requesterName: null,
     locationName: request.location.name,
     requestCode: request.code,
-    requestUrl: `${appUrl}/${request.brand.slug}/request/${request.access_token}`,
+    requestUrl: brandUrl(request.brand.slug, `/request/${request.access_token}`),
     packageLabel: null,
   };
 }
@@ -98,15 +99,14 @@ export async function notifyFranchisee(
   );
   if (!contact?.requester_email) return { sent: false, reason: 'no_recipient' };
 
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
   const quoteId = options.quoteId ?? null;
   const base = {
-    ...baseProps(request, appUrl),
+    ...baseProps(request),
     requesterName: contact.requester_name,
     packageLabel: packageLabelFor(request, quoteId),
   };
 
-  const composed = compose(notification, request, base, appUrl, options.note ?? null, quoteId);
+  const composed = compose(notification, request, base, options.note ?? null, quoteId);
   if (!composed) return { sent: false, reason: 'nothing_to_say' };
 
   const html = await render(composed.element);
@@ -146,7 +146,6 @@ function compose(
   notification: FranchiseeNotification,
   request: RequestDetail,
   base: FranchiseeEmailBase,
-  appUrl: string,
   note: string | null,
   quoteId: string | null,
 ): Composed | null {
@@ -292,7 +291,7 @@ function compose(
           <InstalledEmail
             {...base}
             itemCount={pkg ? itemsIn(pkg.line_item_ids).length : live.length}
-            locationUrl={`${appUrl}/${request.brand.slug}/location/${request.location.id}/request`}
+            locationUrl={brandUrl(request.brand.slug, `/location/${request.location.id}/request`)}
             note={note}
             outstandingPackages={outstanding}
           />

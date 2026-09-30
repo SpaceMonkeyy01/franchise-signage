@@ -10,7 +10,7 @@
 // of Signage.com, and mail from an unknown vendor at that moment reads as spam.
 
 import { createInvitation } from '../auth/invitations';
-import { appUrl } from '../auth/tokens';
+import { brandOrigin, brandUrl } from '../auth/tokens';
 import { budgetByFormat } from '../budget';
 import { getRegistrationById, getRegistrationByToken } from '../db/queries';
 import { query, queryOne } from '../db/pool';
@@ -27,8 +27,7 @@ export interface WelcomeOutcome {
 
 /** `/{brand_slug}/welcome/{access_token}` — the level-1 landing page. */
 export function welcomeUrl(brandSlug: string, accessToken: string): string {
-  const appUrl = process.env.APP_URL ?? 'http://localhost:3000';
-  return `${appUrl}/${brandSlug}/welcome/${accessToken}`;
+  return brandUrl(brandSlug, `/welcome/${accessToken}`);
 }
 
 /**
@@ -104,7 +103,7 @@ async function accountLink(
         and m.role = 'franchisee_owner' and m.active`,
     [email, brandId],
   );
-  if (owner) return { url: appUrl(`/sign-in?next=/${brandSlug}`), kind: 'sign_in' };
+  if (owner) return { url: `${brandOrigin(brandSlug)}/sign-in?next=/${brandSlug}`, kind: 'sign_in' };
 
   const invitation = await createInvitation({
     brandId,

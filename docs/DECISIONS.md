@@ -1411,6 +1411,30 @@ names, the never-promise-compliance rule, invitation-only accounts).
      mapping is `src/lib/setup-progress.ts`, unit-tested; it disappears once
      the request completes and the installed signs take its place.
 
+146. **The console can have its own address, apart from the brands'** (asked
+     for on 30 Sep: one address for the Signage.com team, another for the
+     franchise portal; option 1 of three — one deployment, two addresses — over
+     two services of the same code or a split codebase). It is switched on by
+     configuration alone: `APP_URL` under a configured `BRAND_PORTAL_DOMAINS`
+     domain (`https://admin.signage.com` with `signage.com`) makes that host the
+     console's. There, a brand's page is sent on (307, not 308 — browsers keep a
+     308 forever, and the address is a setting) to the brand's address without
+     the slug: `admin.signage.com/freshbites/request/abc` →
+     `freshbites.signage.com/request/abc`, so every path-based link already in
+     an inbox still arrives. `/admin` still 404s on a brand's address. The
+     console's host is never read as a brand, whatever its subdomain. Emailed
+     links follow: franchisee status and location links, the welcome page,
+     approval links, and invitations and password resets for brand accounts go
+     to the brand's address, since the session they start belongs to the
+     address it starts on; the team's own links stay on `APP_URL`. The console's
+     sign-in turns a brand account away with the address to use — which amends
+     #144's "not refused" for this mode only, because a brand account signed in
+     on the console would be sent to its brand's address holding no session
+     there. Off by default: development with no `BRAND_PORTAL_DOMAINS`, and any
+     deployment whose `APP_URL` is a bare hosting address, serve everything
+     everywhere as before. The hosting address itself (`*.onrender.com`) still
+     serves every page.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

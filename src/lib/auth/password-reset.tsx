@@ -15,7 +15,7 @@ import { sendEmail } from '../email/send';
 import { brandSender, platformSender } from '../email/sender';
 import { PasswordResetEmail } from '../email/templates/password-reset';
 import { SIGNAGE_BRAND } from './invitations';
-import { appUrl, hashToken, mintToken } from './tokens';
+import { appUrl, brandOrigin, hashToken, mintToken } from './tokens';
 
 export const RESET_TTL_MINUTES = 60;
 /** More than this many requests an hour for one account sends nothing further. */
@@ -48,15 +48,15 @@ export async function requestPasswordReset(email: string): Promise<void> {
   );
 
   // Sent as the brand the person belongs to, or as Signage.com for the team.
-  const brand = await queryOne<{ name: string; brand_colors: EmailBrand['brand_colors'] }>(
-    `select b.name, b.brand_colors from memberships m join brands b on b.id = m.brand_id
+  const brand = await queryOne<{ name: string; slug: string; brand_colors: EmailBrand['brand_colors'] }>(
+    `select b.name, b.slug, b.brand_colors from memberships m join brands b on b.id = m.brand_id
       where m.profile_id = $1 and m.active order by m.created_at limit 1`,
     [profile.id],
   );
   const html = await render(
     <PasswordResetEmail
       brand={brand ?? SIGNAGE_BRAND}
-      resetUrl={appUrl(`/reset-password/${token}`)}
+      resetUrl={`${brand ? brandOrigin(brand.slug) : appUrl('')}/reset-password/${token}`}
       expiresInMinutes={RESET_TTL_MINUTES}
     />,
   );

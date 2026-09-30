@@ -47,6 +47,32 @@ export interface PortalConfig {
   /** e.g. `signage.com`. Hosts under it are brand portals. */
   domains: string[];
   reserved: string[];
+  /**
+   * The console's own hostname when this deployment keeps it apart from the
+   * brands (decision #146): `APP_URL`'s host, when that host sits under a
+   * configured BRAND_PORTAL_DOMAINS domain — `admin.signage.com` with
+   * `signage.com`. Brand pages opened there move to the brand's address. Null
+   * otherwise (no domains configured, or a bare hosting address), and then every
+   * address serves every page, as before.
+   */
+  consoleHost: string | null;
+}
+
+function hostnameOf(host: string): string {
+  return host.split(':')[0].toLowerCase();
+}
+
+/** APP_URL's host (with its port), when it is under one of `domains`. */
+function consoleHostFrom(appUrl: string | undefined, domains: string[]): string | null {
+  if (!appUrl) return null;
+  let host: string;
+  try {
+    host = new URL(appUrl).host.toLowerCase();
+  } catch {
+    return null;
+  }
+  const hostname = hostnameOf(host);
+  return domains.some((d) => hostname === d || hostname.endsWith(`.${d}`)) ? host : null;
 }
 
 export function portalConfig(env: Record<string, string | undefined> = process.env): PortalConfig {
@@ -62,13 +88,22 @@ export function portalConfig(env: Record<string, string | undefined> = process.e
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean);
-  return { domains, reserved: [...RESERVED, ...extra] };
+  // Only explicitly configured domains split the console off: development with
+  // no configuration keeps serving everything on localhost:3000.
+  return { domains, reserved: [...RESERVED, ...extra], consoleHost: consoleHostFrom(env.APP_URL, configured) };
+}
+
+/** Whether a request's host is the console's own address (decision #146). */
+export function isConsoleHost(host: string | null, config: PortalConfig): boolean {
+  return !!host && !!config.consoleHost && hostnameOf(host) === hostnameOf(config.consoleHost);
 }
 
 /** The brand slug a host names, or null when it is not a brand portal. */
 export function brandFromHost(host: string | null, config: PortalConfig): string | null {
   if (!host) return null;
-  const hostname = host.split(':')[0].toLowerCase();
+  const hostname = hostnameOf(host);
+  // The console's address is never a brand, whatever its subdomain is called.
+  if (isConsoleHost(host, config)) return null;
   for (const domain of config.domains) {
     if (!hostname.endsWith(`.${domain}`)) continue;
     const sub = hostname.slice(0, -(domain.length + 1));
@@ -100,6 +135,16 @@ export function portalOrigin(slug: string, host: string | null, config: PortalCo
   return null;
 }
 
+/**
+ * A brand's address as emailed links should use it: set only when the console
+ * has its own address (decision #146), since a link to the brand's pages on the
+ * console's address would only be sent on to the brand's. Null otherwise, and
+ * the caller builds the path-based link on APP_URL.
+ */
+export function splitBrandOrigin(slug: string, config: PortalConfig): string | null {
+  return config.consoleHost ? portalOrigin(slug, config.consoleHost, config) : null;
+}
+
 export type PortalRoute =
   | { kind: 'pass' }
   | { kind: 'rewrite'; path: string }
@@ -116,6 +161,34 @@ export type PortalRoute =
  *   /admin               → 404: the console is not served on a brand's address
  *   /otherbrand/…        → /{slug}/otherbrand/… → 404: one brand per address
  */
+export type ConsoleRoute =
+  | { kind: 'pass' }
+  /** A brand's page: served on that brand's address, at `path` there. */
+  | { kind: 'brand'; slug: string; path: string };
+
+/**
+ * What to do with a request to the console's own address, when it has one
+ * (decision #146). The console, the shared routes and the front page stay; a
+ * brand's page moves to the brand's address, without the slug:
+ *
+ *   /admin/…, /sign-in, /review/…  → unchanged
+ *   /                              → unchanged: the "where do I sign in" page
+ *   /freshbites                    → freshbites.signage.com/
+ *   /freshbites/request/abc?x=1    → freshbites.signage.com/request/abc (search kept by the caller)
+ *
+ * So franchisees and corporate never land on the console's address, and every
+ * path-based link already in an inbox still arrives.
+ */
+export function routeConsole(pathname: string): ConsoleRoute {
+  if (pathname === '/' || pathname === '/admin' || pathname.startsWith('/admin/')) return { kind: 'pass' };
+  if (SHARED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
+    return { kind: 'pass' };
+  }
+  const [, slug = '', ...rest] = pathname.split('/');
+  if (!/^[a-z0-9-]+$/.test(slug)) return { kind: 'pass' };
+  return { kind: 'brand', slug, path: `/${rest.join('/')}` };
+}
+
 export function routePortal(slug: string, pathname: string): PortalRoute {
   if (pathname === '/admin' || pathname.startsWith('/admin/')) return { kind: 'not_found' };
   if (pathname === '/') return { kind: 'rewrite', path: `/${slug}` };

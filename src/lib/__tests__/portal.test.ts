@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import { brandFromHost, portalConfig, portalOrigin, routePortal } from '../portal';
+import {
+  brandFromHost,
+  isConsoleHost,
+  portalConfig,
+  portalOrigin,
+  routeConsole,
+  routePortal,
+  splitBrandOrigin,
+} from '../portal';
 
 describe('portalOrigin', () => {
   const prod = portalConfig({ NODE_ENV: 'production', BRAND_PORTAL_DOMAINS: 'signage.com' });
@@ -101,5 +109,85 @@ describe('routePortal', () => {
   it('does not serve the console on a brand address', () => {
     expect(routePortal('freshbites', '/admin')).toEqual({ kind: 'not_found' });
     expect(routePortal('freshbites', '/admin/team')).toEqual({ kind: 'not_found' });
+  });
+});
+
+describe('the console on its own address (decision #146)', () => {
+  const split = portalConfig({
+    NODE_ENV: 'production',
+    BRAND_PORTAL_DOMAINS: 'signage.com',
+    APP_URL: 'https://admin.signage.com',
+  });
+
+  it('is APP_URL, when APP_URL is under a configured portal domain', () => {
+    expect(split.consoleHost).toBe('admin.signage.com');
+    expect(isConsoleHost('admin.signage.com', split)).toBe(true);
+    expect(isConsoleHost('Admin.Signage.com:443', split)).toBe(true);
+    expect(isConsoleHost('freshbites.signage.com', split)).toBe(false);
+    expect(isConsoleHost(null, split)).toBe(false);
+  });
+
+  it('is off without configured domains, on a hosting address, and in plain development', () => {
+    expect(portalConfig({ NODE_ENV: 'production', APP_URL: 'https://admin.signage.com' }).consoleHost).toBeNull();
+    expect(
+      portalConfig({
+        NODE_ENV: 'production',
+        BRAND_PORTAL_DOMAINS: 'signage.com',
+        APP_URL: 'https://portal.onrender.com',
+      }).consoleHost,
+    ).toBeNull();
+    // localhost is a portal domain in development only implicitly; that alone
+    // must not move the path-based pages off localhost:3000.
+    const dev = portalConfig({ NODE_ENV: 'development', APP_URL: 'http://localhost:3000' });
+    expect(dev.consoleHost).toBeNull();
+    expect(isConsoleHost('localhost:3000', dev)).toBe(false);
+  });
+
+  it('can be tried in development by configuring localhost', () => {
+    const dev = portalConfig({
+      NODE_ENV: 'development',
+      BRAND_PORTAL_DOMAINS: 'localhost',
+      APP_URL: 'http://admin.localhost:3000',
+    });
+    expect(dev.consoleHost).toBe('admin.localhost:3000');
+    expect(splitBrandOrigin('freshbites', dev)).toBe('http://freshbites.localhost:3000');
+  });
+
+  it('is never a brand, whatever its subdomain is called', () => {
+    const custom = portalConfig({
+      NODE_ENV: 'production',
+      BRAND_PORTAL_DOMAINS: 'signage.com',
+      APP_URL: 'https://console.signage.com',
+    });
+    expect(brandFromHost('console.signage.com', custom)).toBeNull();
+    expect(brandFromHost('freshbites.signage.com', custom)).toBe('freshbites');
+  });
+
+  it("gives emailed links the brand's address only when split", () => {
+    expect(splitBrandOrigin('freshbites', split)).toBe('https://freshbites.signage.com');
+    const unsplit = portalConfig({ NODE_ENV: 'production', BRAND_PORTAL_DOMAINS: 'signage.com' });
+    expect(splitBrandOrigin('freshbites', unsplit)).toBeNull();
+  });
+});
+
+describe('routeConsole', () => {
+  it('keeps the console, the front page and the shared routes', () => {
+    for (const path of ['/', '/admin', '/admin/team', '/sign-in', '/two-factor', '/invite/t', '/review/t', '/api/files/x']) {
+      expect(routeConsole(path)).toEqual({ kind: 'pass' });
+    }
+  });
+
+  it("sends a brand's pages to the brand's address, without the slug", () => {
+    expect(routeConsole('/freshbites')).toEqual({ kind: 'brand', slug: 'freshbites', path: '/' });
+    expect(routeConsole('/freshbites/')).toEqual({ kind: 'brand', slug: 'freshbites', path: '/' });
+    expect(routeConsole('/freshbites/request/abc')).toEqual({
+      kind: 'brand',
+      slug: 'freshbites',
+      path: '/request/abc',
+    });
+  });
+
+  it('does not mistake a prefix of the console for it', () => {
+    expect(routeConsole('/adminx')).toEqual({ kind: 'brand', slug: 'adminx', path: '/' });
   });
 });

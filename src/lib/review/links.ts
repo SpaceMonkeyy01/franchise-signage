@@ -14,6 +14,7 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 
+import { brandOrigin } from '../auth/tokens';
 import { query, queryOne } from '../db/pool';
 
 /** SPEC §9 interface 3. Long enough for a reviewer's week, short enough to expire. */
@@ -41,9 +42,9 @@ export type LinkFailure =
 
 const hash = (token: string) => createHash('sha256').update(token).digest('hex');
 
-export function reviewUrl(token: string): string {
-  const base = process.env.APP_URL ?? 'http://localhost:3000';
-  return `${base}/review/${token}`;
+/** On the brand's address, so a reviewer who signs in from the page does so there. */
+export function reviewUrl(token: string, brandSlug: string): string {
+  return `${brandOrigin(brandSlug)}/review/${token}`;
 }
 
 /**
@@ -73,8 +74,9 @@ export async function mintReviewLinks(
 ): Promise<MintedLink[]> {
   await revokeReviewLinks(requestId);
 
-  const request = await queryOne<{ package_version: number }>(
-    `select package_version from requests where id = $1`,
+  const request = await queryOne<{ package_version: number; brand_slug: string }>(
+    `select r.package_version, b.slug as brand_slug
+       from requests r join brands b on b.id = r.brand_id where r.id = $1`,
     [requestId],
   );
   if (!request) throw new Error('Unknown request');
@@ -89,7 +91,7 @@ export async function mintReviewLinks(
        returning expires_at`,
       [requestId, reviewerEmail, hash(token), request.package_version, REVIEW_LINK_TTL_DAYS],
     );
-    minted.push({ token, url: reviewUrl(token), reviewerEmail, expiresAt: row!.expires_at });
+    minted.push({ token, url: reviewUrl(token, request.brand_slug), reviewerEmail, expiresAt: row!.expires_at });
   }
   return minted;
 }

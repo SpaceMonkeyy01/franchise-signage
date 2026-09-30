@@ -114,6 +114,7 @@ and the deployment works the same without it. To switch it on:
 | Variable | Value |
 |---|---|
 | `BRAND_PORTAL_DOMAINS` | the parent domain(s), comma-separated — e.g. `signage.com` |
+| `APP_URL` | the console's own address, e.g. `https://admin.signage.com` — see below |
 | `PLATFORM_SUBDOMAINS` | optional: more subdomains that are never brands (`www`, `franchise`, `app`, `admin`, `api` are built in) |
 
 Outside the code:
@@ -124,9 +125,37 @@ Outside the code:
 - **Nothing in Supabase.** It never redirects to us (above), so there is no
   redirect URL to add per brand.
 
-Emails still link to `APP_URL`'s path-based addresses, which keep working; they
-do not yet point at a brand's own address. In development none of this is
-needed: `http://freshbites.localhost:3000` is a portal with no configuration.
+In development none of this is needed: `http://freshbites.localhost:3000` is a
+portal with no configuration.
+
+### The console on its own address: `admin.signage.com`
+
+With the portals switched on, set **`APP_URL` to the console's own address**
+under the same domain — `https://admin.signage.com` with
+`BRAND_PORTAL_DOMAINS=signage.com` — and the team and the brands are kept apart
+(DECISIONS #146):
+
+- `admin.signage.com` serves the console and the team's sign-in. A brand's page
+  opened there (an old path-based link, say) is sent on to the brand's address.
+  A franchisee or corporate account signing in there is told where to sign in
+  instead.
+- `freshbites.signage.com` serves Freshbites, and 404s the console.
+- Emails to a brand's people link to the brand's address; the team's stay on
+  `admin.signage.com`.
+
+The DNS is the wildcard above; `admin` is already covered by it. Any subdomain
+works for the console (`franchise`, `console`, …) — `APP_URL`'s host is never
+read as a brand. With `APP_URL` left at the hosting address, nothing is split
+and emails link to the path-based pages there, as before.
+
+To try it locally:
+
+```
+APP_URL=http://admin.localhost:3000 BRAND_PORTAL_DOMAINS=localhost npm run dev
+```
+
+then open `http://admin.localhost:3000` (the team) and
+`http://freshbites.localhost:3000` (Freshbites).
 
 ## 4 · The review SLA
 

@@ -12,7 +12,7 @@ import { sendEmail } from '../email/send';
 import { brandSender, platformSender } from '../email/sender';
 import { InvitationEmail } from '../email/templates/invitation';
 import type { MemberRole } from './access';
-import { appUrl, hashToken, mintToken } from './tokens';
+import { appUrl, brandOrigin, hashToken, mintToken } from './tokens';
 
 export const INVITATION_TTL_DAYS = 14;
 
@@ -74,9 +74,10 @@ export async function createInvitation(input: NewInvitation): Promise<MintedInvi
   const brand = input.brandId
     ? await queryOne<{
         name: string;
+        slug: string;
         brand_colors: EmailBrand['brand_colors'];
         franchisee_email_domains: string[];
-      }>(`select name, brand_colors, franchisee_email_domains from brands where id = $1`, [
+      }>(`select name, slug, brand_colors, franchisee_email_domains from brands where id = $1`, [
         input.brandId,
       ])
     : null;
@@ -107,7 +108,9 @@ export async function createInvitation(input: NewInvitation): Promise<MintedInvi
     ],
   );
 
-  const url = appUrl(`/invite/${token}`);
+  // A brand's invitation opens on the brand's address: accepting it signs the
+  // person in, and that session belongs to the address it was started on.
+  const url = brand ? `${brandOrigin(brand.slug)}/invite/${token}` : appUrl(`/invite/${token}`);
   const domainWarning = outsideDomains(email, brand?.franchisee_email_domains ?? []);
   if (input.send === false) return { id: row!.id, url, domainWarning };
 

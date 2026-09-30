@@ -6,10 +6,12 @@
 // decided afterwards, on every request, by their memberships (src/lib/auth/
 // access.ts) — so a correct password on an account with no role reaches nothing.
 
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { homeFor, membershipsFor, requiresSecondFactor, safeNext } from '@/lib/auth/access';
 import { endSession, signInWithPassword } from '@/lib/auth/identity';
+import { isConsoleHost, portalConfig, portalOrigin } from '@/lib/portal';
 import { portalSlug } from '@/lib/portal-request';
 import {
   LOCKOUT_MINUTES,
@@ -52,6 +54,23 @@ export async function signIn(
   // Read by id rather than from the session just created: the cookie was set in
   // this request, and the session is the next request's to read.
   const memberships = await membershipsFor(userId);
+
+  // The console's own address (decision #146) is the team's. A brand account
+  // signed in here would be sent on to its brand's address, where this session
+  // does not exist — so say where to sign in instead of signing in twice.
+  const host = (await headers()).get('host');
+  const config = portalConfig();
+  if (isConsoleHost(host, config) && !memberships.some((m) => m.role === 'platform_admin')) {
+    const addresses = [...new Set(memberships.map((m) => m.brandSlug).filter((s) => s !== null))]
+      .map((slug) => portalOrigin(slug, host, config)?.replace(/^https?:\/\//, ''))
+      .filter(Boolean);
+    await endSession();
+    return {
+      error: addresses.length
+        ? `This sign-in is for the Signage.com team. Sign in at ${addresses.join(' or ')} instead.`
+        : 'This sign-in is for the Signage.com team.',
+    };
+  }
   const destination = safeNext(next, homeFor(memberships, await portalSlug()));
   if (requiresSecondFactor(memberships)) {
     redirect(`/two-factor?next=${encodeURIComponent(destination)}`);

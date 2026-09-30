@@ -1,5 +1,20 @@
 # Where the build is
 
+## 30 Sep 2026: the console and the brands on separate addresses
+
+- **One deployment, two addresses** (#146). Set `APP_URL=https://admin.signage.com`
+  and `BRAND_PORTAL_DOMAINS=signage.com`: the team works at
+  `admin.signage.com`, Freshbites at `freshbites.signage.com`. Brand pages
+  opened on the console's address are sent on to the brand's (old links still
+  arrive); the console 404s on a brand's; the console's sign-in turns brand
+  accounts away with the address to use; emails to a brand's people link to the
+  brand's address. Off unless configured, so `localhost:3000` is unchanged.
+- **Try it locally:** `APP_URL=http://admin.localhost:3000 BRAND_PORTAL_DOMAINS=localhost npm run dev`,
+  then `http://admin.localhost:3000` and `http://freshbites.localhost:3000`.
+- **To go live:** wildcard DNS `*.signage.com` and a wildcard custom domain on
+  Render, then those two variables — `docs/DEPLOY.md` §3.
+- Checks: **270 smoke**, **182 unit**, typecheck, lint.
+
 ## 29 Sep 2026: package readiness, and a real front page for the brand portal
 
 - **Package readiness** (#141): a card on the franchisee's request page and the
