@@ -2340,7 +2340,7 @@ for (const [who, account, landing] of [
   await landingPage.locator('a[href$="/sign-in"]').filter({ hasText: 'Freshbites' }).click();
   await landingPage.waitForURL(/freshbites\.localhost:\d+\/sign-in/, { timeout: TIMEOUT });
   await landingPage.getByLabel('Email').fill(account.email);
-  await landingPage.getByLabel('Password').fill(account.password);
+  await landingPage.getByLabel('Password', { exact: false }).first().fill(account.password);
   await landingPage.getByRole('button', { name: 'Sign in' }).click();
   await landingPage.waitForURL(landing, { timeout: TIMEOUT }).catch(() => {});
   record(`choosing Freshbites at / lands ${who} on their own view, on the portal`, landing.test(landingPage.url()), landingPage.url());
@@ -2480,6 +2480,21 @@ await page.waitForLoadState('networkidle');
 await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on the franchisee view of a request');
 await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
 await expectVisible(page, 'iframe[src$="/freshbites/corporate"]', 'and its corporate tab opens the dashboard');
+
+// --------------------------------------------------------- show password
+{
+  const eyeContext = await browser.newContext();
+  const eye = await eyeContext.newPage();
+  await eye.goto(`${BASE}/sign-in`, { waitUntil: 'networkidle' });
+  const field = eye.locator('input[autocomplete="current-password"]');
+  await field.fill('typed-secret');
+  await eye.getByRole('button', { name: 'Show password' }).click();
+  const shown = await field.getAttribute('type');
+  await eye.getByRole('button', { name: 'Hide password' }).click();
+  const hidden = await field.getAttribute('type');
+  record('the eye shows the password and hides it again', shown === 'text' && hidden === 'password', `${shown} → ${hidden}`);
+  await eyeContext.close();
+}
 
 // ------------------------------------------------------------------ accounts
 // SPEC v2.3 §9b phase A, as its demo reads: a team member accepts an invite,

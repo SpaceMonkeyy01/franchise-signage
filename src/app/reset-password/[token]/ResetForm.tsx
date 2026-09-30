@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { FormError, fieldClass, labelClass, primaryButtonClass } from '@/components/AuthCard';
 
 import { completeReset } from './actions';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function ResetForm({ token, minPassword }: { token: string; minPassword: number }) {
   const [password, setPassword] = useState('');
@@ -25,8 +26,7 @@ export function ResetForm({ token, minPassword }: { token: string; minPassword: 
     <form onSubmit={submit} className="space-y-4">
       <label className={labelClass}>
         New password
-        <input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           minLength={minPassword}
           value={password}
@@ -38,8 +38,7 @@ export function ResetForm({ token, minPassword }: { token: string; minPassword: 
       </label>
       <label className={labelClass}>
         Confirm new password
-        <input
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           value={confirm}
           onChange={(event) => setConfirm(event.target.value)}

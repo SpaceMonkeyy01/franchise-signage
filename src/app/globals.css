@@ -97,3 +97,10 @@ body::before {
     background: #fff;
   }
 }
+
+/* Edge draws its own reveal eye inside password fields; PasswordInput has one
+   that works in every browser, so Edge's would be a second, different eye. */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

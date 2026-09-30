@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react';
 import { FormError, fieldClass, labelClass, primaryButtonClass } from '@/components/AuthCard';
 
 import { acceptWithExistingAccount, acceptWithNewAccount } from './actions';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function AcceptForm({
   token,
@@ -104,8 +105,7 @@ export function AcceptForm({
 
       <label className={labelClass}>
         {hasAccount ? 'Your password' : 'Choose a password'}
-        <input
-          type="password"
+        <PasswordInput
           autoComplete={hasAccount ? 'current-password' : 'new-password'}
           minLength={hasAccount ? undefined : minPassword}
           value={password}
@@ -121,8 +121,7 @@ export function AcceptForm({
       {!hasAccount && (
         <label className={labelClass}>
           Confirm password
-          <input
-            type="password"
+          <PasswordInput
             autoComplete="new-password"
             value={confirm}
             onChange={(event) => setConfirm(event.target.value)}

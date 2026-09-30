@@ -6,6 +6,7 @@ import { useState, useTransition } from 'react';
 import { FormError, fieldClass, labelClass, primaryButtonClass } from '@/components/AuthCard';
 
 import { signIn } from './actions';
+import { PasswordInput } from '@/components/PasswordInput';
 
 export function SignInForm({ next, devHint }: { next: string | null; devHint: string | null }) {
   const [email, setEmail] = useState('');
@@ -50,8 +51,7 @@ export function SignInForm({ next, devHint }: { next: string | null; devHint: st
             Forgot password?
           </Link>
         </span>
-        <input
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
