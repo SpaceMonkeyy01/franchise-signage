@@ -22,10 +22,9 @@
   tab; the team uploads an icon per sign type on `/admin/catalog`. Shown
   everywhere a sign is drawn: its picture, else its type's icon, else the
   schematic.
-- **Live project:** run `npm run migrate` — three migrations since the last one
-  there (`brand_catalog`, `store_types`, `sign_images`). The permission check
-  refused running it from here as a production deploy; the dry run confirmed
-  the connection.
+- **Live project:** all 18 migrations applied on 30 Sep (`brand_catalog`,
+  `store_types`, `sign_images` were the new three); a dry run reports nothing
+  pending.
 - Checks: **305 smoke**, **188 unit**, **63 schema** (43 behavioural), typecheck, lint.
 - Decisions #148–157.
 
