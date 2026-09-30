@@ -40,57 +40,67 @@ export function BrandHeader({
   account?: React.ReactNode;
 }) {
   return (
-    <header className="relative border-b border-gray-200 bg-white">
-      <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
-        {brand.logo_url ? (
-          // A brand's own wordmark says its name; Signage.com follows it, smaller.
-          <div className="flex min-w-0 items-center gap-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={brand.logo_url} alt={brand.name} className="h-8 w-auto shrink-0 sm:h-9" />
-            <span className="h-7 w-px shrink-0 bg-gray-200" aria-hidden="true" />
-            <p className="flex flex-col gap-0.5 text-[10px] uppercase leading-tight tracking-wider text-gray-400">
-              Powered by
-              <SignageLogo className="h-3.5 w-auto" />
-            </p>
-          </div>
-        ) : (
-          <>
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-              style={{ background: 'var(--color-brand-light)' }}
-            >
-              <LeafMark />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
-                {brand.name}
-              </p>
-              <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-400">
-                Powered by <SignageLogo className="h-3 w-auto" />
-              </p>
-            </div>
-          </>
-        )}
-        <div className="ml-auto flex items-center gap-4">
-          {backHref && (
-            <Link href={backHref} className="text-sm text-gray-500 transition-colors hover:text-gray-900">
-              ← Back
-            </Link>
-          )}
-          {account}
-        </div>
-      </div>
-      {/* A wash of the brand's colour under the header, fading into the grid:
-          the brand's pages open with its colour rather than with white. */}
+    <>
+      {/* A wash of the brand's colour from the top of the page, behind the
+          header and fading into the grid: the brand's pages open with its
+          colour, and header and page read as one surface. It scrolls away. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-full -z-10 h-64"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 print:hidden"
         style={{
           background:
-            'linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) 10%, transparent), transparent)',
+            'linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) 13%, transparent), color-mix(in srgb, var(--color-brand) 4%, transparent) 55%, transparent)',
         }}
       />
-    </header>
+      {/* Frosted rather than white, so the wash and the grid show through; a
+          thin stripe of the brand colour finishes the top edge. Stays in view. */}
+      <header className="sticky top-0 z-30 border-b border-[color-mix(in_srgb,var(--color-brand)_14%,transparent)] bg-white/80 backdrop-blur-lg backdrop-saturate-150 print:static print:bg-white">
+        <div
+          aria-hidden="true"
+          className="h-1"
+          style={{ background: 'linear-gradient(90deg, var(--color-brand-dark), var(--color-brand))' }}
+        />
+        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
+          {brand.logo_url ? (
+            // A brand's own wordmark says its name; Signage.com follows it, smaller.
+            <div className="flex min-w-0 items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={brand.logo_url} alt={brand.name} className="h-8 w-auto shrink-0 sm:h-9" />
+              <span className="h-7 w-px shrink-0 bg-gray-300/70" aria-hidden="true" />
+              <p className="flex flex-col gap-0.5 text-[10px] uppercase leading-tight tracking-wider text-gray-400">
+                Powered by
+                <SignageLogo className="h-3.5 w-auto" />
+              </p>
+            </div>
+          ) : (
+            <>
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                style={{ background: 'var(--color-brand-light)' }}
+              >
+                <LeafMark />
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
+                  {brand.name}
+                </p>
+                <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-400">
+                  Powered by <SignageLogo className="h-3 w-auto" />
+                </p>
+              </div>
+            </>
+          )}
+          <div className="ml-auto flex items-center gap-4">
+            {backHref && (
+              <Link href={backHref} className="text-sm text-gray-500 transition-colors hover:text-gray-900">
+                ← Back
+              </Link>
+            )}
+            {account}
+          </div>
+        </div>
+      </header>
+    </>
   );
 }
 
