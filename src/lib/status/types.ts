@@ -92,6 +92,11 @@ export interface BrandItemRules {
   vendorPolicyOverride: VendorPolicy | null;
   /** Null for standin-priced items — always a manual team quote. */
   estPrice: number | null;
+  /**
+   * The brand retired it (SPEC v2.4 §2.3). It can still be replaced where it is
+   * installed, but not through the fast lane: corporate decides (#155).
+   */
+  retired?: boolean;
 }
 
 export interface LineItemState {

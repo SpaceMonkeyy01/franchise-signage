@@ -45,8 +45,18 @@ describe('deriveInitialItemStatus (SPEC §7)', () => {
     expect(deriveInitialItemStatus('exception', STANDARD_MODEL)).toBe('pending_review');
   });
 
-  it('always auto-approves a like-for-like replacement (the fast lane)', () => {
+  it('auto-approves a like-for-like replacement (the fast lane)', () => {
     expect(deriveInitialItemStatus('replacement', STANDARD_MODEL)).toBe('auto_approved');
+  });
+
+  it('sends the replacement of a sign the brand retired to corporate (#155)', () => {
+    expect(
+      deriveInitialItemStatus('replacement', STANDARD_MODEL, { requiresReviewOverride: null, retired: true }),
+    ).toBe('pending_review');
+    const never: BrandRules = { ...STANDARD_MODEL, approvalMode: 'never' };
+    expect(deriveInitialItemStatus('replacement', never, { requiresReviewOverride: null, retired: true })).toBe(
+      'auto_approved',
+    );
   });
 
   it('treats approval_mode as the outer switch', () => {

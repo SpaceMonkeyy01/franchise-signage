@@ -214,7 +214,8 @@ export function deriveRequestStatusFromPackages(
  *     addon       → pending_review, unless the brand item overrides
  *     exception   → always pending_review; a standard sign that will not work
  *                   at the site is precisely what corporate exists to judge
- *     replacement → always auto_approved (the fast lane)
+ *     replacement → auto_approved (the fast lane), unless the brand has
+ *                   retired the sign: then pending_review (#155)
  *
  * Reading `always`/`never` as an outer switch rather than as another rule to
  * reconcile per origin is a judgment call — SPEC §7 describes the bullets and
@@ -224,7 +225,7 @@ export function deriveRequestStatusFromPackages(
 export function deriveInitialItemStatus(
   origin: LineItemOrigin,
   brand: BrandRules,
-  brandItem?: Pick<BrandItemRules, 'requiresReviewOverride'>,
+  brandItem?: Pick<BrandItemRules, 'requiresReviewOverride' | 'retired'>,
 ): LineItemStatus {
   if (brand.approvalMode === 'never') return 'auto_approved';
   if (brand.approvalMode === 'always') return 'pending_review';
@@ -233,7 +234,9 @@ export function deriveInitialItemStatus(
     case 'standard':
       return brandItem?.requiresReviewOverride === true ? 'pending_review' : 'auto_approved';
     case 'replacement':
-      return 'auto_approved';
+      // The fast lane is for a sign the brand still stands behind. One it has
+      // retired goes to corporate, who may want the new one instead (#155).
+      return brandItem?.retired ? 'pending_review' : 'auto_approved';
     case 'exception':
       return 'pending_review';
     case 'addon':

@@ -1467,9 +1467,8 @@ item 7's "CRUD UI only when onboarding brand #2".
 
 150. **Retiring a sign takes it out of every package at once**, and
      reinstating does not put it back — re-adding is the brand's package
-     decision. Installed signs and past requests keep it. **Worth your view:** a
-     retired sign cannot be ordered like-for-like either, because request
-     creation has always refused inactive items; the confirm dialog says so.
+     decision. Installed signs and past requests keep it. Replacing one where it
+     is installed: #155.
 
 151. **After approval, a sign's name and spec are Signage.com's to change.**
      Line items read them live (only the price is snapshotted), so a rename
@@ -1486,6 +1485,15 @@ item 7's "CRUD UI only when onboarding brand #2".
      types (drive-thru, mall in-line, kiosk) would move `location_format` from
      an enum to a per-brand table, touching setup, locations, the budget
      one-pager and the portfolio. Asked, not yet answered.
+
+155. **A retired sign can still be replaced where it is installed — through
+     corporate** (asked on 30 Sep: "maybe on a request for approval"). The line
+     item is still a like-for-like `replacement`, with the installed sizing and
+     spec, but it is `pending_review` instead of the fast lane, so corporate
+     can approve it or suggest a current sign. Under `approval_mode = never`
+     nothing goes to corporate, and it auto-approves as before. Request
+     creation accepts an inactive item only for a replacement; everything else
+     still needs a live sign.
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's

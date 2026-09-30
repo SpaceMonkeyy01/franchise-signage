@@ -165,11 +165,7 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
           )
         )[0] ?? input.requester);
 
-    const catalog = await loadBrandItems(
-      exec,
-      input.brandId,
-      input.items.map((item) => item.brandItemId),
-    );
+    const catalog = await loadBrandItems(exec, input.brandId, input.items);
     const installed = await loadInstalledSigns(exec, input.locationId, input.items);
 
     const [request] = await exec.query<{ id: string; code: string; access_token: string }>(
@@ -199,7 +195,7 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
       const itemStatus = deriveInitialItemStatus(
         item.origin,
         { approvalMode: brand.approval_mode, vendorPolicy: brand.vendor_policy },
-        { requiresReviewOverride: brandItem.requires_review_override },
+        { requiresReviewOverride: brandItem.requires_review_override, retired: !brandItem.active },
       );
       tally(counts, itemStatus);
 
@@ -337,23 +333,33 @@ interface BrandItemPricing {
   id: string;
   est_price: string | null;
   requires_review_override: boolean | null;
+  active: boolean;
 }
 
+/**
+ * The brand items a request names. Each must be live — except a retired one
+ * named by a like-for-like replacement, which may still be replaced where it
+ * is installed, through corporate rather than the fast lane (#155).
+ */
 async function loadBrandItems(
   exec: Exec,
   brandId: string,
-  ids: string[],
+  items: readonly NewRequestItem[],
 ): Promise<Map<string, BrandItemPricing>> {
-  const unique = [...new Set(ids)];
+  const unique = [...new Set(items.map((item) => item.brandItemId))];
   const rows = await exec.query<BrandItemPricing>(
-    `select id, est_price, requires_review_override
-       from brand_items where brand_id = $1 and id = any($2) and active`,
+    `select id, est_price, requires_review_override, active
+       from brand_items where brand_id = $1 and id = any($2) and review_status = 'approved'`,
     [brandId, unique],
   );
-  if (rows.length !== unique.length) {
-    throw new Error('A requested sign is not in this brand’s catalog');
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  for (const item of items) {
+    const row = byId.get(item.brandItemId);
+    if (!row || (!row.active && item.origin !== 'replacement')) {
+      throw new Error('A requested sign is not in this brand’s catalog');
+    }
   }
-  return new Map(rows.map((row) => [row.id, row]));
+  return byId;
 }
 
 /** installed_sign_id → brand_item_id, for the replacement items only. */

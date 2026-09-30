@@ -103,6 +103,8 @@ export interface InstalledSignRow {
   installed_at: string;
   est_price: string | null;
   vendor_policy_override: VendorPolicy | null;
+  /** The brand retired it: replaceable, but through corporate (#155). */
+  retired: boolean;
 }
 
 /** The `locations.address` jsonb shape (SPEC §5.1). */
@@ -563,7 +565,8 @@ export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]
 export function getInstalledSignsForLocation(locationId: string): Promise<InstalledSignRow[]> {
   return rows<InstalledSignRow>(
     `select s.id, s.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.est_price, bi.vendor_policy_override, mc.render_key, s.sizing, s.installed_at
+            bi.est_price, bi.vendor_policy_override, mc.render_key, s.sizing, s.installed_at,
+            not bi.active as retired
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id

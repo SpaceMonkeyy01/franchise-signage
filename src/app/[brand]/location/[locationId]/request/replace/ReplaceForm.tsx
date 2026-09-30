@@ -88,6 +88,7 @@ export function ReplaceForm({
                       month: 'short',
                       year: 'numeric',
                     })}
+                    {sign.retired && ' · retired by the brand'}
                   </span>
                 </span>
               </span>
@@ -151,13 +152,15 @@ export function ReplaceForm({
           }}
         >
           <p className="text-sm font-medium" style={{ color: 'var(--color-brand-dark)' }}>
-            Ready to submit — pre-approved
+            {selected.retired ? 'Ready to submit — needs corporate approval' : 'Ready to submit — pre-approved'}
           </p>
           <p className="mt-1 text-xs leading-relaxed" style={{ color: 'var(--color-brand-dark)' }}>
             Replacing your {selected.brand_item_name}
             {selected.sizing ? ` (${selected.sizing})` : ''} like-for-like against the locked brand
-            spec{selected.spec_summary ? `: ${selected.spec_summary}` : ''}. Skips corporate review,
-            straight to quote preparation.
+            spec{selected.spec_summary ? `: ${selected.spec_summary}` : ''}.{' '}
+            {selected.retired
+              ? `${brand.name} has retired this sign, so corporate reviews the replacement first — they may suggest a current sign instead.`
+              : 'Skips corporate review, straight to quote preparation.'}
           </p>
           <p
             className="mt-1.5 flex flex-wrap items-center gap-2 text-xs font-semibold"

@@ -167,7 +167,7 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
           if (
             active &&
             !window.confirm(
-              `Retire ${name}? It leaves the catalog and every package at once. Stores that have it keep it, but cannot order it again.`,
+              `Retire ${name}? It leaves the catalog and every package at once. Stores that have it keep it; replacing it needs corporate approval, and nobody can order a new one.`,
             )
           ) {
             return;

@@ -2156,6 +2156,44 @@ await removeSmokeCatalog();
     );
   }
 
+  // A retired sign still installed can be replaced — through corporate (#155).
+  const retiredInstalled = await withDb(async (client) =>
+    (
+      await client.query(
+        `update brand_items set active = false
+          where id = (select s.brand_item_id from installed_signs s
+                        join brand_items bi on bi.id = s.brand_item_id
+                       where s.location_id = $1 and s.status = 'active' and bi.active
+                       order by bi.sort_order limit 1)
+          returning id, name`,
+        [oakPlaza],
+      )
+    ).rows[0],
+  );
+  try {
+    await ownerPage.goto(`${BASE}/freshbites/location/${oakPlaza}/request/replace`, { waitUntil: 'networkidle' });
+    await ownerPage.getByRole('button', { name: new RegExp(retiredInstalled.name) }).click();
+    await ownerPage.getByRole('button', { name: 'Faded / worn', exact: true }).click();
+    await expectVisible(ownerPage, 'text=Ready to submit — needs corporate approval', 'a retired sign can still be replaced, and the form says corporate reviews it');
+    await ownerPage.getByRole('button', { name: /Submit replacement request/ }).click();
+    await ownerPage.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+    createdCodes.push(await ownerPage.locator('h1').innerText());
+    rememberCodes();
+    const replaced = await withDb(async (client) =>
+      (
+        await client.query(
+          `select li.item_status from line_items li join requests r on r.id = li.request_id
+            where li.brand_item_id = $1 and li.origin = 'replacement'
+            order by r.created_at desc limit 1`,
+          [retiredInstalled.id],
+        )
+      ).rows[0],
+    );
+    record('and it goes to corporate instead of the fast lane', replaced?.item_status === 'pending_review', JSON.stringify(replaced));
+  } finally {
+    await withDb((client) => client.query(`update brand_items set active = true where id = $1`, [retiredInstalled.id]));
+  }
+
   // A reviewer reads the tab and changes nothing.
   const reviewerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const reviewer = await reviewerContext.newPage();
