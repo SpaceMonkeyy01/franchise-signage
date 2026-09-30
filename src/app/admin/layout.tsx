@@ -6,6 +6,8 @@
 
 import Link from 'next/link';
 
+import { SignageLogo } from '@/components/SignageLogo';
+
 import { getTeamMember } from '@/lib/auth/team';
 
 import { signOut } from '../sign-in/actions';
@@ -32,8 +34,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <>
       <header className="border-b border-gray-200 bg-gray-900">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/admin" className="text-sm font-semibold text-white">
-            Signage.com <span className="font-normal text-gray-400">· operator console</span>
+          <Link href="/admin" className="flex items-center gap-2.5 text-sm text-gray-400">
+            <SignageLogo onDark className="h-5 w-auto" />
+            <span>operator console</span>
           </Link>
           {member && (
             <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">

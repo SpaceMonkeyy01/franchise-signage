@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 
 import { AuthCard, FormNotice } from '@/components/AuthCard';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { SignageLogo } from '@/components/SignageLogo';
 import { getViewer, homeFor, owesSecondFactor, safeNext } from '@/lib/auth/access';
 import { getBrandBySlug } from '@/lib/db/queries';
 import { portalSlug } from '@/lib/portal-request';
@@ -62,6 +63,7 @@ export default async function SignInPage({
     <AuthCard
       title={brand ? `Sign in to ${brand.name} signage` : 'Sign in to Signage.com'}
       eyebrow={brand ? `${brand.name} · Franchise by Signage` : 'Signage.com team · Franchise by Signage'}
+      logo={brand ? undefined : <SignageLogo className="h-7 w-auto" />}
       subtitle={
         brand
           ? 'Accounts are created by invitation. If you were invited, open the email to set your password first.'

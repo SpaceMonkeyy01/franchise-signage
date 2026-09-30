@@ -7,6 +7,7 @@
 import { redirect } from 'next/navigation';
 
 import { AuthCard } from '@/components/AuthCard';
+import { SignageLogo } from '@/components/SignageLogo';
 import { getViewer, homeFor, requiresSecondFactor, safeNext } from '@/lib/auth/access';
 import { portalSlug } from '@/lib/portal-request';
 import { devCurrentCode, totpFactors } from '@/lib/auth/identity';
@@ -33,6 +34,11 @@ export default async function TwoFactorPage({
 
   return (
     <AuthCard
+      logo={
+        viewer.memberships.some((m) => m.role === 'platform_admin') && !(await portalSlug()) ? (
+          <SignageLogo className="h-7 w-auto" />
+        ) : undefined
+      }
       title={verified ? 'Enter your code' : 'Set up two-factor sign-in'}
       subtitle={
         verified

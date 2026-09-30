@@ -18,6 +18,7 @@ import { redirect } from 'next/navigation';
 
 import { FormNotice } from '@/components/AuthCard';
 import { CursorGlow } from '@/components/CursorGlow';
+import { SignageLogo } from '@/components/SignageLogo';
 import { getViewer, homeFor, owesSecondFactor } from '@/lib/auth/access';
 import { getBrandsPublic, type BrandPublic } from '@/lib/db/queries';
 import { portalConfig, portalOrigin } from '@/lib/portal';
@@ -76,7 +77,9 @@ export default async function Home() {
           <span className="text-sm font-semibold tracking-tight text-gray-900">
             Franchise <span className="font-normal text-gray-500">by</span> Signage
           </span>
-          <span className="text-xs text-gray-500">Operated by Signage.com</span>
+          <span className="flex items-center gap-2 text-xs text-gray-500">
+            Operated by <SignageLogo className="h-4 w-auto" />
+          </span>
         </div>
       </header>
 
@@ -131,11 +134,8 @@ export default async function Home() {
                   href="/sign-in"
                   className="card-lift group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-gray-400"
                 >
-                  <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">
-                    S
-                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-gray-900">Signage.com</span>
+                    <SignageLogo className="mb-1.5 block h-6 w-auto" />
                     <span className="block text-xs text-gray-500">
                       The team: queue, pricing, routing and fulfilment
                     </span>

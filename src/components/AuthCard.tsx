@@ -10,17 +10,21 @@ export function AuthCard({
   title,
   subtitle,
   eyebrow = 'Franchise by Signage',
+  logo,
   children,
   footer,
 }: {
   title: string;
   subtitle?: React.ReactNode;
   eyebrow?: string;
+  /** A wordmark above everything else — Signage.com's, on its own sign-in. */
+  logo?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-16">
+      {logo && <div className="mb-5">{logo}</div>}
       <Link href="/" className="text-xs font-medium uppercase tracking-widest text-brand">
         {eyebrow}
       </Link>
