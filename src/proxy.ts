@@ -1,6 +1,7 @@
 // Brand portals (SPEC v2.3 §10.4): `{brand}.signage.com` serves `/{brand}/…`,
 // and, when the console has its own address (decision #146), a brand's page
-// opened there is sent on to the brand's address.
+// opened there is sent on to the brand's address, and any other host (the
+// hosting address) is sent to the console's (decision #147).
 //
 // All the deciding is in src/lib/portal.ts, where it is unit-tested; this only
 // applies it. A request on any other host — localhost, the console's address,
@@ -17,6 +18,7 @@ import {
   portalOrigin,
   routeConsole,
   routePortal,
+  sendToConsole,
 } from './lib/portal';
 
 const portals = portalConfig();
@@ -25,6 +27,12 @@ export function proxy(request: NextRequest) {
   const host = request.headers.get('host');
   const slug = brandFromHost(host, portals);
   if (!slug) {
+    if (sendToConsole(host, request.nextUrl.pathname, portals)) {
+      return NextResponse.redirect(
+        `${portals.consoleOrigin}${request.nextUrl.pathname}${request.nextUrl.search}`,
+        307,
+      );
+    }
     if (isConsoleHost(host, portals)) {
       const route = routeConsole(request.nextUrl.pathname);
       const origin = route.kind === 'brand' ? portalOrigin(route.slug, host, portals) : null;

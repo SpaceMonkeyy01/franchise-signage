@@ -56,6 +56,8 @@ export interface PortalConfig {
    * address serves every page, as before.
    */
   consoleHost: string | null;
+  /** `APP_URL` itself when `consoleHost` is set: where other hosts are sent. */
+  consoleOrigin: string | null;
 }
 
 function hostnameOf(host: string): string {
@@ -90,7 +92,26 @@ export function portalConfig(env: Record<string, string | undefined> = process.e
     .filter(Boolean);
   // Only explicitly configured domains split the console off: development with
   // no configuration keeps serving everything on localhost:3000.
-  return { domains, reserved: [...RESERVED, ...extra], consoleHost: consoleHostFrom(env.APP_URL, configured) };
+  const consoleHost = consoleHostFrom(env.APP_URL, configured);
+  return {
+    domains,
+    reserved: [...RESERVED, ...extra],
+    consoleHost,
+    consoleOrigin: consoleHost ? new URL(env.APP_URL!).origin : null,
+  };
+}
+
+/**
+ * Whether a request on some third host — neither the console's nor a brand's,
+ * such as the hosting address `*.onrender.com` — should be sent to the
+ * console's address, once there is one (decision #147). Everything but `/api`
+ * is: the app is then reached only by its two kinds of address, and a session
+ * is never started on a host that no email links to. `/api` answers anywhere,
+ * so a cron call or a file link is never bounced.
+ */
+export function sendToConsole(host: string | null, pathname: string, config: PortalConfig): boolean {
+  if (!config.consoleHost || isConsoleHost(host, config)) return false;
+  return pathname !== '/api' && !pathname.startsWith('/api/');
 }
 
 /** Whether a request's host is the console's own address (decision #146). */

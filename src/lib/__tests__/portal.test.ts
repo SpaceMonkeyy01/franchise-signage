@@ -7,6 +7,7 @@ import {
   portalOrigin,
   routeConsole,
   routePortal,
+  sendToConsole,
   splitBrandOrigin,
 } from '../portal';
 
@@ -189,5 +190,27 @@ describe('routeConsole', () => {
 
   it('does not mistake a prefix of the console for it', () => {
     expect(routeConsole('/adminx')).toEqual({ kind: 'brand', slug: 'adminx', path: '/' });
+  });
+});
+
+describe('sendToConsole (decision #147)', () => {
+  const split = portalConfig({
+    NODE_ENV: 'production',
+    BRAND_PORTAL_DOMAINS: 'signage.com',
+    APP_URL: 'https://admin.signage.com',
+  });
+
+  it("sends the hosting address and the bare domain to the console's", () => {
+    expect(split.consoleOrigin).toBe('https://admin.signage.com');
+    expect(sendToConsole('portal.onrender.com', '/', split)).toBe(true);
+    expect(sendToConsole('portal.onrender.com', '/freshbites/request/abc', split)).toBe(true);
+    expect(sendToConsole('signage.com', '/sign-in', split)).toBe(true);
+  });
+
+  it('leaves the console, the API, and every deployment that is not split', () => {
+    expect(sendToConsole('admin.signage.com', '/admin', split)).toBe(false);
+    expect(sendToConsole('portal.onrender.com', '/api/cron/review-sla', split)).toBe(false);
+    const unsplit = portalConfig({ NODE_ENV: 'production', APP_URL: 'https://portal.onrender.com' });
+    expect(sendToConsole('portal.onrender.com', '/admin', unsplit)).toBe(false);
   });
 });

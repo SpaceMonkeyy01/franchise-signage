@@ -9,6 +9,8 @@
   arrive); the console 404s on a brand's; the console's sign-in turns brand
   accounts away with the address to use; emails to a brand's people link to the
   brand's address. Off unless configured, so `localhost:3000` is unchanged.
+  Once split, the Render address redirects to the console's, except `/api`
+  (#147); Render's health check is now `/api/health`.
 - **Try it locally:** `APP_URL=http://admin.localhost:3000 BRAND_PORTAL_DOMAINS=localhost npm run dev`,
   then `http://admin.localhost:3000` and `http://freshbites.localhost:3000`.
 - **To go live:** wildcard DNS `*.signage.com` and a wildcard custom domain on

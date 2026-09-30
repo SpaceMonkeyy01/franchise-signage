@@ -1432,8 +1432,16 @@ names, the never-promise-compliance rule, invitation-only accounts).
      on the console would be sent to its brand's address holding no session
      there. Off by default: development with no `BRAND_PORTAL_DOMAINS`, and any
      deployment whose `APP_URL` is a bare hosting address, serve everything
-     everywhere as before. The hosting address itself (`*.onrender.com`) still
-     serves every page.
+     everywhere as before.
+
+147. **Once split, the hosting address sends everyone to the console's.** Any
+     host that is neither the console's nor a brand's — `*.onrender.com`, the
+     bare `signage.com` — answers a 307 to the same path on `APP_URL`, which
+     then sends a brand's page on to the brand (#146). So the app is reached by
+     its two kinds of address only, and no session starts on a host no email
+     links to. `/api` is exempt and answers everywhere (cron, file links), and
+     the health check moved from `/` to a new `/api/health` so it sees the app
+     rather than a redirect.
 
 ### Corrected while building Session 5
 

@@ -19,7 +19,7 @@ services:
     region: singapore
     buildCommand: npm ci && npm run build
     startCommand: npm start
-    healthCheckPath: /
+    healthCheckPath: /api/health
     envVars:
       # Next 16 needs a modern Node; package.json pins no engine, so pin it here.
       - key: NODE_VERSION

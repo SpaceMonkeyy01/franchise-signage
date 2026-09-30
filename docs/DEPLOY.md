@@ -146,7 +146,9 @@ under the same domain — `https://admin.signage.com` with
 The DNS is the wildcard above; `admin` is already covered by it. Any subdomain
 works for the console (`franchise`, `console`, …) — `APP_URL`'s host is never
 read as a brand. With `APP_URL` left at the hosting address, nothing is split
-and emails link to the path-based pages there, as before.
+and emails link to the path-based pages there, as before. Once split, the
+hosting address (`<service>.onrender.com`) redirects to `admin.signage.com`,
+except `/api/…` (DECISIONS #147); the health check is `/api/health`.
 
 To try it locally:
 
