@@ -52,9 +52,20 @@ export function BrandHeader({
             'linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) 13%, transparent), color-mix(in srgb, var(--color-brand) 4%, transparent) 55%, transparent)',
         }}
       />
-      {/* Frosted rather than white, so the wash and the grid show through; a
-          thin stripe of the brand colour finishes the top edge. Stays in view. */}
-      <header className="sticky top-0 z-30 border-b border-[color-mix(in_srgb,var(--color-brand)_14%,transparent)] bg-white/80 backdrop-blur-lg backdrop-saturate-150 print:static print:bg-white">
+      {/* The brand's own surface rather than white: its light shade running
+          to near-white, crossed by fine diagonal pinstripes in its colour —
+          the hatching of a sign drawing. Translucent and blurred, so the page
+          still passes under it; a stripe of the brand colour finishes the top.
+          Stays in view, and prints plain. */}
+      <header
+        className="sticky top-0 z-30 border-b border-[color-mix(in_srgb,var(--color-brand)_18%,transparent)] backdrop-blur-lg backdrop-saturate-150 print:static print:!bg-white"
+        style={{
+          background: [
+            'repeating-linear-gradient(135deg, color-mix(in srgb, var(--color-brand) 9%, transparent) 0 1px, transparent 1px 10px)',
+            'linear-gradient(90deg, color-mix(in srgb, var(--color-brand-light) 94%, transparent), color-mix(in srgb, var(--color-brand-light) 55%, rgb(255 255 255 / 0.9)))',
+          ].join(', '),
+        }}
+      >
         <div
           aria-hidden="true"
           className="h-1"
