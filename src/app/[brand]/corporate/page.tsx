@@ -34,16 +34,18 @@ import {
 } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 
+import { listBrandSigns, listMasterCatalog } from '@/lib/catalog/manage';
 import { brandFranchiseePeople } from '@/lib/staff';
 
 import { Approvals } from './Approvals';
 import { Franchisees } from './Franchisees';
 import { People, type InvitedRow, type PersonRow } from './People';
 import { Registrations } from './Registrations';
+import { Signs } from './Signs';
 
 export const dynamic = 'force-dynamic';
 
-type TabKey = 'dashboard' | 'approvals' | 'people';
+type TabKey = 'dashboard' | 'approvals' | 'signs' | 'people';
 
 export default async function CorporateDashboard({
   params,
@@ -65,7 +67,9 @@ export default async function CorporateDashboard({
   const tab: TabKey =
     requested === 'approvals'
       ? 'approvals'
-      : requested === 'people' && access.canManage
+      : requested === 'signs'
+        ? 'signs'
+        : requested === 'people' && access.canManage
         ? 'people'
         : 'dashboard';
 
@@ -115,6 +119,7 @@ export default async function CorporateDashboard({
               }
               active={tab === 'approvals'}
             />
+            <Tab href={`${base}?tab=signs`} label="Signs" active={tab === 'signs'} />
             {access.canManage && (
               <Tab href={`${base}?tab=people`} label="People" active={tab === 'people'} />
             )}
@@ -122,6 +127,8 @@ export default async function CorporateDashboard({
         </div>
 
         {tab === 'approvals' && <Approvals brandSlug={brand.slug} requests={pending} />}
+
+        {tab === 'signs' && <SignsTab access={access} />}
 
         {tab === 'people' && <PeopleTab access={access} />}
 
@@ -181,6 +188,20 @@ export default async function CorporateDashboard({
         </p>
       </main>
     </>
+  );
+}
+
+/** The brand's signs (SPEC v2.4 §2.3): brand admins propose and retire; reviewers read. */
+async function SignsTab({ access }: { access: CorporateAccess }) {
+  const [signs, master] = await Promise.all([listBrandSigns(access.brand.id), listMasterCatalog()]);
+  return (
+    <Signs
+      brandSlug={access.brand.slug}
+      brandName={access.brand.name}
+      canManage={access.canManage}
+      signs={signs}
+      master={master.filter((row) => row.active)}
+    />
   );
 }
 

@@ -188,6 +188,21 @@ async function latestLinkTo(to, kind, pattern) {
  * Remove the smoke admin — identity, profile, roles, invitations and mail — so
  * each run invites a stranger. Run before and after, like the other cleanups.
  */
+/**
+ * The catalog section's proposals (SPEC v2.4 §2.3), and what they wrote. Run
+ * before and after it, so an interrupted run leaves nothing a second finds.
+ */
+async function removeSmokeCatalog() {
+  return withDb(async (client) => {
+    await client.query(`delete from catalog_events where summary like '%Smoke %'`);
+    await client.query(`delete from sent_emails where kind like 'catalog_%' and subject like '%Smoke %'`);
+    await client.query(`update brand_packages set items = coalesce((
+        select jsonb_agg(e order by n) from jsonb_array_elements(items) with ordinality as t(e, n)
+         where e #>> '{}' not in (select id::text from brand_items where name like 'Smoke %')), '[]'::jsonb)`);
+    await client.query(`delete from brand_items where name like 'Smoke %'`);
+  });
+}
+
 async function removeSmokeAdmin() {
   return withDb(async (client) => {
     await client.query(`delete from invitations where lower(email) = lower($1)`, [SMOKE_ADMIN]);
@@ -2013,6 +2028,116 @@ await expectGone(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"] >> text=deact
 await ownerPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
 await expectVisible(ownerPage, 'h2:text-is("Freshbites — Oak Plaza")', 'who is back on the next click');
 await corpPeople.close();
+
+// ------------------------------------------------ the catalog (SPEC v2.4 §2.3)
+// A brand admin proposes a sign; it stays out of franchisees' sight until
+// Signage.com prices and approves it; it can be retired at once. A declined
+// proposal comes back with the reason, and can be withdrawn. No brand role
+// ever enters a price.
+console.log('\nThe catalog (SPEC v2.4 §2.3): propose, price, approve, retire');
+await removeSmokeCatalog();
+{
+  const addPage = `${BASE}/freshbites/location/${oakPlaza}/request/add`;
+  const corpCatalog = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const corp = await corpCatalog.newPage();
+  corp.on('pageerror', (error) => pageErrors.push(error.message));
+  await signInWithPassword(corp, BRAND_ADMIN, '/freshbites/corporate?tab=signs');
+  await corp.getByRole('button', { name: 'Propose a new sign' }).waitFor({ timeout: TIMEOUT });
+
+  const propose = async (name, placement, type, style) => {
+    await corp.getByRole('button', { name: 'Propose a new sign' }).click();
+    await corp.getByLabel('Where it goes').selectOption(placement);
+    await corp.getByLabel('Sign type').selectOption(type);
+    await corp.getByLabel('Style').selectOption({ label: style });
+    await corp.getByLabel('Name franchisees will see').fill(name);
+    await corp.getByRole('button', { name: 'Send to Signage.com' }).click();
+    await corp.locator(`article:has-text("${name}")`).waitFor({ timeout: TIMEOUT });
+  };
+
+  await corp.getByRole('button', { name: 'Propose a new sign' }).click();
+  await corp.getByLabel('Where it goes').selectOption('indoor');
+  await corp.getByLabel('Sign type').selectOption('Illuminated Dimensional Letters');
+  await corp.getByLabel('Style').selectOption({ label: 'Face & Halo-Lit' });
+  record('the proposal form never asks corporate for a price', (await corp.getByLabel(/price/i).count()) === 0);
+  await corp.getByRole('button', { name: 'Cancel' }).click();
+  await propose('Smoke Patio Letters', 'indoor', 'Illuminated Dimensional Letters', 'Face & Halo-Lit');
+  await expectVisible(corp, 'article:has-text("Smoke Patio Letters") >> text=Awaiting review', 'a brand admin proposes a sign');
+
+  const proposed = await withDb(async (client) =>
+    (await client.query(`select review_status, active, est_price from brand_items where name = 'Smoke Patio Letters'`)).rows[0],
+  );
+  record(
+    'which is pending, inactive and unpriced',
+    proposed?.review_status === 'pending' && proposed?.active === false && proposed?.est_price === null,
+    JSON.stringify(proposed),
+  );
+  await ownerPage.goto(addPage, { waitUntil: 'networkidle' });
+  await expectCount(ownerPage, 'text=Smoke Patio Letters', 0, 'and franchisees do not see it');
+
+  const catalogTeam = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const team = await catalogTeam.newPage();
+  team.on('pageerror', (error) => pageErrors.push(error.message));
+  await signInAsAdmin(team, DEV_ADMIN);
+  await team.goto(`${BASE}/admin/catalog`, { waitUntil: 'networkidle' });
+  const card = team.locator('article', { hasText: 'Smoke Patio Letters' });
+  await expectVisible(team, 'article:has-text("Smoke Patio Letters")', 'the team finds it waiting for review');
+  record(
+    'and the team was emailed',
+    await withDb(async (client) =>
+      (await client.query(`select 1 from sent_emails where kind = 'catalog_sign_proposed' and subject like '%Smoke Patio Letters'`)).rowCount > 0,
+    ),
+  );
+  await card.getByLabel('Price estimate').fill('4200');
+  await card.getByRole('button', { name: 'Approve and make live' }).click();
+  await expectGone(team, 'article:has-text("Smoke Patio Letters")', 'the team approves it at a price');
+
+  await corp.reload({ waitUntil: 'networkidle' });
+  await expectVisible(corp, 'article:has-text("Smoke Patio Letters") >> text=$4,200 est.', 'corporate sees it live at the team’s price');
+  record(
+    'and the brand admin was emailed',
+    await withDb(async (client) =>
+      (await client.query(`select 1 from sent_emails where kind = 'catalog_sign_approved' and to_email = $1 and subject like 'Smoke Patio Letters%'`, [BRAND_ADMIN.email])).rowCount > 0,
+    ),
+  );
+  await ownerPage.goto(addPage, { waitUntil: 'networkidle' });
+  await expectVisible(ownerPage, 'text=Smoke Patio Letters', 'franchisees can order it now');
+
+  corp.once('dialog', (dialog) => dialog.accept());
+  await corp.locator('article', { hasText: 'Smoke Patio Letters' }).getByRole('button', { name: 'Retire' }).click();
+  await expectVisible(corp, 'article:has-text("Smoke Patio Letters") >> text=Retired', 'a brand admin retires it');
+  await ownerPage.goto(addPage, { waitUntil: 'networkidle' });
+  await expectCount(ownerPage, 'text=Smoke Patio Letters', 0, 'and franchisees can no longer order it');
+
+  // Declined, then withdrawn.
+  await propose('Smoke Rejected Sign', 'outdoor', 'Pylon Signs', 'Single or Double Pole');
+  await team.reload({ waitUntil: 'networkidle' });
+  const rejected = team.locator('article', { hasText: 'Smoke Rejected Sign' });
+  await rejected.getByRole('button', { name: 'Decline' }).click();
+  await expectVisible(team, 'article:has-text("Smoke Rejected Sign") >> text=/Say why/', 'a decline needs a reason');
+  await rejected.getByLabel(/Note to the brand/).fill('The road sign already covers this');
+  await rejected.getByRole('button', { name: 'Decline' }).click();
+  await expectGone(team, 'article:has-text("Smoke Rejected Sign")', 'the team declines with one');
+  await corp.reload({ waitUntil: 'networkidle' });
+  await expectVisible(corp, 'article:has-text("Smoke Rejected Sign") >> text=The road sign already covers this', 'corporate reads the reason');
+  corp.once('dialog', (dialog) => dialog.accept());
+  await corp.locator('article', { hasText: 'Smoke Rejected Sign' }).getByRole('button', { name: 'Withdraw' }).click();
+  await expectGone(corp, 'article:has-text("Smoke Rejected Sign")', 'and withdraws it');
+
+  // A reviewer reads the tab and changes nothing.
+  const reviewerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const reviewer = await reviewerContext.newPage();
+  await signInWithPassword(reviewer, BRAND_REVIEWER, '/freshbites/corporate?tab=signs');
+  await reviewer.getByText('Freshbites signs').first().waitFor({ timeout: TIMEOUT });
+  record(
+    'a reviewer sees the signs and cannot propose or retire',
+    (await reviewer.getByRole('button', { name: /Propose a new sign|Retire/ }).count()) === 0,
+  );
+
+  await reviewerContext.close();
+  await catalogTeam.close();
+  await corpCatalog.close();
+}
+await removeSmokeCatalog();
 
 await ownerContext.close();
 await staffContext.close();

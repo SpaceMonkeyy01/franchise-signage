@@ -19,6 +19,7 @@ import {
   type CatalogActor,
   type NewVariant,
 } from '@/lib/catalog/manage';
+import { notifySignReviewed } from '@/lib/email/catalog';
 import type { SubmitFailure } from '@/lib/forms';
 
 async function run(fn: (actor: CatalogActor) => Promise<unknown>): Promise<SubmitFailure | undefined> {
@@ -46,18 +47,22 @@ export async function approveSignAction(
   itemId: string,
   decision: { name: string; specSummary: string; price: string; note: string },
 ) {
-  return run((actor) =>
-    approveSign(itemId, actor, {
+  return run(async (actor) => {
+    await approveSign(itemId, actor, {
       name: decision.name,
       specSummary: decision.specSummary,
       price: parsePrice(decision.price),
       note: decision.note,
-    }),
-  );
+    });
+    await notifySignReviewed(itemId);
+  });
 }
 
 export async function declineSignAction(itemId: string, note: string) {
-  return run((actor) => declineSign(itemId, actor, note));
+  return run(async (actor) => {
+    await declineSign(itemId, actor, note);
+    await notifySignReviewed(itemId);
+  });
 }
 
 export async function setSignPriceAction(itemId: string, price: string) {
