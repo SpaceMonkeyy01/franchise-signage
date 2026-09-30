@@ -2249,6 +2249,46 @@ await removeSmokeCatalog();
   await ownerPage.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
   await expectCount(ownerPage, 'button:has-text("Smoke Drive-thru")', 0, 'and it is no longer offered at setup');
 
+  // Pictures (#157): a sign's own picture wins; without one, its type's icon;
+  // without either, the drawn schematic.
+  try {
+    await corp.reload({ waitUntil: 'networkidle' });
+    await corp
+      .locator('[data-sign-image="Freshbites Blade Sign"] input[type=file]')
+      .setInputFiles({ name: 'blade.png', mimeType: 'image/png', buffer: PIXEL_PNG });
+    await expectVisible(corp, 'article:has-text("Freshbites Blade Sign") img[src^="/api/files/catalog/"]', 'a brand admin uploads a sign picture');
+    await ownerPage.goto(addPage, { waitUntil: 'networkidle' });
+    await expectVisible(ownerPage, 'img[alt="Freshbites Blade Sign"][src^="/api/files/catalog/"]', 'and franchisees see it');
+    const served = await ownerPage.evaluate(async () => {
+      const img = document.querySelector('img[alt="Freshbites Blade Sign"]');
+      const response = await fetch(img.getAttribute('src'));
+      return `${response.status} ${response.headers.get('content-type')}`;
+    });
+    record('and the picture is served', served === '200 image/png', served);
+
+    await corp
+      .locator('[data-sign-image="Freshbites Blade Sign"] input[type=file]')
+      .setInputFiles({ name: 'notes.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
+    await expectVisible(corp, '[data-sign-image="Freshbites Blade Sign"] >> text=Upload a PNG, JPG or WEBP picture.', 'a PDF is refused as a picture');
+
+    await team.goto(`${BASE}/admin/catalog`, { waitUntil: 'networkidle' });
+    await team
+      .locator('[data-type-icon="A-Frame Sign"] input[type=file]')
+      .setInputFiles({ name: 'aframe.png', mimeType: 'image/png', buffer: PIXEL_PNG });
+    await expectVisible(team, '[data-type-icon="A-Frame Sign"] >> text=Replace icon', 'the team uploads a sign type icon');
+    await corp.reload({ waitUntil: 'networkidle' });
+    await expectVisible(corp, 'article:has-text("Freshbites Sidewalk A-Frame") img[src^="/api/files/catalog/"]', 'which shows for a brand sign with no picture of its own');
+
+    await corp.locator('[data-sign-image="Freshbites Blade Sign"]').getByRole('button', { name: 'Remove' }).click();
+    await expectCount(corp, 'article:has-text("Freshbites Blade Sign") img', 0, 'removing the picture brings back the schematic');
+  } finally {
+    await withDb(async (client) => {
+      await client.query(`update brand_items set thumbnail_url = null where name = 'Freshbites Blade Sign'`);
+      await client.query(`update master_catalog set icon_path = null where sign_type = 'A-Frame Sign'`);
+      await client.query(`delete from catalog_events where kind like 'sign_image_%' or kind like 'master_icon_%'`);
+    });
+  }
+
   // A reviewer reads the tab and changes nothing.
   const reviewerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const reviewer = await reviewerContext.newPage();

@@ -23,6 +23,7 @@ function item(id: string, overrides: Partial<LineItemRow> = {}): LineItemRow {
     site_variables: [],
     pinned_attributes: {},
     render_key: null,
+    image_path: null,
     pricing_basis: 'direct',
     origin: 'standard',
     item_status: 'auto_approved',

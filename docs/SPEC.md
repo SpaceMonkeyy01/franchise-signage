@@ -48,7 +48,7 @@ A named brand item pins one master row's attributes. Franchisees only ever see b
 | site_variables | text[] | which attributes remain per-site (e.g. `["size", "mounting"]`) |
 | spec_summary | text | human-readable pinned spec line for UI/emails |
 | est_price | numeric nullable | estimate for direct-priced items; null → "Custom quote", manual pricing by team |
-| thumbnail_url | text nullable | falls back to generic render by render_key |
+| thumbnail_url | text nullable | the sign's uploaded picture (a storage path, v2.4); falls back to the sign type's icon (`master_catalog.icon_path`), then the generic render by render_key |
 | requires_review_override | boolean nullable | per-item override of brand approval rules |
 | vendor_policy_override | text nullable | per-item routing override (see §4); null → brand default |
 | active / sort_order | | |

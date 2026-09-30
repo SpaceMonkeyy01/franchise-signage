@@ -523,7 +523,7 @@ function StepPackage({
               {isOpen && (
                 <div className="border-t border-gray-100 px-4 pb-4 pt-3">
                   <SignThumbnail
-                    renderKey={brandItem.render_key}
+                    renderKey={brandItem.render_key} imagePath={brandItem.image_path}
                     label={brandItem.name}
                     className="mb-3 h-24 w-full rounded-lg border border-gray-100"
                   />

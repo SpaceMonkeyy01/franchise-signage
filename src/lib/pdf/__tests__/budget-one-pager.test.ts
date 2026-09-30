@@ -23,6 +23,7 @@ const item = (
   site_variables: [],
   est_price,
   render_key: null,
+  image_path: null,
   vendor_policy_override: null,
   sort_order,
 });

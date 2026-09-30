@@ -7,6 +7,17 @@
 //
 // master_catalog.render_key carries ~20 engine slugs; they collapse into six
 // silhouettes, the same coarse shapes docs/flow-demo.jsx uses.
+//
+// An uploaded picture wins when there is one (DECISIONS #157): the sign's own,
+// else its catalog type's icon — the query hands over whichever applies as
+// `imagePath`. The schematic is what is left.
+
+import { fileUrl } from '@/lib/storage/url';
+
+/** A stored path, or an absolute URL a seed may carry. */
+export function signImageUrl(path: string): string {
+  return /^https?:\/\//.test(path) || path.startsWith('/') ? path : fileUrl(path);
+}
 
 type Shape = 'channel' | 'letters' | 'box' | 'pylon' | 'menu' | 'window';
 
@@ -25,11 +36,26 @@ export function SignThumbnail({
   renderKey,
   className = '',
   label,
+  imagePath,
 }: {
   renderKey: string | null;
   className?: string;
   label?: string;
+  /** An uploaded picture: the sign's own, or its catalog type's icon. */
+  imagePath?: string | null;
 }) {
+  if (imagePath) {
+    return (
+      // A plain img: the file route is ours and already sized by the upload cap,
+      // and next/image would need every storage host configured.
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={signImageUrl(imagePath)}
+        alt={label ?? 'Sign'}
+        className={`${className} bg-white object-contain`}
+      />
+    );
+  }
   const shape = shapeFor(renderKey);
 
   return (

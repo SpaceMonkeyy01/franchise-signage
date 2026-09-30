@@ -15,11 +15,14 @@ import {
   getSign,
   setMasterActive,
   setSignActive,
+  setSignImage,
   setSignPrice,
+  setSignTypeIcon,
   updateMasterOptions,
   type CatalogActor,
   type NewVariant,
 } from '@/lib/catalog/manage';
+import { storeSignImage } from '@/lib/catalog/images';
 import { notifySignReviewed } from '@/lib/email/catalog';
 import type { SubmitFailure } from '@/lib/forms';
 
@@ -93,4 +96,22 @@ export async function updateMasterOptionsAction(
   renderKey: string,
 ) {
   return run((actor) => updateMasterOptions(masterId, actor, options, renderKey));
+}
+
+// Pictures (#157). Passing no file removes the picture.
+
+export async function setSignImageAction(itemId: string, formData: FormData | null) {
+  return run(async (actor) => {
+    const sign = await getSign(itemId);
+    if (!sign) throw new CatalogError('That sign no longer exists.');
+    const path = formData ? await storeSignImage(formData) : null;
+    await setSignImage(sign.brand_id, itemId, actor, path);
+  });
+}
+
+export async function setSignTypeIconAction(masterId: string, formData: FormData | null) {
+  return run(async (actor) => {
+    const path = formData ? await storeSignImage(formData) : null;
+    await setSignTypeIcon(masterId, actor, path);
+  });
 }

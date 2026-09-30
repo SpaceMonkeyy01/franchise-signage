@@ -19,6 +19,7 @@ import {
   reviseSign,
   savePackage,
   setSignActive,
+  setSignImage,
   setStoreTypeActive,
   updateStoreType,
   withdrawSign,
@@ -26,6 +27,7 @@ import {
   type PackageFormat,
   type Proposal,
 } from '@/lib/catalog/manage';
+import { storeSignImage } from '@/lib/catalog/images';
 import { notifySignProposed } from '@/lib/email/catalog';
 import type { SubmitFailure } from '@/lib/forms';
 
@@ -102,4 +104,12 @@ export async function setStoreTypeActiveAction(brandSlug: string, key: string, a
 
 export async function moveStoreTypeAction(brandSlug: string, key: string, direction: -1 | 1) {
   return run(brandSlug, (access) => moveStoreType(access.brand.id, key, direction));
+}
+
+/** A sign's own picture (#157); no file removes it. Prices stay the team's. */
+export async function setBrandSignImageAction(brandSlug: string, itemId: string, formData: FormData | null) {
+  return run(brandSlug, async (access, actor) => {
+    const path = formData ? await storeSignImage(formData) : null;
+    await setSignImage(access.brand.id, itemId, actor, path);
+  });
 }

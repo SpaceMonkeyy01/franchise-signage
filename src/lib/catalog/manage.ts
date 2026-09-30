@@ -39,6 +39,8 @@ export interface MasterRow {
   pricing_type: string | null;
   pricing_basis: 'direct' | 'standin';
   render_key: string | null;
+  /** The team's uploaded icon for this sign type (#157). */
+  icon_path: string | null;
   active: boolean;
   /** attribute → the option names a brand may lock. */
   options: Record<string, string[]>;
@@ -70,6 +72,10 @@ export interface ManagedSign {
   variant: string | null;
   pricing_basis: 'direct' | 'standin';
   render_key: string | null;
+  /** What shows: the sign's own picture, else its type's icon (#157). */
+  image_path: string | null;
+  /** The sign's own uploaded picture, if any. */
+  thumbnail_url: string | null;
   /** Installed at stores: a reason to think twice before retiring. */
   installed: number;
 }
@@ -113,7 +119,7 @@ export async function listMasterCatalog(): Promise<MasterRow[]> {
     brand_items: string;
   }>(
     `select mc.id, mc.placement, mc.category, mc.sign_type, mc.variant, mc.pricing_type,
-            mc.pricing_basis, mc.render_key, mc.active, mc.attribute_options,
+            mc.pricing_basis, mc.render_key, mc.icon_path, mc.active, mc.attribute_options,
             (select count(*) from brand_items bi where bi.master_catalog_id = mc.id) as brand_items
        from master_catalog mc
       order by mc.placement, mc.category, mc.sign_type, mc.variant nulls first`,
@@ -131,7 +137,7 @@ const SIGN_SQL = `
          bi.submission_note, bi.review_note, bi.submitted_at, bi.reviewed_at, bi.sort_order,
          coalesce(sp.name, sp.email) as submitted_by,
          mc.id as master_id, mc.placement, mc.category, mc.sign_type, mc.variant,
-         mc.pricing_basis, mc.render_key,
+         mc.pricing_basis, mc.render_key, coalesce(bi.thumbnail_url, mc.icon_path) as image_path, bi.thumbnail_url,
          (select count(*)::int from installed_signs s
            where s.brand_item_id = bi.id and s.status = 'active') as installed
     from brand_items bi
@@ -882,6 +888,60 @@ export async function updateMasterOptions(
       kind: 'master_options_updated',
       actor,
       summary: `${actor.label} edited ${name}` + (changes.length ? `: ${changes.join('; ')}` : ''),
+    });
+  });
+}
+
+// ------------------------------------------------------------ sign pictures
+
+/**
+ * A brand sign's own picture (#157), or none to fall back to its type's icon.
+ * Scoped to the brand: the caller passes the brand from its own access.
+ */
+export async function setSignImage(
+  brandId: string,
+  itemId: string,
+  actor: CatalogActor,
+  path: string | null,
+): Promise<void> {
+  await transaction(async (exec) => {
+    const [row] = await exec.query<{ name: string }>(
+      `update brand_items set thumbnail_url = $3 where id = $1 and brand_id = $2 returning name`,
+      [itemId, brandId, path],
+    );
+    if (!row) throw new CatalogError('That sign no longer exists.');
+    await record(exec, {
+      brandId,
+      itemId,
+      kind: path ? 'sign_image_set' : 'sign_image_removed',
+      actor,
+      summary: `${actor.label} ${path ? 'uploaded a picture for' : 'removed the picture from'} ${row.name}`,
+    });
+  });
+}
+
+/**
+ * The team's icon for a sign type (#157): set on every row of that type at that
+ * placement, since the catalog shows a type once with its variants beneath.
+ */
+export async function setSignTypeIcon(masterId: string, actor: CatalogActor, path: string | null): Promise<void> {
+  await transaction(async (exec) => {
+    const [row] = await exec.query<{ placement: string; sign_type: string }>(
+      `select placement, sign_type from master_catalog where id = $1`,
+      [masterId],
+    );
+    if (!row) throw new CatalogError('That catalog row no longer exists.');
+    await exec.query(`update master_catalog set icon_path = $3 where placement = $1 and sign_type = $2`, [
+      row.placement,
+      row.sign_type,
+      path,
+    ]);
+    await record(exec, {
+      brandId: null,
+      masterId,
+      kind: path ? 'master_icon_set' : 'master_icon_removed',
+      actor,
+      summary: `${actor.label} ${path ? 'uploaded an icon for' : 'removed the icon from'} ${row.sign_type} (${row.placement})`,
     });
   });
 }

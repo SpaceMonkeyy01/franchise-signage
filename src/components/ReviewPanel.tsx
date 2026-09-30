@@ -157,7 +157,7 @@ function DecisionCard({
     >
       <div className="flex gap-3">
         <SignThumbnail
-          renderKey={item.render_key}
+          renderKey={item.render_key} imagePath={item.image_path}
           label={item.brand_item_name}
           className="h-14 w-20 shrink-0 rounded"
         />

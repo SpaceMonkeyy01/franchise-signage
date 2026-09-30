@@ -383,7 +383,7 @@ function PackageCard({
           const sign = byId.get(id)!;
           return (
             <li key={`${id}-${index}`} className="flex items-center gap-3 py-2">
-              <SignThumbnail renderKey={sign.render_key} label={sign.name} className="h-8 w-11 shrink-0" />
+              <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-8 w-11 shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-gray-900">{sign.name}</p>
                 <p className="text-xs text-gray-500">

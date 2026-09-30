@@ -18,10 +18,16 @@
   "Drive-thru", rename, reorder, retire, each with its package (#156); a
   retired sign still installed can be replaced, through corporate (#155); the
   team edits each catalog sign's options on `/admin/catalog` (#154).
-- **Live project:** run `npm run migrate` — two migrations since the last one
-  there (`brand_catalog`, `store_types`).
-- Checks: **298 smoke**, **188 unit**, **63 schema** (43 behavioural), typecheck, lint.
-- Decisions #148–156.
+- **Sign pictures (#157):** brand admins upload a picture per sign on the Signs
+  tab; the team uploads an icon per sign type on `/admin/catalog`. Shown
+  everywhere a sign is drawn: its picture, else its type's icon, else the
+  schematic.
+- **Live project:** run `npm run migrate` — three migrations since the last one
+  there (`brand_catalog`, `store_types`, `sign_images`). The permission check
+  refused running it from here as a production deploy; the dry run confirmed
+  the connection.
+- Checks: **305 smoke**, **188 unit**, **63 schema** (43 behavioural), typecheck, lint.
+- Decisions #148–157.
 
 ## 30 Sep 2026: the console and the brands on separate addresses
 

@@ -74,7 +74,7 @@ export function ReplaceForm({
             >
               <span className="flex min-w-0 items-center gap-3">
                 <SignThumbnail
-                  renderKey={sign.render_key}
+                  renderKey={sign.render_key} imagePath={sign.image_path}
                   label={sign.brand_item_name}
                   className="h-11 w-16 shrink-0 rounded-md"
                 />

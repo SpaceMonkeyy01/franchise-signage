@@ -10,6 +10,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
+import { ImageUpload } from '@/components/ImageUpload';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { attributeLabel, signStatus } from '@/lib/catalog/labels';
 import type { ManagedSign, MasterRow } from '@/lib/catalog/manage';
@@ -19,6 +20,7 @@ import {
   proposeSignAction,
   reviseSignAction,
   setBrandSignActiveAction,
+  setBrandSignImageAction,
   withdrawSignAction,
 } from './catalog-actions';
 
@@ -169,7 +171,7 @@ function SignRow({
   return (
     <article className="rounded-xl border border-gray-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-start gap-3">
-        <SignThumbnail renderKey={sign.render_key} label={sign.name} className="h-11 w-16 shrink-0" />
+        <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-11 w-16 shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium text-gray-900">{sign.name}</p>
@@ -179,6 +181,14 @@ function SignRow({
             {variantName(sign)} · {sign.placement}
           </p>
           {sign.spec_summary && <p className="mt-0.5 text-xs text-gray-700">{sign.spec_summary}</p>}
+          {canManage && (
+            <div className="mt-1" data-sign-image={sign.name}>
+              <ImageUpload
+                hasImage={!!sign.thumbnail_url}
+                save={(formData) => setBrandSignImageAction(brandSlug, sign.id, formData)}
+              />
+            </div>
+          )}
           <p className="mt-0.5 text-xs text-gray-500">
             {priceLabel(sign)}
             {sign.installed > 0 && ` · installed at ${sign.installed} store${sign.installed === 1 ? '' : 's'}`}
@@ -351,7 +361,7 @@ function ProposalForm({
 
       {chosen && (
         <div className="flex flex-wrap gap-4 rounded-lg bg-gray-50 p-3">
-          <SignThumbnail renderKey={chosen.render_key} label={variantName(chosen)} className="h-14 w-20 shrink-0" />
+          <SignThumbnail renderKey={chosen.render_key} imagePath={chosen.icon_path} label={variantName(chosen)} className="h-14 w-20 shrink-0" />
           <div className="min-w-0 flex-1 space-y-2">
             <p className="text-xs text-gray-600">
               {chosen.pricing_basis === 'standin'

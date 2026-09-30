@@ -491,7 +491,7 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
     <div className="rounded-lg border border-gray-200 p-3">
       <div className="flex gap-3">
         <SignThumbnail
-          renderKey={item.render_key}
+          renderKey={item.render_key} imagePath={item.image_path}
           label={item.brand_item_name}
           className="h-12 w-16 shrink-0 rounded"
         />

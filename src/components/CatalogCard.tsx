@@ -38,7 +38,7 @@ export function CatalogCard({
       }
     >
       <SignThumbnail
-        renderKey={item.render_key}
+        renderKey={item.render_key} imagePath={item.image_path}
         label={item.name}
         className="mb-2 h-20 w-full rounded-lg border border-gray-100"
       />

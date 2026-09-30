@@ -1507,6 +1507,18 @@ item 7's "CRUD UI only when onboarding brand #2".
      no budget sheet; the last live type cannot be retired. The unused enum
      type is left in place.
 
+157. **Signs can carry an uploaded picture** (asked for on 30 Sep). A brand
+     sign's picture fills the `thumbnail_url` §2.2 always had (as a storage
+     path); a sign type's icon is the new `master_catalog.icon_path`, set by the
+     team once per type and placement. Everywhere a sign is drawn — catalog
+     cards, setup, installed signs, status page, approvals, console, packages —
+     the order is the sign's picture, then its type's icon, then the schematic.
+     Brand admins upload their signs' pictures (a picture is not a price); the
+     team uploads type icons and any sign's picture. PNG, JPG or WEBP up to 5 MB
+     — not the PDF or HEIC request photos allow, since an `<img>` must show it.
+     Served through the existing file route, where the unguessable path is the
+     credential, as for every other upload. Emails and PDFs are unchanged.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

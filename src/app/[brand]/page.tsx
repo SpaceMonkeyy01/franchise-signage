@@ -451,7 +451,7 @@ function LocationCard({
           {location.installed_signs.map((sign) => (
             <div key={sign.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2">
               <SignThumbnail
-                renderKey={sign.render_key}
+                renderKey={sign.render_key} imagePath={sign.image_path}
                 label={sign.brand_item_name}
                 className="h-10 w-14 shrink-0 rounded"
               />

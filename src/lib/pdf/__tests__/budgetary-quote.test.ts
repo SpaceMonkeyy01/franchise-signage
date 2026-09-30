@@ -31,6 +31,7 @@ const item = (
   site_variables: [],
   pinned_attributes: {},
   render_key: null,
+  image_path: null,
   pricing_basis: price === null ? 'standin' : 'direct',
   origin: 'standard',
   item_status: 'approved',

@@ -6,6 +6,7 @@
 
 import Link from 'next/link';
 
+import { ImageUpload } from '@/components/ImageUpload';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { requireTeamMember } from '@/lib/auth/team';
 import {
@@ -18,6 +19,8 @@ import {
   type MasterRow,
 } from '@/lib/catalog/manage';
 import { getBrandsPublic } from '@/lib/db/queries';
+
+import { setSignImageAction, setSignTypeIconAction } from './actions';
 
 import {
   AddVariantForm,
@@ -102,7 +105,7 @@ export default async function CatalogPage({
             {pending.map((sign) => (
               <article key={sign.id} className="rounded-xl border border-amber-200 bg-white p-4">
                 <div className="flex flex-wrap items-start gap-4">
-                  <SignThumbnail renderKey={sign.render_key} label={sign.name} className="h-14 w-20 shrink-0" />
+                  <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-14 w-20 shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{sign.brand_name}</p>
                     <p className="text-sm font-semibold text-gray-900">{sign.name}</p>
@@ -179,10 +182,14 @@ export default async function CatalogPage({
                   <tr key={sign.id}>
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-3">
-                        <SignThumbnail renderKey={sign.render_key} label={sign.name} className="h-9 w-12 shrink-0" />
+                        <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-9 w-12 shrink-0" />
                         <div>
                           <p className="font-medium text-gray-900">{sign.name}</p>
                           <p className="text-xs text-gray-500">{variantName(sign)}</p>
+                          <ImageUpload
+                            hasImage={!!sign.thumbnail_url}
+                            save={setSignImageAction.bind(null, sign.id)}
+                          />
                         </div>
                       </div>
                     </td>
@@ -246,11 +253,19 @@ export default async function CatalogPage({
                         <div key={signType} className="flex flex-wrap gap-4 px-4 py-3">
                           <SignThumbnail
                             renderKey={variants.find((v) => v.render_key)?.render_key ?? null}
+                            imagePath={variants.find((v) => v.icon_path)?.icon_path ?? null}
                             label={signType}
                             className="h-10 w-14 shrink-0"
                           />
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-medium text-gray-900">{signType}</p>
+                            <div data-type-icon={signType}>
+                              <ImageUpload
+                                label="icon"
+                                hasImage={variants.some((v) => v.icon_path)}
+                                save={setSignTypeIconAction.bind(null, variants[0].id)}
+                              />
+                            </div>
                             <ul className="mt-1 space-y-1">
                               {variants.map((row) => (
                                 <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

@@ -98,6 +98,8 @@ export interface InstalledSignRow {
   brand_item_name: string;
   spec_summary: string | null;
   render_key: string | null;
+  /** Uploaded picture: the sign's own, else its catalog type's icon (#157). */
+  image_path: string | null;
   sizing: string | null;
   installed_at: string;
   est_price: string | null;
@@ -163,7 +165,7 @@ export async function getLocationsForBrand(
   const signs = await rows<InstalledSignRow & { location_id: string }>(
     `select s.id, s.location_id, s.brand_item_id, bi.name as brand_item_name,
             bi.spec_summary, bi.est_price, bi.vendor_policy_override,
-            mc.render_key, s.sizing, s.installed_at
+            mc.render_key, coalesce(bi.thumbnail_url, mc.icon_path) as image_path, s.sizing, s.installed_at
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id
@@ -200,6 +202,8 @@ export interface LineItemRow {
   /** The brand's locked-down spec (SPEC §2.2) — what a vendor actually builds to. */
   pinned_attributes: Record<string, unknown>;
   render_key: string | null;
+  /** Uploaded picture: the sign's own, else its catalog type's icon (#157). */
+  image_path: string | null;
   /** `direct` → est_price is real; `standin` → "Custom quote" (SPEC §2.1). */
   pricing_basis: string;
   origin: LineItemOrigin;
@@ -350,7 +354,7 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   const items = await rows<Omit<LineItemRow, 'files'>>(
     `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
             bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override,
-            mc.render_key, mc.pricing_basis,
+            mc.render_key, coalesce(bi.thumbnail_url, mc.icon_path) as image_path, mc.pricing_basis,
             li.origin, li.item_status,
             li.sizing, li.site_notes, li.tbd_fields, li.exception_issue,
             li.review_note, li.est_price_snapshot
@@ -488,6 +492,8 @@ export interface BrandItemRow {
   site_variables: string[];
   est_price: string | null;
   render_key: string | null;
+  /** Uploaded picture: the sign's own, else its catalog type's icon (#157). */
+  image_path: string | null;
   vendor_policy_override: VendorPolicy | null;
   sort_order: number;
 }
@@ -495,7 +501,7 @@ export interface BrandItemRow {
 export function getBrandCatalog(brandId: string): Promise<BrandItemRow[]> {
   return rows<BrandItemRow>(
     `select bi.id, bi.name, bi.spec_summary, bi.site_variables, bi.est_price,
-            bi.vendor_policy_override, mc.render_key, bi.sort_order
+            bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, mc.icon_path) as image_path, bi.sort_order
        from brand_items bi
        join master_catalog mc on mc.id = bi.master_catalog_id
       where bi.brand_id = $1 and bi.active
@@ -586,7 +592,7 @@ export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]
 export function getInstalledSignsForLocation(locationId: string): Promise<InstalledSignRow[]> {
   return rows<InstalledSignRow>(
     `select s.id, s.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.est_price, bi.vendor_policy_override, mc.render_key, s.sizing, s.installed_at,
+            bi.est_price, bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, mc.icon_path) as image_path, s.sizing, s.installed_at,
             not bi.active as retired
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
