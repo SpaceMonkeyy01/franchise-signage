@@ -15,7 +15,7 @@ import { getViewer, homeFor, owesSecondFactor, safeNext } from '@/lib/auth/acces
 import { getBrandBySlug } from '@/lib/db/queries';
 import { portalSlug } from '@/lib/portal-request';
 
-import { devSignInHint } from './dev-hint';
+import { devSignInAccounts } from './dev-hint';
 import { SignInForm } from './SignInForm';
 import { SignOutButton } from './SignOutButton';
 
@@ -57,7 +57,7 @@ export default async function SignInPage({
     redirect(safeNext(next, homeFor(viewer.memberships, portal)));
   }
 
-  const devHint = devSignInHint(brand ? 'brand' : 'platform');
+  const devAccounts = devSignInAccounts(brand ? 'brand' : 'platform');
 
   const card = (
     <AuthCard
@@ -87,7 +87,7 @@ export default async function SignInPage({
       ) : (
         <div className="space-y-4">
           {reason && REASONS[reason] && <FormNotice>{REASONS[reason]}</FormNotice>}
-          <SignInForm next={next ?? null} devHint={devHint} />
+          <SignInForm next={next ?? null} devAccounts={devAccounts} />
         </div>
       )}
     </AuthCard>

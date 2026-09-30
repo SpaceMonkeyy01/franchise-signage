@@ -91,7 +91,14 @@ export function TwoFactorForm({
           <span data-testid="dev-totp-code" className="font-mono font-semibold">
             {shownDevCode}
           </span>
-          . Under Supabase the code comes from your app and is never shown here.
+          . Under Supabase the code comes from your app and is never shown here.{' '}
+          <button
+            type="button"
+            onClick={() => setCode(shownDevCode)}
+            className="font-semibold underline underline-offset-2 hover:text-amber-950"
+          >
+            Use this code
+          </button>
         </p>
       )}
 
