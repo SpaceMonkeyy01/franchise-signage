@@ -2275,10 +2275,11 @@ await removeSmokeCatalog();
     await team
       .locator('[data-type-icon="A-Frame Sign"] input[type=file]')
       .setInputFiles({ name: 'aframe.png', mimeType: 'image/png', buffer: PIXEL_PNG });
-    await expectVisible(team, '[data-type-icon="A-Frame Sign"] >> text=Replace icon', 'the team uploads a sign type icon');
+    await expectVisible(team, '[data-type-icon="A-Frame Sign"] button[aria-label="Replace icon"]', 'the team uploads a sign type icon');
     await corp.reload({ waitUntil: 'networkidle' });
     await expectVisible(corp, 'article:has-text("Freshbites Sidewalk A-Frame") img[src^="/api/files/catalog/"]', 'which shows for a brand sign with no picture of its own');
 
+    await corp.locator('[data-sign-image="Freshbites Blade Sign"]').hover();
     await corp.locator('[data-sign-image="Freshbites Blade Sign"]').getByRole('button', { name: 'Remove' }).click();
     await expectCount(corp, 'article:has-text("Freshbites Blade Sign") img', 0, 'removing the picture brings back the schematic');
   } finally {

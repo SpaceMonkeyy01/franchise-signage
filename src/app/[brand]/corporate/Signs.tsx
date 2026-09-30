@@ -171,7 +171,23 @@ function SignRow({
   return (
     <article className="rounded-xl border border-gray-200 bg-white px-4 py-3">
       <div className="flex flex-wrap items-start gap-3">
-        <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-11 w-16 shrink-0" />
+        {canManage ? (
+          <span data-sign-image={sign.name}>
+            <ImageUpload
+              hasImage={!!sign.thumbnail_url}
+              save={(formData) => setBrandSignImageAction(brandSlug, sign.id, formData)}
+            >
+              <SignThumbnail
+                renderKey={sign.render_key}
+                imagePath={sign.image_path}
+                label={sign.name}
+                className="block h-11 w-16 rounded-md"
+              />
+            </ImageUpload>
+          </span>
+        ) : (
+          <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-11 w-16 shrink-0" />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-medium text-gray-900">{sign.name}</p>
@@ -181,14 +197,6 @@ function SignRow({
             {variantName(sign)} · {sign.placement}
           </p>
           {sign.spec_summary && <p className="mt-0.5 text-xs text-gray-700">{sign.spec_summary}</p>}
-          {canManage && (
-            <div className="mt-1" data-sign-image={sign.name}>
-              <ImageUpload
-                hasImage={!!sign.thumbnail_url}
-                save={(formData) => setBrandSignImageAction(brandSlug, sign.id, formData)}
-              />
-            </div>
-          )}
           <p className="mt-0.5 text-xs text-gray-500">
             {priceLabel(sign)}
             {sign.installed > 0 && ` · installed at ${sign.installed} store${sign.installed === 1 ? '' : 's'}`}
