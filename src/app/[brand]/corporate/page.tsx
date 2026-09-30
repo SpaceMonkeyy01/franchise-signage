@@ -140,7 +140,7 @@ export default async function CorporateDashboard({
             {portfolio.metrics.pendingApprovals > 0 && (
               <Link
                 href={`${base}?tab=approvals`}
-                className="mt-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100"
+                className="card-lift mt-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100"
               >
                 <span className="text-sm text-amber-900">
                   {portfolio.metrics.pendingApprovals} item

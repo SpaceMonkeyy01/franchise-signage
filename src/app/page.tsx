@@ -17,6 +17,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { FormNotice } from '@/components/AuthCard';
+import { CursorGlow } from '@/components/CursorGlow';
 import { getViewer, homeFor, owesSecondFactor } from '@/lib/auth/access';
 import { getBrandsPublic, type BrandPublic } from '@/lib/db/queries';
 import { portalConfig, portalOrigin } from '@/lib/portal';
@@ -67,7 +68,7 @@ export default async function Home() {
   const brands = signedInWithoutAccess ? [] : await getBrandsPublic();
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-gray-50">
+    <div className="relative flex flex-1 flex-col overflow-hidden">
       <Backdrop />
 
       <header className="relative border-b border-gray-200/80 bg-white/70 backdrop-blur">
@@ -128,7 +129,7 @@ export default async function Home() {
               <nav aria-label="Choose where to sign in" className="mt-6 space-y-3">
                 <Link
                   href="/sign-in"
-                  className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
+                  className="card-lift group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-gray-400"
                 >
                   <span className="flex h-10 w-10 flex-none items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white">
                     S
@@ -147,7 +148,7 @@ export default async function Home() {
                   <a
                     key={brand.id}
                     href={brandSignIn(brand, host)}
-                    className="group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-400"
+                    className="card-lift group flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 hover:border-gray-400"
                   >
                     {!brand.logo_url && (
                       <span
@@ -221,15 +222,8 @@ function Backdrop() {
         className="absolute right-1/3 top-1/4 h-72 w-72 rounded-full opacity-70 blur-3xl"
         style={{ background: 'radial-gradient(closest-side, #E0F2FE, transparent)' }}
       />
-      <div
-        className="absolute inset-0 opacity-40"
-        style={{
-          backgroundImage: 'radial-gradient(#CBD5E1 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-          WebkitMaskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-        }}
-      />
+      {/* The dot pattern this page once drew is the site-wide grid now. */}
+      <CursorGlow />
 
       <svg
         className="absolute bottom-[4%] left-[2%] hidden h-36 w-36 md:block"

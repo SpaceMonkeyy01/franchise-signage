@@ -22,7 +22,8 @@ export function BrandTheme({ brand }: { brand: BrandPublic }) {
       --color-brand:${primary};
       --color-brand-dark:${primaryDark ?? primary};
       --color-brand-light:${primaryLight ?? '#f1f5f9'};
-    }`}</style>
+    }
+    body{--page-tint:${primary};}`}</style>
   );
 }
 
@@ -37,7 +38,7 @@ export function BrandHeader({
   account?: React.ReactNode;
 }) {
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="relative border-b border-gray-200 bg-white">
       <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
         {brand.logo_url ? (
           // A brand's own wordmark says its name; Signage.com follows it, smaller.
@@ -78,6 +79,16 @@ export function BrandHeader({
           {account}
         </div>
       </div>
+      {/* A wash of the brand's colour under the header, fading into the grid:
+          the brand's pages open with its colour rather than with white. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-full -z-10 h-64"
+        style={{
+          background:
+            'linear-gradient(to bottom, color-mix(in srgb, var(--color-brand) 10%, transparent), transparent)',
+        }}
+      />
     </header>
   );
 }

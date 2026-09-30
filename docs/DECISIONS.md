@@ -1519,6 +1519,17 @@ item 7's "CRUD UI only when onboarding brand #2".
      Served through the existing file route, where the unguessable path is the
      credential, as for every other upload. Emails and PDFs are unchanged.
 
+158. **The page is a drafting board** (asked for on 30 Sep: "a lot of white").
+     A faint 24px grid with a stronger line every fifth sits behind every page
+     (`body::before`, fixed, fading toward the bottom and sides, never printed),
+     tinted with the brand colour on a brand's pages and neutral on the
+     console. Brand headers carry a soft wash of the brand colour into the page.
+     Cards stay white — the demo's card language, and they carry forms and
+     prices — with a faint shadow, and whole-card links lift on hover
+     (`.card-lift`). Motion is limited to the two signed-out front pages, where
+     the grid lights up around the pointer (`CursorGlow`), only for a mouse and
+     never under reduced motion; working screens stay still.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

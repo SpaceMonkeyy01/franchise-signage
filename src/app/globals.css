@@ -20,7 +20,80 @@
    matching the demo, and half of it is printed or PDF'd for lenders and
    landlords (SPEC §8b) — a dark variant would be a second design to maintain
    for no audience. */
+html {
+  background: #f8fafb;
+}
+
+/* The page is a drafting board: a faint grid, 24px with a stronger line every
+   fifth, the way a sign shop's layout sheet reads. It is texture, not
+   content — white cards stay white and sit on top of it. On a brand's pages it
+   takes the brand's colour (BrandTheme sets --page-tint); the Signage.com
+   console keeps it neutral. It fades out toward the bottom and the sides, so a
+   long page does not feel busy, and it never prints. */
 body {
-  background: #f9fafb;
+  --page-tint: #0f172a;
+  --grid-minor: color-mix(in srgb, var(--page-tint) 5%, transparent);
+  --grid-major: color-mix(in srgb, var(--page-tint) 8%, transparent);
+  background: #f8fafb;
   color: #111827;
+  /* A stacking context, so the grid below paints above this background and
+     beneath everything else. */
+  isolation: isolate;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid-minor) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-minor) 1px, transparent 1px);
+  background-size: 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+  background-position: -1px -1px;
+  mask-image: radial-gradient(ellipse 110% 90% at 50% 0%, #000 45%, transparent 100%);
+}
+
+/* Cards lift a little off the grid. Matched on the classes every card in the
+   app already carries, rather than touching forty files. */
+.rounded-xl.border.bg-white,
+.rounded-2xl.border.bg-white {
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.04),
+    0 1px 3px rgb(15 23 42 / 0.03);
+}
+
+/* Something you can click that looks like a card rises to meet the pointer. */
+.card-lift {
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    border-color 150ms ease;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 4px 12px rgb(15 23 42 / 0.08),
+    0 1px 3px rgb(15 23 42 / 0.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-lift,
+  .card-lift:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media print {
+  body::before {
+    display: none;
+  }
+  html,
+  body {
+    background: #fff;
+  }
 }

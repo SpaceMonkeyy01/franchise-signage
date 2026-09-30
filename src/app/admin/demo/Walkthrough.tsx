@@ -105,7 +105,7 @@ export function Walkthrough({
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-gray-50">
+    <main className="flex flex-1 flex-col">
       <div className="border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">

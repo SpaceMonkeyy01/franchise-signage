@@ -23,6 +23,7 @@ import { notFound, redirect } from 'next/navigation';
 
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { CursorGlow } from '@/components/CursorGlow';
 import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { RequestStatusChip } from '@/components/StatusChip';
@@ -188,7 +189,8 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
     <>
       <BrandTheme brand={brand} />
       <BrandHeader brand={brand} />
-      <main className="flex-1 bg-[#F7F5EF]">
+      <main className="relative flex-1">
+        <CursorGlow />
         <section className="mx-auto grid w-full max-w-5xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div>
             <p

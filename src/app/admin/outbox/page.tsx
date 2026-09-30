@@ -55,7 +55,7 @@ export default async function Outbox() {
           <Link
             key={email.id}
             href={`/admin/outbox/${email.id}`}
-            className="block rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300"
+            className="card-lift block rounded-xl border border-gray-200 bg-white px-4 py-3 hover:border-gray-300"
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-sm font-medium text-gray-900">{email.subject}</span>
