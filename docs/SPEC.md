@@ -1,9 +1,9 @@
-# Franchise Signage Studio — MVP Spec v2.3
+# Franchise Signage Studio — MVP Spec v2.4
 
-Version 2.3 · Supersedes v2.2 · Handoff document for implementation (Claude Code)
+Version 2.4 · Supersedes v2.3 · Handoff document for implementation (Claude Code)
 Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for every account) + Resend + Vercel.
 Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
-What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
+What changed in v2.4: §2.3 is new — the catalog is managed in the app. Signage.com keeps the master catalog and sets every price; a brand admin proposes new brand signs (Signage.com reviews and prices them before they go live) and edits the brand's packages, which go live at once. What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -52,6 +52,40 @@ A named brand item pins one master row's attributes. Franchisees only ever see b
 | requires_review_override | boolean nullable | per-item override of brand approval rules |
 | vendor_policy_override | text nullable | per-item routing override (see §4); null → brand default |
 | active / sort_order | | |
+
+### 2.3 Managing the catalog in the app (new in v2.4)
+
+Both layers are managed on screen, no longer only by the seed script.
+
+- **Signage.com owns the master catalog** (`/admin/catalog`): adds sign types
+  and variants, switches them off (never deletes: brand items point at them),
+  and sets how each renders and is priced.
+- **Signage.com sets every price.** `est_price` is what a franchisee sees and
+  what the §8b documents carry to a lender, so no brand role ever enters one.
+  When the §8 Design Studio integration lands, its pricing engine's number is
+  Signage.com's price too; the team still confirms it.
+- **A brand admin proposes a new brand sign** from the active master catalog:
+  a variant, the locked choices from that variant's `attribute_options`, a
+  name, and a note. It arrives as `review_status = pending` and inactive, so no
+  franchisee sees it. The team reviews it — edits the spec if needed, sets the
+  price (or leaves it "Custom quote" for standin rows), and approves, which
+  makes it live; or declines with a note, and the brand admin may revise and
+  resubmit. When Design Studio is connected, the proposal also carries a mockup
+  and an engine price; until then the mockup slot stays empty (§8: nothing
+  blocks on Design Studio).
+- **A brand admin retires a live sign**, effective at once: it leaves the
+  catalog, the packages and the budget numbers. Installed signs and past
+  requests keep it. A retired sign cannot be ordered, including like-for-like.
+- **A live sign's name and spec are Signage.com's to change.** Line items read
+  them live, so a change reads through every past request and email.
+- **A brand admin edits the brand's packages**, effective at once: which live
+  signs each format's package holds, in what order, and how many. Only live,
+  active signs can be in a package. Requests already submitted are unaffected.
+  Because a package decides what is `standard` (§7, auto-approved), the server
+  derives an item's origin from the package, never from the browser.
+- **Reviewers see the catalog and packages and change nothing.**
+- Every catalog change is written to `catalog_events` (append-only), as request
+  changes are to `request_events`.
 
 ## 3. Brand configuration
 
@@ -265,7 +299,7 @@ Access happens in two steps, at two different moments, because the DID is needed
 4. **Routing engine** (resolve policy incl. per-item overrides, compose + send package email, create quote row).
 5. **Notification emails + lender documents**: submitted, changes requested, item approved/declined, quote ready, order accepted, shipped, installed. Plus the §8b PDF set: budgetary quote (franchisee-downloadable from the status page), formal invoice and paid receipt (team-triggered from the queue). Plus the §8d welcome email (template + trigger on corporate email registration) and the §8b budget one-pager export (per-format PDF from brand package prices, corporate-triggered).
 6. **Corporate dashboard** (read-only, magic-link or simple auth): portfolio metrics (locations, installed signs, open requests, pending approvals, program spend), per-location compliance cards, jump-to-approvals.
-7. **Brand admin**: seed pilot brand via script (brand, brand_items, packages, master_catalog import from the taxonomy sheet); CRUD UI only when onboarding brand #2.
+7. **Brand admin**: seed pilot brand via script (brand, brand_items, packages, master_catalog import from the taxonomy sheet). Since v2.4 the catalog and packages are also managed in the app (§2.3).
 
 ### 9b. Accounts (v2.3), phases A–D
 
@@ -331,7 +365,10 @@ manager changed. Stores (`locations`) gain a `franchisee_id`.
 | Invite a franchisee (the §8d registration) | ✓ | ✓ | — | — | — |
 | Invite or deactivate store staff | ✓ | ✓ | — | own stores | — |
 | Prepare packages, price, route, fulfil, invoice | ✓ | — | — | — | — |
-| Create a brand, edit the catalog or packages | ✓ | — | — | — | — |
+| Create a brand, edit the master catalog, set prices (§2.3) | ✓ | — | — | — | — |
+| Propose a new brand sign, retire a sign (§2.3) | ✓ | ✓ | — | — | — |
+| Edit the brand's packages (§2.3) | ✓ | ✓ | — | — | — |
+| See the brand's signs and packages | ✓ | ✓ | ✓ | — | — |
 
 Four lines deserve a note:
 
@@ -533,6 +570,18 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
 
 ---
+
+## Changelog v2.3 → v2.4 (Sep 2026)
+
+- **§2.3 (new): the catalog is managed in the app.** Signage.com keeps the
+  master catalog and sets every price. A brand admin proposes new brand signs
+  (pending until Signage.com reviews and prices them), retires signs, and edits
+  the brand's packages, both effective at once. Proposals will carry a Design
+  Studio mockup and engine price once §8 lands.
+- **§7 hardened:** an item's `standard` origin is derived from the brand's
+  package on the server.
+- **§10.2:** the "edit the catalog or packages" row is split three ways.
+  **§9 item 7:** the CRUD UI is no longer deferred to brand #2.
 
 ## Changelog v2.2 → v2.3 (Sep 2026)
 

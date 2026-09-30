@@ -51,6 +51,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <Link href="/admin/outbox" className="text-gray-300 underline-offset-2 hover:underline">
                 Outbox
               </Link>
+              <Link href="/admin/catalog" className="text-gray-300 underline-offset-2 hover:underline">
+                Catalog
+              </Link>
               <Link href="/admin/team" className="text-gray-300 underline-offset-2 hover:underline">
                 Team
               </Link>

@@ -913,6 +913,103 @@ const checks: NamedCheck[] = [
       return expect(updated === 0 && decided === 0, `updated ${updated} request(s), ${decided} item(s)`);
     },
   },
+  // ---------------------------------------------- the catalog (SPEC v2.4 §2.3)
+  {
+    label: 'a brand admin proposes a sign only as pending, inactive and unpriced, and only in their brand',
+    run: async (db) => {
+      // The master row's id is looked up as the owner and written literally: a
+      // select from master_catalog inside the insert would find no rows under
+      // RLS, insert nothing, and pass every case for the wrong reason.
+      await asOwner(db);
+      const master = (await db.query<{ id: string }>(`select id from master_catalog limit 1`)).rows[0].id;
+      const insert = (brandId: string, name: string, extra = '') => `
+        insert into brand_items (brand_id, master_catalog_id, name, review_status, active, est_price)
+        values ('${brandId}', '${master}', '${name}', ${extra || `'pending', false, null`})`;
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const proposed = await refusal(db, insert(alphaBrandId, 'Proposed'));
+      const live = await refusal(db, insert(alphaBrandId, 'Sneaked live', `'approved', true, null`));
+      const priced = await refusal(db, insert(alphaBrandId, 'Self-priced', `'pending', false, 99`));
+      const elsewhere = await refusal(db, insert(betaBrandId, 'At Beta'));
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const byReviewer = await refusal(db, insert(alphaBrandId, 'By reviewer'));
+      await asOwner(db);
+      await db.exec(`delete from brand_items where name in ('Proposed', 'Sneaked live', 'Self-priced', 'At Beta', 'By reviewer')`);
+      return expect(
+        proposed === null && !!live && !!priced && !!elsewhere && !!byReviewer,
+        `proposed: ${proposed ?? 'ok'}; live: ${live ?? 'ALLOWED'}; priced: ${priced ?? 'ALLOWED'}; ` +
+          `beta: ${elsewhere ?? 'ALLOWED'}; reviewer: ${byReviewer ?? 'ALLOWED'}`,
+      );
+    },
+  },
+  {
+    label: "a pending sign is seen by its brand's admins and reviewers, and not by another brand or anon",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into brand_items (brand_id, master_catalog_id, name, review_status, active)
+        select b.id, m.id, 'Pending ' || b.slug, 'pending', false from brands b, master_catalog m`);
+      const pendingAt = async () =>
+        count(db, `select count(*) as n from brand_items where review_status = 'pending'`);
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const admin = await pendingAt();
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewer = await pendingAt();
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await pendingAt();
+      await asAnon(db, ALPHA_TOKEN);
+      const anon = await pendingAt();
+      await asOwner(db);
+      await db.exec(`delete from brand_items where name like 'Pending %'`);
+      return expect(
+        admin === 1 && reviewer === 1 && owner === 0 && anon === 0,
+        `admin ${admin}, reviewer ${reviewer}, owner ${owner}, anon ${anon} (want 1, 1, 0, 0)`,
+      );
+    },
+  },
+  {
+    label: "a brand admin edits their brand's packages; a reviewer and another brand cannot",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into brand_packages (brand_id, format, label, items)
+        select id, 'inline', 'Inline', '[]'::jsonb from brands`);
+      const touch = (brandId: string) =>
+        `update brand_packages set label = 'Edited' where brand_id = '${brandId}'`;
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const own = await affected(db, touch(alphaBrandId));
+      const other = await affected(db, touch(betaBrandId));
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const byReviewer = await affected(db, touch(alphaBrandId));
+      await asOwner(db);
+      await db.exec(`delete from brand_packages`);
+      return expect(
+        own === 1 && other === 0 && byReviewer === 0,
+        `own ${own}, beta ${other}, reviewer ${byReviewer} (want 1, 0, 0)`,
+      );
+    },
+  },
+  {
+    label: "catalog history is read by the brand's corporate, and by no one else",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into catalog_events (brand_id, kind, actor_label, summary)
+        select id, 'sign_proposed', 'someone', 'Proposed' from brands`);
+      const n = () => count(db, `select count(*) as n from catalog_events`);
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewer = await n();
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await n();
+      await asAnon(db, ALPHA_TOKEN);
+      const anon = (await refusal(db, `select count(*) from catalog_events`)) ? 0 : await n();
+      await asOwner(db);
+      await db.exec(`delete from catalog_events`);
+      return expect(
+        reviewer === 1 && owner === 0 && anon === 0,
+        `reviewer ${reviewer}, owner ${owner}, anon ${anon} (want 1, 0, 0)`,
+      );
+    },
+  },
   {
     label: 'anon reaches no account table, invitation or password reset',
     run: async (db) => {
