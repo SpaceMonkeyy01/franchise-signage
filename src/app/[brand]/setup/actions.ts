@@ -66,6 +66,15 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   ]);
   if (!brand) return { error: 'Unknown brand.' };
 
+  // What the package for this format holds, counted: an item is `standard`
+  // only while the package still has one of it (SPEC v2.4 §7 note).
+  const pkg = await queryOne<{ items: string[] }>(
+    `select items from brand_packages where brand_id = $1 and format = $2`,
+    [brand.id, input.location.format],
+  );
+  const inPackage = new Map<string, number>();
+  for (const id of pkg?.items ?? []) inPackage.set(id, (inPackage.get(id) ?? 0) + 1);
+
   let token: string;
   let requestId: string;
   try {
@@ -104,7 +113,7 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
             ],
         items: input.items.map((item) => ({
           brandItemId: item.brandItemId,
-          origin: originOf(item),
+          origin: originOf(item, inPackage),
           sizing: item.tbd ? null : item.sizing,
           tbdFields: item.tbd ? ['sizing'] : [],
           exceptionIssue: item.exceptionIssue,
@@ -131,8 +140,16 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
  * `exception`, not a standard item — which is precisely what corporate exists to
  * judge (SPEC §7). Derived here rather than sent by the browser so the origin
  * and the issue text cannot disagree.
+ *
+ * And `standard` is decided against the brand's package, never taken from the
+ * browser's `fromPackage` alone (SPEC v2.4 §2.3): standard auto-approves, so a
+ * forged flag would otherwise skip corporate. Each package entry covers one
+ * item, so an endcap's two storefront sets are both standard and a third is an
+ * add-on.
  */
-function originOf(item: SetupItemInput): LineItemOrigin {
-  if (!item.fromPackage) return 'addon';
+function originOf(item: SetupItemInput, inPackage: Map<string, number>): LineItemOrigin {
+  const left = inPackage.get(item.brandItemId) ?? 0;
+  if (!item.fromPackage || left === 0) return 'addon';
+  inPackage.set(item.brandItemId, left - 1);
   return item.exceptionIssue?.trim() ? 'exception' : 'standard';
 }

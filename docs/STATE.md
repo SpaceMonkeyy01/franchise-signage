@@ -1,5 +1,24 @@
 # Where the build is
 
+## 30 Sep 2026 (later): the catalog and packages, managed on screen (spec v2.4)
+
+- **Signage.com: `/admin/catalog`.** Brands' proposals waiting on a price;
+  each brand's signs with editable prices, retire and reinstate; the master
+  catalog (77 variants) with on/off and "add a sign type or variant".
+- **Corporate: a Signs tab.** Brand admins propose a sign from the Signage.com
+  catalog, locking the choices it offers; it stays hidden from franchisees
+  until the team prices and approves it. Declined proposals come back with the
+  reason. Live signs can be retired at once. **Standard packages** per store
+  type are edited in the same tab and are live at once. Reviewers read.
+- Emails: the team on a proposal, the brand admin on the decision. Every change
+  is in `catalog_events`.
+- **Fixed on the way:** setup decided `standard` (auto-approve) from a browser
+  flag; the server now checks it against the package (#152).
+- **Waiting on you:** whether store types should be brand-defined (#153), and
+  #150 (a retired sign cannot be replaced like-for-like).
+- Checks: **289 smoke**, **187 unit**, **61 schema** (41 behavioural), typecheck, lint.
+- Decisions #148–154.
+
 ## 30 Sep 2026: the console and the brands on separate addresses
 
 - **One deployment, two addresses** (#146). Set `APP_URL=https://admin.signage.com`

@@ -1443,6 +1443,56 @@ names, the never-promise-compliance rule, invitation-only accounts).
      the health check moved from `/` to a new `/api/health` so it sees the app
      rather than a redirect.
 
+## 30 Sep — the catalog, managed in the app (SPEC v2.4 §2.3)
+
+Asked for on 30 Sep: a sign-management page for corporate over a catalog the
+Signage.com team keeps. The user's calls: **prices are Signage.com's only**;
+**corporate's package edits go live at once**; **a new sign is proposed and
+the team approves it**, and once Design Studio (§8) is connected the proposal
+also carries its mockup and engine price. Spec v2.4 records it, replacing §9
+item 7's "CRUD UI only when onboarding brand #2".
+
+148. **A proposal is a brand item that is `pending` and inactive.** Not a
+     separate table: every query that already filters on `active` — the
+     franchisee catalog, request creation, packages, budget numbers, anon RLS
+     reads — keeps it out of sight with no change, and approval is one update.
+     A check constraint makes "live" imply "approved". Declined proposals stay,
+     with the reason, until the brand revises or withdraws them.
+
+149. **No brand role ever enters a price.** Corporate's form has no price field
+     and the actions take none; RLS refuses a brand admin's insert with a price.
+     The team sets it on approval (or leaves "Custom quote"; a standin master
+     row can have no other) and can change it later on `/admin/catalog`.
+     Past requests keep their `est_price_snapshot`.
+
+150. **Retiring a sign takes it out of every package at once**, and
+     reinstating does not put it back — re-adding is the brand's package
+     decision. Installed signs and past requests keep it. **Worth your view:** a
+     retired sign cannot be ordered like-for-like either, because request
+     creation has always refused inactive items; the confirm dialog says so.
+
+151. **After approval, a sign's name and spec are Signage.com's to change.**
+     Line items read them live (only the price is snapshotted), so a rename
+     rewrites every past request and email. Corporate can retire and propose a
+     replacement instead.
+
+152. **`standard` is now decided on the server, from the package** (found
+     while mapping the code). Setup trusted the browser's `fromPackage` flag,
+     and `standard` auto-approves, so a forged flag skipped corporate. Each
+     package entry now covers one line item: an endcap's two storefront sets
+     are both standard, a third is an add-on.
+
+153. **Store types stay inline, endcap and freestanding** for now. Brand-defined
+     types (drive-thru, mall in-line, kiosk) would move `location_format` from
+     an enum to a per-brand table, touching setup, locations, the budget
+     one-pager and the portfolio. Asked, not yet answered.
+
+154. **The master catalog is switched off, never deleted** (brand items point
+     at it). A new variant of an existing sign type inherits that type's
+     options and pricing model. Editing a row's options on screen is not built:
+     they come from the pricing engine's attribute list, and Design Studio is
+     where they will be kept in step.
+
 ### Corrected while building Session 5
 
 - **An enum array from `pg` is a string, not an array.** `getBrandsWithPackages`

@@ -15,9 +15,11 @@ import {
   CatalogError,
   proposeSign,
   reviseSign,
+  savePackage,
   setSignActive,
   withdrawSign,
   type CatalogActor,
+  type PackageFormat,
   type Proposal,
 } from '@/lib/catalog/manage';
 import { notifySignProposed } from '@/lib/email/catalog';
@@ -64,4 +66,12 @@ export async function withdrawSignAction(brandSlug: string, itemId: string) {
 
 export async function setBrandSignActiveAction(brandSlug: string, itemId: string, active: boolean) {
   return run(brandSlug, (access, actor) => setSignActive(access.brand.id, itemId, actor, active));
+}
+
+/** Live at once (§2.3): the next store set up with this format gets it. */
+export async function savePackageAction(
+  brandSlug: string,
+  input: { format: PackageFormat; label: string; description: string | null; items: string[] },
+) {
+  return run(brandSlug, (access, actor) => savePackage(access.brand.id, actor, input));
 }

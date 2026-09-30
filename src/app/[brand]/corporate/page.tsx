@@ -34,11 +34,12 @@ import {
 } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 
-import { listBrandSigns, listMasterCatalog } from '@/lib/catalog/manage';
+import { listBrandPackages, listBrandSigns, listMasterCatalog } from '@/lib/catalog/manage';
 import { brandFranchiseePeople } from '@/lib/staff';
 
 import { Approvals } from './Approvals';
 import { Franchisees } from './Franchisees';
+import { Packages } from './Packages';
 import { People, type InvitedRow, type PersonRow } from './People';
 import { Registrations } from './Registrations';
 import { Signs } from './Signs';
@@ -193,15 +194,31 @@ export default async function CorporateDashboard({
 
 /** The brand's signs (SPEC v2.4 §2.3): brand admins propose and retire; reviewers read. */
 async function SignsTab({ access }: { access: CorporateAccess }) {
-  const [signs, master] = await Promise.all([listBrandSigns(access.brand.id), listMasterCatalog()]);
+  const [signs, master, packages] = await Promise.all([
+    listBrandSigns(access.brand.id),
+    listMasterCatalog(),
+    listBrandPackages(access.brand.id),
+  ]);
   return (
-    <Signs
-      brandSlug={access.brand.slug}
-      brandName={access.brand.name}
-      canManage={access.canManage}
-      signs={signs}
-      master={master.filter((row) => row.active)}
-    />
+    <>
+      <Signs
+        brandSlug={access.brand.slug}
+        brandName={access.brand.name}
+        canManage={access.canManage}
+        signs={signs}
+        master={master.filter((row) => row.active)}
+      />
+      <Packages
+        brandSlug={access.brand.slug}
+        canManage={access.canManage}
+        formats={(Object.keys(FORMAT_LABEL) as LocationFormat[]).map((format) => ({
+          format,
+          label: FORMAT_LABEL[format],
+        }))}
+        packages={packages}
+        signs={signs.filter((sign) => sign.review_status === 'approved' && sign.active)}
+      />
+    </>
   );
 }
 

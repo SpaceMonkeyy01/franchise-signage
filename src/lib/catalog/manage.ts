@@ -554,3 +554,87 @@ export async function addMasterVariant(actor: CatalogActor, input: NewVariant): 
     return row.id;
   });
 }
+
+// ------------------------------------------------------------------ packages
+
+export type PackageFormat = 'inline' | 'endcap' | 'freestanding';
+
+export interface ManagedPackage {
+  format: PackageFormat;
+  label: string;
+  description: string | null;
+  /** Ordered brand item ids; a repeat is a second of the same sign. */
+  items: string[];
+}
+
+export function listBrandPackages(brandId: string): Promise<ManagedPackage[]> {
+  return query<ManagedPackage>(
+    `select format, label, description, items from brand_packages
+      where brand_id = $1 order by format`,
+    [brandId],
+  );
+}
+
+/**
+ * A brand admin saves one format's package — live at once (SPEC v2.4 §2.3).
+ * Every item must be one of the brand's own live signs. Requests already
+ * submitted are untouched: their line items were written when they were made.
+ */
+export async function savePackage(
+  brandId: string,
+  actor: CatalogActor,
+  input: { format: PackageFormat; label: string; description: string | null; items: string[] },
+): Promise<void> {
+  const label = input.label.trim();
+  if (!label) throw new CatalogError('Give the package a name.');
+  if (!['inline', 'endcap', 'freestanding'].includes(input.format)) throw new CatalogError('Unknown store type.');
+  if (input.items.length > 100) throw new CatalogError('That is more signs than a package can hold.');
+  if (input.items.some((id) => !/^[0-9a-f-]{36}$/i.test(id))) {
+    throw new CatalogError('A package can only hold your live signs. Reload and try again.');
+  }
+
+  const live = await query<{ id: string; name: string }>(
+    `select id, name from brand_items
+      where brand_id = $1 and active and review_status = 'approved' and id = any($2::uuid[])`,
+    [brandId, [...new Set(input.items)]],
+  );
+  const names = new Map(live.map((row) => [row.id, row.name]));
+  if (input.items.some((id) => !names.has(id))) {
+    throw new CatalogError('A package can only hold your live signs. Reload and try again.');
+  }
+
+  await transaction(async (exec) => {
+    const [before] = await exec.query<{ items: string[] }>(
+      `select items from brand_packages where brand_id = $1 and format = $2 for update`,
+      [brandId, input.format],
+    );
+    await exec.query(
+      `insert into brand_packages (brand_id, format, label, description, items)
+       values ($1,$2,$3,$4,$5)
+       on conflict (brand_id, format)
+       do update set label = excluded.label, description = excluded.description, items = excluded.items`,
+      [brandId, input.format, label, input.description?.trim() || null, JSON.stringify(input.items)],
+    );
+
+    // What changed, by name and count, for the history.
+    const count = (ids: string[]) => ids.reduce((m, id) => m.set(id, (m.get(id) ?? 0) + 1), new Map<string, number>());
+    const was = count(before?.items ?? []);
+    const now = count(input.items);
+    const changes: string[] = [];
+    for (const id of new Set([...was.keys(), ...now.keys()])) {
+      const delta = (now.get(id) ?? 0) - (was.get(id) ?? 0);
+      if (delta === 0) continue;
+      const name = names.get(id) ?? 'a retired sign';
+      changes.push(delta > 0 ? `added ${delta > 1 ? `${delta}× ` : ''}${name}` : `removed ${-delta > 1 ? `${-delta}× ` : ''}${name}`);
+    }
+    await record(exec, {
+      brandId,
+      kind: before ? 'package_updated' : 'package_created',
+      actor,
+      summary:
+        `${actor.label} ${before ? 'updated' : 'created'} the ${label} package` +
+        (changes.length ? `: ${changes.join(', ')}` : ''),
+      detail: { format: input.format, items: input.items },
+    });
+  });
+}

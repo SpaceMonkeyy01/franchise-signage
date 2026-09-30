@@ -194,7 +194,7 @@ async function latestLinkTo(to, kind, pattern) {
  */
 async function removeSmokeCatalog() {
   return withDb(async (client) => {
-    await client.query(`delete from catalog_events where summary like '%Smoke %'`);
+    await client.query(`delete from catalog_events where summary like '%Smoke %' or kind like 'package_%'`);
     await client.query(`delete from sent_emails where kind like 'catalog_%' and subject like '%Smoke %'`);
     await client.query(`update brand_packages set items = coalesce((
         select jsonb_agg(e order by n) from jsonb_array_elements(items) with ordinality as t(e, n)
@@ -2123,6 +2123,39 @@ await removeSmokeCatalog();
   await corp.locator('article', { hasText: 'Smoke Rejected Sign' }).getByRole('button', { name: 'Withdraw' }).click();
   await expectGone(corp, 'article:has-text("Smoke Rejected Sign")', 'and withdraws it');
 
+  // Packages: a brand admin edits one, and it is what the next store gets.
+  const inlineBefore = await withDb(async (client) =>
+    (await client.query(`select items from brand_packages p join brands b on b.id = p.brand_id
+                          where b.slug = 'freshbites' and p.format = 'inline'`)).rows[0].items,
+  );
+  try {
+    const inline = corp.locator('[data-package="inline"]');
+    await inline.getByRole('button', { name: 'Edit package' }).click();
+    await inline.getByRole('button', { name: 'Remove' }).last().click();
+    await inline.getByRole('button', { name: 'Save package' }).click();
+    await expectVisible(corp, '[data-package="inline"] >> text=Edit package', 'a brand admin edits a standard package');
+    const inlineAfter = await withDb(async (client) =>
+      (await client.query(`select items from brand_packages p join brands b on b.id = p.brand_id
+                            where b.slug = 'freshbites' and p.format = 'inline'`)).rows[0].items,
+    );
+    record(
+      'and it is live at once, one sign shorter',
+      inlineAfter.length === inlineBefore.length - 1 &&
+        inlineAfter.every((id, i) => id === inlineBefore[i]),
+      `${inlineBefore.length} → ${inlineAfter.length}`,
+    );
+    await ownerPage.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
+    await ownerPage.getByText(/inline/i).first().waitFor({ timeout: TIMEOUT });
+  } finally {
+    await withDb((client) =>
+      client.query(
+        `update brand_packages set items = $1
+          where format = 'inline' and brand_id = (select id from brands where slug = 'freshbites')`,
+        [JSON.stringify(inlineBefore)],
+      ),
+    );
+  }
+
   // A reviewer reads the tab and changes nothing.
   const reviewerContext = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   const reviewer = await reviewerContext.newPage();
@@ -2130,7 +2163,7 @@ await removeSmokeCatalog();
   await reviewer.getByText('Freshbites signs').first().waitFor({ timeout: TIMEOUT });
   record(
     'a reviewer sees the signs and cannot propose or retire',
-    (await reviewer.getByRole('button', { name: /Propose a new sign|Retire/ }).count()) === 0,
+    (await reviewer.getByRole('button', { name: /Propose a new sign|Retire|Edit package/ }).count()) === 0,
   );
 
   await reviewerContext.close();
