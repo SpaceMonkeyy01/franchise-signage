@@ -1497,9 +1497,13 @@ item 7's "CRUD UI only when onboarding brand #2".
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
-     options and pricing model. Editing a row's options on screen is not built:
-     they come from the pricing engine's attribute list, and Design Studio is
-     where they will be kept in step.
+     options and pricing model. **The team edits a row's options on screen**
+     (asked for on 30 Sep): one list per attribute, one option per line, plus
+     the render key. An option kept by name keeps its engine `var_name`; a new
+     one gets a derived id the pricing engine does not know until Design Studio
+     is kept in step, and the editor says so. `basic_fields` (the engine's
+     sizing inputs) are not a choice and are left alone. A brand sign that
+     already locked a removed option keeps it.
 
 ### Corrected while building Session 5
 

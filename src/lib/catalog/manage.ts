@@ -16,7 +16,7 @@
 // takes brand ids from the caller's own access, never from the browser.
 
 import { query, queryOne, transaction } from '../db/pool';
-import { summarize } from './labels';
+import { attributeLabel, summarize } from './labels';
 
 export { attributeLabel, signStatus, summarize } from './labels';
 
@@ -635,6 +635,84 @@ export async function savePackage(
         `${actor.label} ${before ? 'updated' : 'created'} the ${label} package` +
         (changes.length ? `: ${changes.join(', ')}` : ''),
       detail: { format: input.format, items: input.items },
+    });
+  });
+}
+
+// ------------------------------------------------------ master row options
+
+const slug = (text: string) =>
+  text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+/**
+ * The team edits which choices a master row offers (SPEC v2.4 §2.3): the
+ * lists a brand admin locks from. Options kept by name keep their engine
+ * `var_name` and `value`; new ones get a derived `var_name`, which the pricing
+ * engine does not know until Design Studio is kept in step (§8). Sizing fields
+ * (`basic_fields`) are the engine's, not a choice, and are left as they are.
+ * Brand signs that already locked a value that is removed keep it.
+ */
+export async function updateMasterOptions(
+  masterId: string,
+  actor: CatalogActor,
+  options: Record<string, string[]>,
+  renderKey: string | null,
+): Promise<void> {
+  const cleaned: Record<string, string[]> = {};
+  for (const [rawAttribute, values] of Object.entries(options)) {
+    const attribute = slug(rawAttribute);
+    if (!attribute || NOT_LOCKABLE.has(attribute)) continue;
+    const names = [...new Set(values.map((v) => v.trim()).filter(Boolean))];
+    if (names.length > 0) cleaned[attribute] = names;
+  }
+
+  await transaction(async (exec) => {
+    const [row] = await exec.query<{ attribute_options: Record<string, unknown> | null; sign_type: string; variant: string | null }>(
+      `select attribute_options, sign_type, variant from master_catalog where id = $1 for update`,
+      [masterId],
+    );
+    if (!row) throw new CatalogError('That catalog row no longer exists.');
+    const before = (row.attribute_options ?? {}) as Record<string, { var_name?: string; name?: string; value?: string }[]>;
+
+    const next: Record<string, unknown> = {};
+    for (const attribute of NOT_LOCKABLE) if (before[attribute]) next[attribute] = before[attribute];
+    for (const [attribute, names] of Object.entries(cleaned)) {
+      const existing = Array.isArray(before[attribute]) ? before[attribute] : [];
+      next[attribute] = names.map(
+        (name) =>
+          existing.find((option) => option?.name === name) ?? {
+            var_name: `${attribute}_${slug(name)}`,
+            name,
+            value: name,
+          },
+      );
+    }
+
+    await exec.query(`update master_catalog set attribute_options = $2, render_key = $3 where id = $1`, [
+      masterId,
+      JSON.stringify(next),
+      renderKey?.trim() || null,
+    ]);
+    const was = optionsFrom(before);
+    const changes: string[] = [];
+    for (const attribute of new Set([...Object.keys(was), ...Object.keys(cleaned)])) {
+      const a = new Set(was[attribute] ?? []);
+      const b = new Set(cleaned[attribute] ?? []);
+      const added = [...b].filter((x) => !a.has(x));
+      const removed = [...a].filter((x) => !b.has(x));
+      if (added.length) changes.push(`${attributeLabel(attribute)} +${added.join(', +')}`);
+      if (removed.length) changes.push(`${attributeLabel(attribute)} −${removed.join(', −')}`);
+    }
+    const name = row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
+    await record(exec, {
+      brandId: null,
+      masterId,
+      kind: 'master_options_updated',
+      actor,
+      summary: `${actor.label} edited ${name}` + (changes.length ? `: ${changes.join('; ')}` : ''),
     });
   });
 }

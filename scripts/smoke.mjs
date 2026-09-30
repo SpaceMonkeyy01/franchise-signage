@@ -194,7 +194,7 @@ async function latestLinkTo(to, kind, pattern) {
  */
 async function removeSmokeCatalog() {
   return withDb(async (client) => {
-    await client.query(`delete from catalog_events where summary like '%Smoke %' or kind like 'package_%'`);
+    await client.query(`delete from catalog_events where summary like '%Smoke %' or kind like 'package_%' or kind = 'master_options_updated'`);
     await client.query(`delete from sent_emails where kind like 'catalog_%' and subject like '%Smoke %'`);
     await client.query(`update brand_packages set items = coalesce((
         select jsonb_agg(e order by n) from jsonb_array_elements(items) with ordinality as t(e, n)
@@ -2122,6 +2122,37 @@ await removeSmokeCatalog();
   corp.once('dialog', (dialog) => dialog.accept());
   await corp.locator('article', { hasText: 'Smoke Rejected Sign' }).getByRole('button', { name: 'Withdraw' }).click();
   await expectGone(corp, 'article:has-text("Smoke Rejected Sign")', 'and withdraws it');
+
+  // The team edits which choices a catalog row offers; corporate locks from them.
+  const aFrame = await withDb(async (client) =>
+    (await client.query(`select id, attribute_options, render_key from master_catalog where sign_type = 'A-Frame Sign'`)).rows[0],
+  );
+  try {
+    await team.reload({ waitUntil: 'networkidle' });
+    await team.locator('div.flex-wrap:has(p:text-is("A-Frame Sign"))').getByRole('button', { name: 'Edit options' }).click();
+    const editor = team.locator('[data-options-editor="A-Frame Sign"]');
+    await editor.getByRole('button', { name: 'Add an attribute' }).click();
+    await editor.getByLabel('Attribute', { exact: true }).last().fill('insert_size');
+    await editor.getByLabel(/Options for/).last().fill('24 x 36\n18 x 24');
+    await editor.getByRole('button', { name: 'Save options' }).click();
+    await expectGone(team, '[data-options-editor="A-Frame Sign"]', 'the team adds options to a catalog row');
+
+    await corp.reload({ waitUntil: 'networkidle' });
+    await corp.getByRole('button', { name: 'Propose a new sign' }).click();
+    await corp.getByLabel('Where it goes').selectOption('outdoor');
+    await corp.getByLabel('Sign type').selectOption('A-Frame Sign');
+    const offered = await corp.getByLabel('Insert size').locator('option').allTextContents();
+    record('and corporate can lock them in a proposal', offered.includes('24 x 36') && offered.includes('18 x 24'), offered.join(' | '));
+    await corp.getByRole('button', { name: 'Cancel' }).click();
+  } finally {
+    await withDb((client) =>
+      client.query(`update master_catalog set attribute_options = $2, render_key = $3 where id = $1`, [
+        aFrame.id,
+        JSON.stringify(aFrame.attribute_options),
+        aFrame.render_key,
+      ]),
+    );
+  }
 
   // Packages: a brand admin edits one, and it is what the next store gets.
   const inlineBefore = await withDb(async (client) =>

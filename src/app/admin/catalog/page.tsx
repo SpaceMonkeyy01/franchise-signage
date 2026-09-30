@@ -19,7 +19,14 @@ import {
 } from '@/lib/catalog/manage';
 import { getBrandsPublic } from '@/lib/db/queries';
 
-import { AddVariantForm, MasterToggle, PriceEditor, ReviewForm, SignActiveToggle } from './CatalogControls';
+import {
+  AddVariantForm,
+  MasterToggle,
+  OptionsEditor,
+  PriceEditor,
+  ReviewForm,
+  SignActiveToggle,
+} from './CatalogControls';
 
 export const metadata = { title: 'Catalog · Signage.com' };
 
@@ -257,6 +264,12 @@ export default async function CatalogPage({
                                       ` · ${Object.keys(row.options).length} options`}
                                   </span>
                                   <MasterToggle masterId={row.id} active={row.active} />
+                                  <OptionsEditor
+                                    masterId={row.id}
+                                    name={variantName(row)}
+                                    options={row.options}
+                                    renderKey={row.render_key}
+                                  />
                                 </li>
                               ))}
                             </ul>

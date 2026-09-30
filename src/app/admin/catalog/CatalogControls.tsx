@@ -11,6 +11,7 @@ import {
   setMasterActiveAction,
   setSignActiveAction,
   setSignPriceAction,
+  updateMasterOptionsAction,
 } from './actions';
 
 const input = 'rounded-lg border border-gray-300 px-2.5 py-1.5 text-sm';
@@ -316,5 +317,113 @@ export function AddVariantForm({ categories }: { categories: string[] }) {
       </div>
       <ErrorLine error={error} />
     </form>
+  );
+}
+
+/**
+ * Which choices a catalog row offers brands — one list per attribute, one
+ * option per line. Brand signs that already locked a removed value keep it.
+ */
+export function OptionsEditor({
+  masterId,
+  name,
+  options,
+  renderKey,
+}: {
+  masterId: string;
+  name: string;
+  options: Record<string, string[]>;
+  renderKey: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState<{ attribute: string; values: string }[]>(
+    Object.entries(options).map(([attribute, values]) => ({ attribute, values: values.join('\n') })),
+  );
+  const [key, setKey] = useState(renderKey ?? '');
+  const { error, pending, go } = useAction();
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-gray-500 underline-offset-2 hover:text-gray-900 hover:underline"
+      >
+        Edit options
+      </button>
+    );
+  }
+
+  return (
+    <div className="mt-2 w-full space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-3" data-options-editor={name}>
+      <p className="text-xs font-medium text-gray-800">
+        Options brands can lock for {name}. One option per line; an empty list removes the attribute.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {rows.map((row, index) => (
+          <div key={index}>
+            <input
+              className={`${input} w-full text-xs font-medium`}
+              value={row.attribute}
+              aria-label="Attribute"
+              placeholder="attribute, e.g. mounting_type"
+              onChange={(e) =>
+                setRows((c) => c.map((r, i) => (i === index ? { ...r, attribute: e.target.value } : r)))
+              }
+            />
+            <textarea
+              className={`${input} mt-1 w-full text-xs`}
+              rows={Math.max(3, row.values.split('\n').length)}
+              value={row.values}
+              aria-label={`Options for ${row.attribute || 'new attribute'}`}
+              onChange={(e) =>
+                setRows((c) => c.map((r, i) => (i === index ? { ...r, values: e.target.value } : r)))
+              }
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <button
+          type="button"
+          onClick={() => setRows((c) => [...c, { attribute: '', values: '' }])}
+          className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs text-gray-800"
+        >
+          Add an attribute
+        </button>
+        <label className="text-xs text-gray-600">
+          Render key
+          <input className={`${input} ml-2 w-48 text-xs`} value={key} onChange={(e) => setKey(e.target.value)} />
+        </label>
+      </div>
+      <p className="text-[11px] text-gray-500">
+        New options are not priced by the pricing engine until Design Studio is kept in step; brand signs
+        that already locked a removed option keep it.
+      </p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            go(
+              () =>
+                updateMasterOptionsAction(
+                  masterId,
+                  Object.fromEntries(rows.map((r) => [r.attribute, r.values.split('\n')])),
+                  key,
+                ),
+              () => setOpen(false),
+            )
+          }
+          className="rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 disabled:opacity-40"
+        >
+          Save options
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-xs text-gray-600">
+          Cancel
+        </button>
+      </div>
+      <ErrorLine error={error} />
+    </div>
   );
 }

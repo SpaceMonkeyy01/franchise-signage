@@ -16,6 +16,7 @@ import {
   setMasterActive,
   setSignActive,
   setSignPrice,
+  updateMasterOptions,
   type CatalogActor,
   type NewVariant,
 } from '@/lib/catalog/manage';
@@ -84,4 +85,12 @@ export async function setMasterActiveAction(masterId: string, active: boolean) {
 
 export async function addMasterVariantAction(input: NewVariant) {
   return run((actor) => addMasterVariant(actor, input));
+}
+
+export async function updateMasterOptionsAction(
+  masterId: string,
+  options: Record<string, string[]>,
+  renderKey: string,
+) {
+  return run((actor) => updateMasterOptions(masterId, actor, options, renderKey));
 }
