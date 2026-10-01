@@ -17,7 +17,19 @@
   a spec question, noted in #161.
 - **Footer credit** on every screen: "MVP v1.0 by Saad A." (`MVP_VERSION` in
   `src/app/layout.tsx`), hidden in print.
-- Checks: **306 smoke**, **192 unit**, typecheck, lint.
+- **Status machine** (#162): every item declined → terminal `declined`;
+  a resubmission returns to `needs_review`. Migration
+  `20261001090000_request_declined.sql` (enum value + data correction).
+- **Team queue**: time waiting in the current status, oldest first, amber from
+  three days; one card per request on a phone.
+- **Corporate dashboard** (#163): the duplicate registration panel is gone
+  (People already had it); vendor policy is one line below the budget sheets.
+- **Tooling**: `.prettierrc.json` + `npm run format -- <files>`;
+  `npm run shots` (every role's screens at three widths, fails on sideways
+  scroll).
+- **Live project:** all 19 migrations applied (1 Oct; no live rows needed
+  moving), and the Freshbites brand row now has its `logo_url`.
+- Checks: **306 smoke**, **192 unit**, **64 schema**, typecheck, lint, shots.
 
 ## 30 Sep 2026 (evening): look and feel, and a faster dev sign-in
 
@@ -99,7 +111,7 @@
 - **A store mid-setup shows its six stages on "My stores"** (#145), with the
   opening-date countdown and a button when the next move is the franchisee's.
 - **Freshbites wears its own logo** (`public/brands/freshbites/logo.png`, the
-  seed's `logo_url`); the live project's brand row still needs it set.
+  seed's `logo_url`); set on the live project's brand row on 1 Oct.
 - Both ideas came from an outside concept page; what was deliberately not taken,
   and the zone grouping waiting on a yes, is #143.
 - Checks: **270 smoke**, **172 unit**, typecheck, lint, green build.
