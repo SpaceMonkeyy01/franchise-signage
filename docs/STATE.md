@@ -29,7 +29,12 @@
   scroll).
 - **Live project:** all 19 migrations applied (1 Oct; no live rows needed
   moving), and the Freshbites brand row now has its `logo_url`.
-- Checks: **306 smoke**, **192 unit**, **64 schema**, typecheck, lint, shots.
+- **Spec v2.5** (awaiting your review): the schema divergences recorded since
+  Session 1 and today's three status rules are written into SPEC.md, each
+  citing its DECISIONS.md entry; see its changelog.
+- **CI** (`.github/workflows/checks.yml`): typecheck, lint, unit tests and
+  `db:verify` on every push, proven from a clean clone. Runs once pushed.
+- Checks: **312 smoke**, **192 unit**, **64 schema**, typecheck, lint, shots.
 
 ## 30 Sep 2026 (evening): look and feel, and a faster dev sign-in
 
@@ -854,14 +859,15 @@ In `docs/DECISIONS.md`, none blocking:
 
 1. ~~Should SPEC §6 gain a terminal request-level `declined`?~~ **Answered and
    built** (#162, 1 Oct): yes, `needs_review → declined`.
-2. SPEC §5.4 should gain `changes_requested` as a fifth `line_item_status`.
+2. ~~SPEC §5.4 should gain `changes_requested`.~~ **Written into spec v2.5**
+   (1 Oct), with the other Session 1 schema divergences (#2–#5, #7).
 3. Session 2's calls (entries 14–19): submission stopping at `submitted`, the
    structured address, optional sizing on add-ons, the note-on-timeline when no
    lease exhibit is provided, resolving the change request on resubmission, and
    storing uploads before the request exists.
 4. ~~Entry 20 — per-policy vendor contacts.~~ **Answered and built** (entry 34):
    `brand_vendor_contacts`, one row per (brand, policy). Nothing already
-   configured had to move. §3.1 should be amended to match.
+   configured had to move. §3.1 now says so (spec v2.5).
 5. Session 3's calls (entries 23–26), chiefly the split between swappable
    identity and fixed authorization in `/admin`.
 6. Session 4's calls (entries 27–33), chiefly: **one link per email rather than

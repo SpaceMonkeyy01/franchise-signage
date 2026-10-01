@@ -12,7 +12,7 @@ A co-branded signage workflow portal Signage.com operates for franchise brands (
 anything else when resuming; it is kept current at the end of each session.
 
 ## Source-of-truth documents (read before writing any code)
-- `docs/SPEC.md` — the build contract (currently spec v2.4): full data model, status machine, approval rules, vendor routing, Design Studio integration contract, DID module, two-level access, accounts and roles (§10), build order. Authoritative.
+- `docs/SPEC.md` — the build contract (currently spec v2.5, awaiting the owner's review of what v2.5 wrote in): full data model, status machine, approval rules, vendor routing, Design Studio integration contract, DID module, two-level access, accounts and roles (§10), build order. Authoritative.
 - `docs/flow-demo.jsx` — interactive reference implementation of the UX (all three personas, shared state). The real app's flows, screens, copy tone, and behavior should match this demo. Where SPEC.md and the demo disagree, STOP and flag it — do not guess. **Note: the file on disk is v12. Spec v2.1 and Session 8 reference a v13 demo that adds the DID generator screens; it has not landed in the repo yet.**
 - `docs/sign-taxonomy.tsv` — the master catalog seed data (Placement → Category → Sign Type → Variant + attribute matrix + pricing basis).
 - `docs/FLOW.md` — stakeholder-facing narrative of the whole system (five parties, the five points signage enters a franchisee's journey, outputs by stage). Context and language, NOT a build contract: where it disagrees with SPEC.md or the demo, they win.

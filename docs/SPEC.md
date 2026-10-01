@@ -1,9 +1,9 @@
-# Franchise Signage Studio — MVP Spec v2.4
+# Franchise Signage Studio — MVP Spec v2.5
 
-Version 2.4 · Supersedes v2.3 · Handoff document for implementation (Claude Code)
+Version 2.5 · Supersedes v2.4 · Handoff document for implementation (Claude Code)
 Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for every account) + Resend + Vercel.
 Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
-What changed in v2.4: §2.3 is new — the catalog is managed in the app. Signage.com keeps the master catalog and sets every price; a brand admin proposes new brand signs (Signage.com reviews and prices them before they go live) and edits the brand's packages, which go live at once. What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
+What changed in v2.5: the spec catches up with the build. Fields the schema has carried since the first sessions are written in (§3.1, §5.1, §5.3, §5.4, §5.6), and §6/§7 gain three rules: corporate's review opens when the team prepares the package, a resubmission goes straight back to review, and a request with every item declined ends at a terminal `declined`. See the changelog; each item cites the DECISIONS.md entry it came from, and the whole amendment is awaiting the owner's review. What changed in v2.4: §2.3 is new — the catalog is managed in the app. Signage.com keeps the master catalog and sets every price; a brand admin proposes new brand signs (Signage.com reviews and prices them before they go live) and edits the brand's packages, which go live at once. What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -100,7 +100,11 @@ Both layers are managed on screen, no longer only by the seed script.
 | vendor_policy | enum | `signage_com` \| `approved_vendor` \| `preferred_vendor` \| `corporate_first` |
 | vendor_name / vendor_email | | required when policy is external |
 | corporate_cc | boolean | CC corporate on routed packages |
+| corporate_email | text | the address corporate_cc copies and `corporate_first` routes to; required when either is in use (v2.5, DECISIONS #3) |
 | default_tat | text | shown to franchisees for internal fulfillment |
+| did_allowed_email_domains / did_fee_cents | text[] / integer nullable | §8c brand-domain check and the per-brand DID fee; a null fee falls back to the platform default in config (v2.5, DECISIONS #7) |
+
+**Per-policy vendor contacts (v2.5, DECISIONS #20, #34).** The brand row holds one vendor, but §4 resolves routing per item, so a brand on `signage_com` that overrides one sign to `approved_vendor` produces a package that needs an address of its own. `brand_vendor_contacts` holds one row per (brand, policy): vendor_name, vendor_email, and optional corporate_cc and tat that override the brand's for packages to that recipient. The brand columns stay the contact for the brand's own policy.
 
 ### 3.2 `brand_packages` — standard package per store type
 
@@ -136,6 +140,7 @@ The tail is a property of the PACKAGE, not of the request (§6, amended v2.2). A
 | Field | Notes |
 |---|---|
 | id, brand_id, name, address jsonb, format, opening_date nullable, created_at | Requests FK to locations; no more embedded addresses |
+| code | `LOC-0001`, sequence-backed; what people say out loud. The uuid stays the key (v2.5, DECISIONS #4) |
 
 ### 5.2 `installed_signs`
 | Field | Notes |
@@ -150,12 +155,14 @@ The tail is a property of the PACKAGE, not of the request (§6, amended v2.2). A
 | Field | Notes |
 |---|---|
 | id, brand_id, location_id | |
+| code | `REQ-0001`, sequence-backed, shown on every screen (v2.5, DECISIONS #4) |
 | intent | enum: `initial_setup` \| `add` \| `replace_like` \| `modify` (v1.1) \| `remove` (v1.1) \| `rebrand` (v1.1) |
 | access_token | scopes the franchisee secure link to this request |
 | status | derived — see §6 |
 | requester_name / email / phone | |
 | financing_involved | boolean nullable — franchisee indicates a lender is funding signage; flags the team that formal quote/invoice/receipt documents will be needed |
 | landlord_contact | jsonb nullable — name/email of property manager for landlord-approval routing |
+| package_version | integer, starts at 1; raised only by a franchisee's resubmission after a change request (§6) |
 | submitted_at, created_at | |
 
 ### 5.4 `line_items`
@@ -163,7 +170,8 @@ The tail is a property of the PACKAGE, not of the request (§6, amended v2.2). A
 |---|---|
 | id, request_id, brand_item_id | |
 | origin | enum: `standard` \| `addon` \| `exception` \| `replacement` |
-| item_status | enum: `auto_approved` \| `pending_review` \| `approved` \| `declined` |
+| item_status | enum: `auto_approved` \| `pending_review` \| `approved` \| `declined` \| `changes_requested` — the fifth marks an item a reviewer sent back; it returns to `pending_review` on resubmission (v2.5, DECISIONS #1) |
+| est_price_snapshot | numeric nullable — the brand item's estimate at submission, so the number a franchisee saw, a reviewer approved and a lender document quotes stay the same as prices move; null = custom quote (v2.5, DECISIONS #2) |
 | sizing / site_notes, tbd_fields text[] | TBD never blocks submission; flags team follow-up |
 | exception_issue | text nullable — why the standard sign won't work |
 | replaces_sign_id | FK installed_signs nullable (replacement intent) |
@@ -171,14 +179,16 @@ The tail is a property of the PACKAGE, not of the request (§6, amended v2.2). A
 | mockup_file_id | nullable — from Design Studio (franchisee-generated or team-prepared); placeholder allowed |
 | review_note | reviewer's optional condition ("approved — matte finish") |
 | reviewed_at / reviewed_via_token | |
+| reviewed_by / reviewed_by_email / reviewed_route | who decided, and how: `link` (the emailed button) or `session` (signed in, v2.3) |
 
 ### 5.5 `request_files`, `request_events`, `change_requests`
-As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_photo), append-only event log powering all timelines, and change_requests for the revision loop (comment + flagged line_item ids; only flagged items reopen).
+As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_photo, landlord_criteria — §8b), append-only event log powering all timelines, and change_requests for the revision loop (comment + flagged line_item ids; only flagged items reopen).
 
 ### 5.6 `quotes`
 | Field | Notes |
 |---|---|
 | id, request_id, recipient_kind (resolved policy), recipient_email, cc_email | |
+| line_item_ids | uuid[] — which items this package carries; §4's split cannot be recorded without it (v2.5, DECISIONS #5) |
 | priced_total, priced_count, manual_count | manual = standin-priced items awaiting team pricing |
 | external | boolean — selects the lifecycle tail |
 | tat, sent_at, delivered_at, accepted_at | |
@@ -187,7 +197,7 @@ As v1: files (kinds: placement_photo, site_file, mockup, package_pdf, condition_
 
 Three levels, each derived from the one below it. Approval lives on the item, fulfillment lives on the package, and the request status is a rollup of both — there is never a second status column to reconcile.
 
-**Item-level:** `auto_approved` (standard + like-for-like replacement) · `pending_review` (addon, exception, modify) → `approved` \| `declined` (per-item, reviewer email links). Declines never block siblings.
+**Item-level:** `auto_approved` (standard + like-for-like replacement) · `pending_review` (addon, exception, modify) → `approved` \| `declined` \| `changes_requested` (per-item, reviewer email links or the signed-in dashboard). A `changes_requested` item returns to `pending_review` when the franchisee resubmits. Declines never block siblings.
 
 **Package-level (new in v2.2).** §4 already splits one request into a quote package per recipient, and each package has its own vendor, its own tail, and its own money. Each therefore runs its own lifecycle:
 ```
@@ -199,6 +209,9 @@ Three levels, each derived from the one below it. Approval lives on the item, fu
 **Request-level (derived, never set directly):**
 ```
 draft → submitted → [needs_review]* → approved → sent_for_quote → «rollup of its packages»
+                          │   ↑
+                          │   └── changes_requested ← (reviewer sends items back; resubmission returns here)
+                          └──→ declined   (every item declined — terminal, v2.5)
 ```
 Before routing the request derives from its ITEMS, exactly as before. After routing it derives from its PACKAGES, and the rule is one line: **the request sits at the stage of its least advanced package.** Ranked `sent_for_quote` < `quote_ready` < `accepted` < `in_production` < `shipped` < `completed`. A package only ever advances, so the rollup only ever advances.
 
@@ -214,7 +227,11 @@ A split request therefore reads:
 | we install ours | **completed** | accepted | accepted |
 | vendor's goes in | completed | **completed** | **completed** |
 
-`needs_review` only if any item is pending; skipped entirely when all items auto-approve (the fast lane goes submitted → approved in one step once the team preps the package). `changes_requested` branches from needs_review back via franchisee resubmission (package version increments).
+`needs_review` only if any item is pending; skipped entirely when all items auto-approve (the fast lane goes submitted → approved in one step once the team preps the package). `changes_requested` branches from needs_review; the franchisee's resubmission raises the package version and returns the request **straight to `needs_review`**: the re-review email has already gone to corporate, and there is no second prep (v2.5, DECISIONS #162).
+
+**Corporate's review opens at package prep (v2.5, DECISIONS #161).** `submitted` means Signage.com has not prepared the package yet: items may still be TBD, photos missing, the landlord criteria unchecked, and no approval email has gone. A decision or change request is accepted only while the request is `needs_review` or `changes_requested` (siblings of a sent-back item can still be decided, §7); anything earlier is refused. Everything that counts items as waiting on corporate (the dashboard, its approvals view, the team's "with corporate" figure) counts only those requests.
+
+**Every item declined (v2.5, DECISIONS #162).** When the last decision leaves no item approved or auto-approved, the request ends at `declined`: nothing to quote, nothing to install. It is terminal, and like `completed` it is not an open request. A request with any item left standing goes to `approved`, and its declined items simply never reach a package.
 
 `completed` is still the ONLY transition that writes to `installed_signs` — it is now the PACKAGE's `completed`, and it writes only that package's approved items (replacement items update their target row). A split site's signs land on the location record as each half is installed rather than waiting for the slower vendor. Every transition, at either level, writes a request_event naming the package it moved. SLA timer on needs_review per brand config.
 
@@ -228,6 +245,7 @@ A split request therefore reads:
 - `replacement` (like-for-like of an active installed sign) → auto_approved, always.
 - Reviewer UX is email-only: signed expiring links, per-item Approve / Decline + optional note; a "changes requested" path with comment + flagged fields. Auto-approved count stated in the email ("4 standard signs auto-approved — no action needed").
 - Approval never requires signing in: the email buttons decide. A signed-in reviewer or brand admin can also decide from the dashboard (v2.3, §10); both paths write the same events.
+- Decisions are accepted only while the review is open, from package prep until the last decision (§6, v2.5). The review opens with the approval email, so neither path can decide ahead of it.
 
 ## 8. Design Studio integration
 
@@ -577,6 +595,17 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
 
 ---
+
+## Changelog v2.4 → v2.5 (Oct 2026)
+
+The build's divergences, written into the contract. Every item below is already built and tested; this version makes the spec say so. **Awaiting the owner's review.** DECISIONS.md has the reasoning for each.
+
+- **§3.1:** `corporate_email` (#3); `did_allowed_email_domains` and `did_fee_cents` (#7); per-policy vendor contacts in `brand_vendor_contacts` (#20, #34).
+- **§5.1 / §5.3:** `LOC-` / `REQ-` codes (#4); `package_version` named on the request.
+- **§5.4:** `changes_requested` as the fifth item status (#1); `est_price_snapshot` (#2); who decided, and by which route (v2.3).
+- **§5.5:** `landlord_criteria` listed among the file kinds (§8b already relied on it).
+- **§5.6:** `quotes.line_item_ids` (#5).
+- **§6 / §7:** corporate's review opens at package prep, and decisions before it are refused (#161); a resubmission returns to `needs_review` (#162); a request with every item declined ends at a terminal `declined` (#162, answering the open question in #9).
 
 ## Changelog v2.3 → v2.4 (Sep 2026)
 
