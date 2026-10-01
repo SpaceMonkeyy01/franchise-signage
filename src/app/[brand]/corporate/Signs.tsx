@@ -77,9 +77,9 @@ export function Signs({
       hint: 'Revise and send again, or withdraw.',
       signs: signs.filter((s) => s.review_status === 'declined'),
     },
-    { title: 'Live', signs: signs.filter((s) => s.review_status === 'approved' && s.active) },
+    { title: 'Active', signs: signs.filter((s) => s.review_status === 'approved' && s.active) },
     {
-      title: 'Retired',
+      title: 'Inactive',
       hint: 'Stores that have these keep them, and replacing one comes to you for approval. Nobody can order a new one.',
       signs: signs.filter((s) => s.review_status === 'approved' && !s.active),
     },
@@ -236,7 +236,7 @@ function SignRow({
                   if (
                     sign.active &&
                     !window.confirm(
-                      `Retire ${sign.name}? It leaves your catalog and every standard package now. Stores that have it keep it and can still replace it, with your approval; nobody can order a new one.`,
+                      `Deactivate ${sign.name}? It leaves your catalog and every standard package now. Stores that have it keep it and can still replace it, with your approval; nobody can order a new one.`,
                     )
                   ) {
                     return;
@@ -245,7 +245,7 @@ function SignRow({
                 }}
                 className={`underline-offset-2 hover:underline disabled:opacity-40 ${sign.active ? 'text-rose-700' : 'text-gray-700'}`}
               >
-                {pending ? '…' : sign.active ? 'Retire' : 'Reinstate'}
+                {pending ? '…' : sign.active ? 'Deactivate' : 'Activate'}
               </button>
             )}
           </div>

@@ -19,7 +19,7 @@ describe('catalog helpers (SPEC v2.4 §2.3)', () => {
   it('reads a sign as pending, declined, live or retired', () => {
     expect(signStatus({ review_status: 'pending', active: false }).label).toBe('Awaiting review');
     expect(signStatus({ review_status: 'declined', active: false }).label).toBe('Declined');
-    expect(signStatus({ review_status: 'approved', active: true }).label).toBe('Live');
-    expect(signStatus({ review_status: 'approved', active: false }).label).toBe('Retired');
+    expect(signStatus({ review_status: 'approved', active: true }).label).toBe('Active');
+    expect(signStatus({ review_status: 'approved', active: false }).label).toBe('Inactive');
   });
 });

@@ -2183,8 +2183,8 @@ await removeSmokeCatalog();
   await expectVisible(ownerPage, 'text=Smoke Patio Letters', 'franchisees can order it now');
 
   corp.once('dialog', (dialog) => dialog.accept());
-  await corp.locator('article', { hasText: 'Smoke Patio Letters' }).getByRole('button', { name: 'Retire' }).click();
-  await expectVisible(corp, 'article:has-text("Smoke Patio Letters") >> text=Retired', 'a brand admin retires it');
+  await corp.locator('article', { hasText: 'Smoke Patio Letters' }).getByRole('button', { name: 'Deactivate' }).click();
+  await expectVisible(corp, 'article:has-text("Smoke Patio Letters") >> text=Inactive', 'a brand admin retires it');
   await ownerPage.goto(addPage, { waitUntil: 'networkidle' });
   await expectCount(ownerPage, 'text=Smoke Patio Letters', 0, 'and franchisees can no longer order it');
 
@@ -2323,7 +2323,7 @@ await removeSmokeCatalog();
   await expectVisible(ownerPage, 'button:has-text("Smoke Drive-thru")', 'a franchisee setting up a store can choose it');
 
   corp.once('dialog', (dialog) => dialog.accept());
-  await driveThru.getByRole('button', { name: 'Retire' }).click();
+  await driveThru.getByRole('button', { name: 'Deactivate' }).click();
   await expectGone(corp, '[data-package="smoke_drive_thru"]', 'a brand admin retires a store type');
   await ownerPage.goto(`${BASE}/freshbites/setup`, { waitUntil: 'networkidle' });
   await expectCount(ownerPage, 'button:has-text("Smoke Drive-thru")', 0, 'and it is no longer offered at setup');
@@ -2376,7 +2376,7 @@ await removeSmokeCatalog();
   await reviewer.getByText('Freshbites signs').first().waitFor({ timeout: TIMEOUT });
   record(
     'a reviewer sees the signs and cannot propose or retire',
-    (await reviewer.getByRole('button', { name: /Propose a new sign|Retire|Edit package/ }).count()) === 0,
+    (await reviewer.getByRole('button', { name: /Propose a new sign|Deactivate|Edit package/ }).count()) === 0,
   );
 
   await reviewerContext.close();

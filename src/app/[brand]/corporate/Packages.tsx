@@ -82,7 +82,7 @@ export function Packages({
       {canManage && <AddStoreType brandSlug={brandSlug} />}
       {retired.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Retired store types</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Inactive store types</p>
           <ul className="mt-1 space-y-1">
             {retired.map((storeType) => (
               <RetiredStoreType key={storeType.key} brandSlug={brandSlug} canManage={canManage} storeType={storeType} />
@@ -187,7 +187,7 @@ function RetiredStoreType({
           onClick={() => go(() => setStoreTypeActiveAction(brandSlug, storeType.key, true))}
           className="text-xs text-gray-700 underline-offset-2 hover:underline disabled:opacity-40"
         >
-          Bring back
+          Activate
         </button>
       )}
       {error && <span className="text-xs text-rose-700">{error}</span>}
@@ -336,7 +336,7 @@ function PackageCard({
                       const stores = `${storeType.locations} store${storeType.locations === 1 ? '' : 's'}`;
                       if (
                         window.confirm(
-                          `Retire the ${formatLabel} store type? New stores can no longer be set up as ${formatLabel}; the ${stores} already set up keep it.`,
+                          `Deactivate the ${formatLabel} store type? New stores can no longer be set up as ${formatLabel}; the ${stores} already set up keep it.`,
                         )
                       ) {
                         typeAction.go(() => setStoreTypeActiveAction(brandSlug, format, false));
@@ -344,7 +344,7 @@ function PackageCard({
                     }}
                     className="text-rose-700 underline-offset-2 hover:underline"
                   >
-                    Retire
+                    Deactivate
                   </button>
                 </span>
               )}

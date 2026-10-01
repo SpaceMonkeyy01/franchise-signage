@@ -88,7 +88,7 @@ export function ReplaceForm({
                       month: 'short',
                       year: 'numeric',
                     })}
-                    {sign.retired && ' · retired by the brand'}
+                    {sign.retired && ' · inactive at the brand'}
                   </span>
                 </span>
               </span>
@@ -159,7 +159,7 @@ export function ReplaceForm({
             {selected.sizing ? ` (${selected.sizing})` : ''} like-for-like against the locked brand
             spec{selected.spec_summary ? `: ${selected.spec_summary}` : ''}.{' '}
             {selected.retired
-              ? `${brand.name} has retired this sign, so corporate reviews the replacement first — they may suggest a current sign instead.`
+              ? `${brand.name} has made this sign inactive, so corporate reviews the replacement first — they may suggest a current sign instead.`
               : 'Skips corporate review, straight to quote preparation.'}
           </p>
           <p

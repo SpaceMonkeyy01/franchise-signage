@@ -11,8 +11,8 @@ export function signStatus(sign: { review_status: ReviewStatus; active: boolean 
   if (sign.review_status === 'pending') return { label: 'Awaiting review', tone: 'bg-amber-50 text-amber-800' };
   if (sign.review_status === 'declined') return { label: 'Declined', tone: 'bg-rose-50 text-rose-700' };
   return sign.active
-    ? { label: 'Live', tone: 'bg-green-50 text-green-800' }
-    : { label: 'Retired', tone: 'bg-gray-100 text-gray-600' };
+    ? { label: 'Active', tone: 'bg-green-50 text-green-800' }
+    : { label: 'Inactive', tone: 'bg-gray-100 text-gray-600' };
 }
 
 /** `mounting_type` → "Mounting type". */

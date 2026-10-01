@@ -168,7 +168,7 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
           if (
             active &&
             !window.confirm(
-              `Retire ${name}? It leaves the catalog and every package at once. Stores that have it keep it; replacing it needs corporate approval, and nobody can order a new one.`,
+              `Deactivate ${name}? It leaves the catalog and every package at once. Stores that have it keep it; replacing it needs corporate approval, and nobody can order a new one.`,
             )
           ) {
             return;
@@ -177,7 +177,7 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
         }}
         className={`text-xs underline-offset-2 hover:underline disabled:opacity-40 ${active ? 'text-rose-700' : 'text-gray-700'}`}
       >
-        {pending ? '…' : active ? 'Retire' : 'Reinstate'}
+        {pending ? '…' : active ? 'Deactivate' : 'Activate'}
       </button>
       <ErrorLine error={error} />
     </>

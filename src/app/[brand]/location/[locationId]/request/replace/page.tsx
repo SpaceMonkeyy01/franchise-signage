@@ -55,7 +55,7 @@ export default async function ReplacePage({
         </div>
         <p className="mt-1 text-sm text-gray-500">
           Brand spec and your sizing are already on file from the original approval — no forms to
-          refill, no corporate review. (A sign the brand has retired is the exception: corporate
+          refill, no corporate review. (A sign the brand has made inactive is the exception: corporate
           reviews its replacement.)
         </p>
 
