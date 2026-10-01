@@ -1,5 +1,24 @@
 # Where the build is
 
+## 1 Oct 2026: layout for big screens, clearer cards, and the review rule enforced
+
+- **Pages widen with the screen** (#159): `page-wide` / `page` / `page-narrow`
+  in `globals.css`; root font steps up from 1680px; both request pages go
+  two-column from 1280px; the console header wraps on a phone.
+- **Cards say each thing once** (#160): request items grouped by status, an
+  Estimate card until a quote exists; corporate's approval tile is the link
+  (banner gone), and each location lists its open requests with a stage bar.
+  Light grey text darkened to pass WCAG AA.
+- **Corporate's review opens at package prep** (#161). Decisions and change
+  requests on an unprepared request now throw `ReviewNotOpenError` (before,
+  a reviewer could approve a `submitted` request and skip prep), and every
+  count follows `isReviewOpen()`. A resubmission returns to `submitted` but is
+  open (package version > 1); whether it should go to `needs_review` instead is
+  a spec question, noted in #161.
+- **Footer credit** on every screen: "MVP v1.0 by Saad A." (`MVP_VERSION` in
+  `src/app/layout.tsx`), hidden in print.
+- Checks: **306 smoke**, **192 unit**, typecheck, lint.
+
 ## 30 Sep 2026 (evening): look and feel, and a faster dev sign-in
 
 - **A drafting-board grid behind every page** (#158): brand-tinted on brand
