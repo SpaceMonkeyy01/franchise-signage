@@ -21,7 +21,8 @@
     "sla": "tsx scripts/run-sla.ts",
     "invite": "tsx scripts/invite.ts",
     "backfill-owners": "tsx scripts/backfill-owners.ts",
-    "format": "prettier --write"
+    "format": "prettier --write",
+    "shots": "node scripts/shots.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.6.1",

@@ -634,6 +634,8 @@ local database; the code is displayed only because this is dev (DECISIONS #112).
 | `npm run dev:db` / `npm run dev:web` | either half on its own |
 | `npm run dev:db:reset` | wipe `.pglite/` and re-seed from scratch |
 | `npm run smoke` | drive the real flows in a browser — 253 checks (needs `npm run dev` up, and Supabase mode OFF) |
+| `npm run shots` | screenshots of every role's main screens at 1920, 1280 and 390px into `shots/`; fails if any page scrolls sideways (needs `npm run dev` up; read-only) |
+| `npm run format -- <files>` | format the files you touched in the house style (`.prettierrc.json`); the codebase is not reformatted wholesale |
 | `npm run sla` | run the review-SLA timer once (also at `/api/cron/review-sla`) |
 | `npm test` | 154 unit tests — the §6 machine and the package rollup, the seed pins, the §8b totals, the §8d welcome copy, the Storage driver's failure shapes |
 | `npm run db:verify` | apply all migrations to a throwaway Postgres — 57 checks in three phases: shape, storyline, and **RLS behaviour** as the anon and authenticated roles |

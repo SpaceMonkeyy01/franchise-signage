@@ -67,3 +67,6 @@ dev-web.log
 
 # Smoke-run leftovers, so a crashed run cleans up on the next one
 scripts/.smoke-leftovers.json
+
+# Screenshots from npm run shots
+shots/
