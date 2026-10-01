@@ -41,7 +41,6 @@ import { Approvals } from './Approvals';
 import { Franchisees } from './Franchisees';
 import { Packages } from './Packages';
 import { People, type InvitedRow, type PersonRow } from './People';
-import { Registrations } from './Registrations';
 import { Signs } from './Signs';
 
 export const dynamic = 'force-dynamic';
@@ -89,8 +88,6 @@ export default async function CorporateDashboard({
           (request): request is NonNullable<typeof request> => request !== null,
         )
       : [];
-  const registrations =
-    tab === 'dashboard' && access.canManage ? await getRegistrationsForBrand(brand.id) : [];
 
   return (
     <>
@@ -136,7 +133,6 @@ export default async function CorporateDashboard({
         {tab === 'dashboard' && (
           <>
             <Metrics metrics={portfolio.metrics} approvalsHref={`${base}?tab=approvals`} />
-            <VendorPolicyCard brand={brand} />
 
             <h2 className="mt-6 text-sm font-semibold text-gray-900">Locations</h2>
             {portfolio.locations.length === 0 ? (
@@ -161,15 +157,11 @@ export default async function CorporateDashboard({
               only add-ons and flagged exceptions reach your approval queue.
             </p>
 
-            {access.canManage && (
-              <Registrations
-                brandSlug={brand.slug}
-                brandName={brand.name}
-                registrations={registrations}
-              />
-            )}
-
+            {/* Reference, not work: below the locations, where the day's
+                business is. Registering a franchisee is on the People tab,
+                with the accounts it creates (DECISIONS #163). */}
             <BudgetDocuments brand={brand} formats={formats} />
+            <VendorPolicyNote brand={brand} />
           </>
         )}
 
@@ -371,25 +363,21 @@ const POLICY_LABEL: Record<string, string> = {
  * they replaced last year. It is read-only here for the same reason it was set
  * that way: changing it re-routes live money, and that is a conversation.
  */
-function VendorPolicyCard({ brand }: { brand: BrandPublic }) {
+function VendorPolicyNote({ brand }: { brand: BrandPublic }) {
   const external = brand.vendor_policy !== 'signage_com';
   return (
-    <div className="mt-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
-      <p className="text-xs leading-relaxed text-gray-600">
-        <span className="font-medium text-gray-800">
-          Vendor policy: {POLICY_LABEL[brand.vendor_policy] ?? brand.vendor_policy}
-        </span>
-        {` — quote packages route to ${brand.vendor_name ?? 'Signage.com'} by default; per-sign overrides apply${
-          brand.corporate_cc ? '. Corporate is copied on every package.' : '.'
-        }`}
-      </p>
-      <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
-        {external
-          ? 'Your vendor quotes and fulfils directly; the portal keeps your approval control and the location records.'
-          : 'Signage.com quotes and fulfils; production is tracked in the portal.'}{' '}
-        Set during white-glove setup — contact your Signage.com manager to change it.
-      </p>
-    </div>
+    <p className="mt-5 text-xs leading-relaxed text-gray-500">
+      <span className="font-medium text-gray-700">
+        Vendor policy: {POLICY_LABEL[brand.vendor_policy] ?? brand.vendor_policy}
+      </span>
+      {` — quote packages route to ${brand.vendor_name ?? 'Signage.com'} by default; per-sign overrides apply${
+        brand.corporate_cc ? '. Corporate is copied on every package.' : '.'
+      } `}
+      {external
+        ? 'Your vendor quotes and fulfils directly; the portal keeps your approval control and the location records.'
+        : 'Signage.com quotes and fulfils; production is tracked in the portal.'}{' '}
+      Set during white-glove setup — contact your Signage.com manager to change it.
+    </p>
   );
 }
 

@@ -1596,6 +1596,16 @@ item 7's "CRUD UI only when onboarding brand #2".
      `submitted`, writing a `status_changed` event for each. SPEC §6's diagram
      should gain the `declined` end and the resubmission edge.
 
+163. **Corporate's dashboard leads with the work; reference goes below**
+     (asked for on 1 Oct). **Departing from the demo**: the dashboard's
+     "Franchisee registrations" panel is gone — the People tab already had the
+     same form ("Register a new franchisee", inside Franchisees), so it was a
+     duplicate, and registering starts an account, which is People's subject.
+     The vendor-policy card above the locations is now one line of text below
+     the budget sheets: corporate set it at onboarding and reads it rarely. The
+     dashboard is now metrics, then locations, then reference. /admin keeps its
+     own registration panel (#76).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

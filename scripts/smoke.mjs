@@ -1776,12 +1776,14 @@ adminPage.on('pageerror', (error) => pageErrors.push(error.message));
 await signInWithPassword(adminPage, BRAND_ADMIN, '/freshbites/corporate');
 await adminPage.waitForURL(/\/freshbites\/corporate$/, { timeout: TIMEOUT });
 
-const corporateRegistrations = adminPage.locator('section:has(h2:text-is("Franchisee registrations"))');
+// Registering lives on the People tab, with the accounts it creates (DECISIONS #163).
+await adminPage.goto(`${BASE}/freshbites/corporate?tab=people`, { waitUntil: 'networkidle' });
+const corporateRegistrations = adminPage.locator('section[data-registrations="people"]');
 await corporateRegistrations.locator('input[type="email"]').fill(SMOKE_CORPORATE_REGISTRATION);
 await corporateRegistrations.getByRole('button', { name: /Register/i }).click();
 await expectVisible(
   adminPage,
-  `section:has(h2:text-is("Franchisee registrations")) >> text=${SMOKE_CORPORATE_REGISTRATION}`,
+  `section[data-registrations="people"] >> text=${SMOKE_CORPORATE_REGISTRATION}`,
   'a brand admin can register a franchisee',
 );
 const corporateRow = await withDb(async (client) =>
