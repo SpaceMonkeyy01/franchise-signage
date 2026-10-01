@@ -742,14 +742,14 @@ export interface Portfolio {
   locations: PortfolioLocation[];
 }
 
-const OPEN_REQUEST_SQL = `status <> 'completed'`;
+// Closed: installed, or every item declined (DECISIONS #162).
+const OPEN_REQUEST_SQL = `status not in ('completed', 'declined')`;
 
 // Corporate's review is open from package prep until the last decision (SPEC §6;
 // REVIEW_OPEN_STATUSES). Before prep a pending item is Signage.com's to prepare,
 // not corporate's to decide, so nothing corporate sees counts it as waiting.
 // The same rule as isReviewOpen(), for a request aliased `r`.
-const REVIEW_OPEN_SQL = `(r.status in (${REVIEW_OPEN_STATUSES.map((s) => `'${s}'`).join(', ')})
-  or (r.status = 'submitted' and r.package_version > 1))`;
+const REVIEW_OPEN_SQL = `r.status in (${REVIEW_OPEN_STATUSES.map((s) => `'${s}'`).join(', ')})`;
 
 export async function getPortfolio(brandId: string): Promise<Portfolio> {
   const [counts, spend, locations] = await Promise.all([

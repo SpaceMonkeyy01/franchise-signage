@@ -26,6 +26,7 @@ const REQUEST: Record<RequestStatus, { label: string; className: string }> = {
   in_production: { label: 'In production', className: 'bg-purple-100 text-purple-800' },
   shipped: { label: 'Shipped', className: 'bg-sky-100 text-sky-800' },
   completed: { label: 'Installed', className: 'bg-gray-200 text-gray-700' },
+  declined: { label: 'Declined', className: 'bg-rose-100 text-rose-800' },
 };
 
 export function ItemStatusChip({ status }: { status: LineItemStatus }) {

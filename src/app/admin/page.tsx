@@ -50,6 +50,7 @@ const BUCKETS: Bucket[] = [
     ours: true,
   },
   { key: 'done', label: 'Installed', statuses: ['completed'] },
+  { key: 'declined', label: 'Declined', statuses: ['declined'] },
 ];
 
 const NEXT_STEP: Record<string, string> = {
@@ -63,6 +64,7 @@ const NEXT_STEP: Record<string, string> = {
   in_production: 'Mark shipped',
   shipped: 'Mark installed',
   completed: '—',
+  declined: '— every item declined',
 };
 
 export default async function AdminQueue({
@@ -92,7 +94,7 @@ export default async function AdminQueue({
   // With corporate means after prep: a submitted request's pending items are
   // still ours to prepare (SPEC §6).
   const pendingItems = all
-    .filter((row) => isReviewOpen({ status: row.status, packageVersion: row.package_version }))
+    .filter((row) => isReviewOpen(row.status))
     .reduce((sum, row) => sum + row.pending_count, 0);
   const tbdItems = all.reduce((sum, row) => sum + row.tbd_count, 0);
 

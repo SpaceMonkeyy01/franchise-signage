@@ -26,7 +26,7 @@ export interface SetupProgress {
   action: string | null;
 }
 
-const STATUS_PROGRESS: Record<Exclude<RequestStatus, 'draft' | 'completed'>, SetupProgress> = {
+const STATUS_PROGRESS: Record<Exclude<RequestStatus, 'draft' | 'completed' | 'declined'>, SetupProgress> = {
   submitted: { current: 1, now: 'Signage.com is preparing your sign package.', action: null },
   needs_review: {
     current: 1,
@@ -46,9 +46,9 @@ const STATUS_PROGRESS: Record<Exclude<RequestStatus, 'draft' | 'completed'>, Set
   shipped: { current: 4, now: 'Your signs have shipped. Installation is next.', action: null },
 };
 
-/** Null once the store is installed (or before anything was submitted). */
+/** Null once the store is installed or declined (or before anything was submitted). */
 export function setupProgress(status: RequestStatus): SetupProgress | null {
-  if (status === 'draft' || status === 'completed') return null;
+  if (status === 'draft' || status === 'completed' || status === 'declined') return null;
   return STATUS_PROGRESS[status];
 }
 

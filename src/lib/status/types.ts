@@ -41,25 +41,21 @@ export type RequestStatus =
   | 'accepted'
   | 'in_production'
   | 'shipped'
-  | 'completed';
+  | 'completed'
+  // Terminal: corporate declined every item (DECISIONS #162). Nothing to quote.
+  | 'declined';
 
 /**
  * Whether corporate's review is open (SPEC §6): from the team's package prep
  * (`needs_review`) until the last decision lands, including while a change
- * request is out — siblings of the flagged items can still be decided (§7) —
- * and after the franchisee resubmits. A resubmission goes back to `submitted`
- * (the machine's only exit from `changes_requested`) but straight back to
- * corporate, with no second prep; only resubmission raises the package version,
- * so `submitted` above v1 is a resubmission. A first-version `submitted`
- * request is still Signage.com's to prepare, not corporate's to decide.
+ * request is out — siblings of the flagged items can still be decided (§7). A
+ * resubmission returns to `needs_review` (DECISIONS #162). `submitted` is still
+ * Signage.com's to prepare, not corporate's to decide.
  */
 export const REVIEW_OPEN_STATUSES = ['needs_review', 'changes_requested'] as const;
 
-export function isReviewOpen(request: { status: RequestStatus; packageVersion: number }): boolean {
-  return (
-    (REVIEW_OPEN_STATUSES as readonly RequestStatus[]).includes(request.status) ||
-    (request.status === 'submitted' && request.packageVersion > 1)
-  );
+export function isReviewOpen(status: RequestStatus): boolean {
+  return (REVIEW_OPEN_STATUSES as readonly RequestStatus[]).includes(status);
 }
 
 export type LineItemOrigin = 'standard' | 'addon' | 'exception' | 'replacement';

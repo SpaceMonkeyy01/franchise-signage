@@ -70,6 +70,13 @@ const checks: Check[] = [
     describe: (rows) => rows.map((r) => r.enumlabel).join(', '),
   },
   {
+    label: 'an all-declined request has a terminal `declined` status (DECISIONS #162)',
+    sql: `select enumlabel from pg_enum e join pg_type t on t.oid = e.enumtypid
+          where t.typname = 'request_status' order by e.enumsortorder`,
+    expect: (rows) => rows.some((r) => r.enumlabel === 'declined'),
+    describe: (rows) => rows.map((r) => r.enumlabel).join(', '),
+  },
+  {
     label: 'HARD RULE: did_signature_status cannot reach `signed`',
     sql: `select enumlabel from pg_enum e join pg_type t on t.oid = e.enumtypid
           where t.typname = 'did_signature_status' order by e.enumsortorder`,

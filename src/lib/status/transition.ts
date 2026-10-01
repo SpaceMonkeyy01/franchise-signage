@@ -478,7 +478,7 @@ export async function decideLineItem(
   // Package prep hands the review to corporate (SPEC §6). Deciding before it
   // would skip prep, and the last decision would move the request straight
   // from `submitted` to `approved`.
-  if (!isReviewOpen(request)) throw new ReviewNotOpenError(request.status);
+  if (!isReviewOpen(request.status)) throw new ReviewNotOpenError(request.status);
 
   const items = await store.getLineItems(options.requestId);
   const item = items.find((candidate) => candidate.id === options.lineItemId);
@@ -520,9 +520,12 @@ export async function decideLineItem(
     requestId: request.id,
     to: derived.status,
     actor: reviewer?.actor ?? 'reviewer',
-    summary: `Corporate review complete · ${derived.approvedCount} approved${
-      derived.declinedCount ? `, ${derived.declinedCount} declined` : ''
-    }`,
+    summary:
+      derived.status === 'declined'
+        ? `Corporate review complete · all ${derived.declinedCount} declined, nothing to quote`
+        : `Corporate review complete · ${derived.approvedCount} approved${
+            derived.declinedCount ? `, ${derived.declinedCount} declined` : ''
+          }`,
     detail: { approved: derived.approvedCount, declined: derived.declinedCount },
   });
   return { itemStatus: options.decision, derived, transition };
@@ -543,7 +546,7 @@ export async function requestChanges(
   if (!request) throw new RequestNotFoundError(requestId);
   // Checked before anything is written: the status move at the end would refuse
   // too, but only after the items had already been reopened.
-  if (!isReviewOpen(request)) throw new ReviewNotOpenError(request.status);
+  if (!isReviewOpen(request.status)) throw new ReviewNotOpenError(request.status);
 
   const items = await store.getLineItems(requestId);
   const { items: next } = applyChangeRequest(items, flaggedItemIds);
@@ -598,7 +601,8 @@ export async function resubmitRequest(
 
   return transitionRequest(store, {
     requestId,
-    to: 'submitted',
+    // Back to corporate for re-review (DECISIONS #162).
+    to: outcome.requestStatus,
     actor: 'franchisee',
     kind: 'request_resubmitted',
     summary: `Resubmitted with changes · package v${outcome.packageVersion}`,

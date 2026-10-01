@@ -99,9 +99,19 @@ describe('deriveRequestStatus (SPEC §6)', () => {
     expect(derived.fastLane).toBe(false);
   });
 
-  it('flags an all-declined request rather than inventing a status for it', () => {
+  // DECISIONS #162: a terminal status, where it used to sit in review forever.
+  it('ends an all-declined request as declined', () => {
     const derived = deriveRequestStatus([lineItem({ id: 'a', itemStatus: 'declined' })]);
-    expect(derived.blocked).toBe('all_items_declined');
+    expect(derived.status).toBe('declined');
+    expect(derived.blocked).toBeUndefined();
+  });
+
+  it('approves a request with any item left standing', () => {
+    const derived = deriveRequestStatus([
+      lineItem({ id: 'a', itemStatus: 'declined' }),
+      lineItem({ id: 'b', itemStatus: 'approved' }),
+    ]);
+    expect(derived.status).toBe('approved');
   });
 
   it('a pending change request outranks anything still under review', () => {
@@ -306,19 +316,6 @@ describe('line-item decisions (SPEC §7)', () => {
     expect(store.events).toEqual([]);
   });
 
-  it('decides a resubmission, which goes straight back to corporate', async () => {
-    const store = createMemoryStore({
-      request: request({ status: 'submitted', packageVersion: 2 }),
-      lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
-    });
-    const outcome = await decideLineItem(store, {
-      requestId: 'REQ-0016',
-      lineItemId: 'b',
-      decision: 'approved',
-    });
-    expect(outcome.itemStatus).toBe('approved');
-  });
-
   it('still decides a sibling while a change request is out (SPEC §7)', async () => {
     const store = createMemoryStore({
       request: request({ status: 'changes_requested' }),
@@ -335,7 +332,7 @@ describe('line-item decisions (SPEC §7)', () => {
     expect(outcome.itemStatus).toBe('approved');
   });
 
-  it('parks an all-declined request rather than inventing a status', async () => {
+  it('ends the request when the last item is declined', async () => {
     const store = createMemoryStore({
       request: request({ status: 'needs_review' }),
       lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
@@ -346,9 +343,9 @@ describe('line-item decisions (SPEC §7)', () => {
       decision: 'declined',
     });
 
-    expect(outcome.derived.blocked).toBe('all_items_declined');
-    expect(outcome.transition).toBeUndefined();
-    expect(store.request.status).toBe('needs_review');
+    expect(outcome.transition?.to).toBe('declined');
+    expect(store.request.status).toBe('declined');
+    expect(store.events.at(-1)?.summary).toMatch(/all 1 declined, nothing to quote/);
   });
 
   // SPEC v2.3 §10.3.4: the link and the dashboard write the same events, with
@@ -444,15 +441,20 @@ describe('the change-request loop (SPEC §6/§7)', () => {
 
     await resubmitRequest(store, 'REQ-0016');
 
-    expect(store.request.status).toBe('submitted');
+    // Straight back to corporate (DECISIONS #162): no second prep.
+    expect(store.request.status).toBe('needs_review');
     expect(store.request.packageVersion).toBe(2);
     expect(store.lineItems.find((i) => i.id === 'b')?.itemStatus).toBe('pending_review');
     // Answered: the status page stops showing "corporate asked for changes".
     expect(store.changeRequests[0].resolvedAt).not.toBeNull();
 
-    // And it re-derives back to the reviewer.
-    const reprep = await prepPackage(store, 'REQ-0016');
-    expect(reprep.to).toBe('needs_review');
+    // And the reviewer can decide it at once.
+    const outcome = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'approved',
+    });
+    expect(outcome.transition?.to).toBe('approved');
   });
 
   it('refuses request-changes without a note', async () => {

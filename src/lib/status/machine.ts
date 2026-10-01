@@ -35,9 +35,12 @@ export const REQUEST_TRANSITIONS: Readonly<Record<RequestStatus, readonly Reques
   // The fast lane: submitted → approved in one step, skipping needs_review
   // entirely, when every item auto-approved.
   submitted: ['needs_review', 'approved'],
-  // A re-review after resubmission re-enters needs_review from itself.
-  needs_review: ['needs_review', 'changes_requested', 'approved'],
-  changes_requested: ['submitted'],
+  // A re-review after resubmission re-enters needs_review from itself. Every
+  // item declined ends the request (DECISIONS #162).
+  needs_review: ['needs_review', 'changes_requested', 'approved', 'declined'],
+  // Resubmission goes straight back to corporate: the re-review email has
+  // already gone, and `submitted` would claim Signage.com has not prepared it.
+  changes_requested: ['needs_review'],
   approved: ['sent_for_quote'],
   sent_for_quote: ['quote_ready'],
   quote_ready: ['accepted'],
@@ -45,6 +48,7 @@ export const REQUEST_TRANSITIONS: Readonly<Record<RequestStatus, readonly Reques
   in_production: ['shipped'],
   shipped: ['completed'],
   completed: [],
+  declined: [],
 };
 
 export function canTransition(from: RequestStatus, to: RequestStatus): boolean {
@@ -255,12 +259,8 @@ export interface DerivedRequestState {
   approvedCount: number;
   declinedCount: number;
   changesRequestedCount: number;
-  /**
-   * Set when every item was declined. There is no request-level `declined`
-   * status in SPEC §6, so the request cannot be derived anywhere sensible and
-   * the team has to close it by hand. Surfaced rather than guessed.
-   */
-  blocked?: 'all_items_declined' | 'no_items';
+  /** Set when there is nothing to derive from. */
+  blocked?: 'no_items';
 }
 
 /**
@@ -290,13 +290,10 @@ export function deriveRequestStatus(items: readonly LineItemState[]): DerivedReq
   if (pendingCount > 0) {
     return { ...base, status: 'needs_review', fastLane: false };
   }
+  // Every item declined: nothing left to quote, and the request ends there
+  // (DECISIONS #162) rather than sitting in review forever.
   if (approvedCount === 0) {
-    return {
-      ...base,
-      status: 'needs_review',
-      fastLane: false,
-      blocked: 'all_items_declined',
-    };
+    return { ...base, status: 'declined', fastLane: false };
   }
   return {
     ...base,

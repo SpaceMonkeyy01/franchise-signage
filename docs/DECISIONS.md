@@ -1576,6 +1576,25 @@ item 7's "CRUD UI only when onboarding brand #2".
      `package_version`, so `submitted` above v1 counts as open. Worth a spec
      look: sending a resubmission to `needs_review` would make the status say
      what it means, but it changes the status machine, so it is not done here.
+     *(Done the same day: #162.)*
+
+162. **Two status-machine corrections** (asked for on 1 Oct, answering #1 of
+     "decisions waiting on you" and the question #161 left open).
+     **A request whose every item is declined ends at a terminal `declined`**
+     (additive enum value; `needs_review → declined`). It used to derive to
+     nothing — `blocked: 'all_items_declined'` — and sit in review forever,
+     counted as open on every dashboard with nothing able to close it. Open
+     requests now exclude it everywhere `completed` was excluded; the queue has
+     a Declined bucket. A request with any item left standing still goes to
+     `approved`. **A resubmission lands on `needs_review`**
+     (`changes_requested → needs_review` replaces `→ submitted`).
+     `applyResubmission()` already derived that and said so; `resubmitRequest()`
+     ignored it, so a resubmitted request read "Submitted", sat in the team's
+     Needs prep bucket, and #161 needed a package-version special case to count
+     it as with corporate. That special case is gone: `isReviewOpen()` is the
+     status alone. The migration moves resubmissions already sitting at
+     `submitted`, writing a `status_changed` event for each. SPEC §6's diagram
+     should gain the `declined` end and the resubmission edge.
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's

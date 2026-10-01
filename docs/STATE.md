@@ -840,9 +840,8 @@ All four are now steps in `docs/SUPABASE.md` rather than paragraphs here.
 
 In `docs/DECISIONS.md`, none blocking:
 
-1. Should SPEC §6 gain a terminal request-level `declined`, or is an
-   all-declined request closed by hand? Today the derivation refuses to guess
-   and returns `blocked: 'all_items_declined'`.
+1. ~~Should SPEC §6 gain a terminal request-level `declined`?~~ **Answered and
+   built** (#162, 1 Oct): yes, `needs_review → declined`.
 2. SPEC §5.4 should gain `changes_requested` as a fifth `line_item_status`.
 3. Session 2's calls (entries 14–19): submission stopping at `submitted`, the
    structured address, optional sizing on add-ons, the note-on-timeline when no

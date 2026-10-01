@@ -31,7 +31,7 @@ export interface Readiness {
 }
 
 type ReadinessInput = Pick<RequestDetail, 'intent' | 'location' | 'items' | 'files' | 'events'> &
-  Partial<Pick<RequestDetail, 'status' | 'package_version'>>;
+  Partial<Pick<RequestDetail, 'status'>>;
 
 const APPROVED = new Set(['auto_approved', 'approved']);
 
@@ -96,9 +96,7 @@ export function packageReadiness(request: ReadinessInput): Readiness {
       `${approved} of ${decided} approved`,
       // Before package prep the items are not with corporate yet (SPEC §6).
       withCorporate > 0 &&
-        (request.status &&
-        request.package_version !== undefined &&
-        !isReviewOpen({ status: request.status, packageVersion: request.package_version })
+        (request.status && !isReviewOpen(request.status)
           ? `${withCorporate} go to corporate next`
           : `${withCorporate} with corporate`),
       needsChanges > 0 && `${needsChanges} ${needsChanges === 1 ? 'needs' : 'need'} changes`,
