@@ -81,7 +81,7 @@ export default async function CatalogPage({
   const categories = [...new Set(master.map((row) => row.category))].sort();
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
       <h1 className="text-xl font-bold text-gray-900">Catalog</h1>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
         Every brand builds its signs from the Signage.com catalog below. Brands propose new signs and

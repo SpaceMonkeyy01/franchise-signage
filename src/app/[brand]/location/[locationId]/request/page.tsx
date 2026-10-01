@@ -99,7 +99,7 @@ export default async function IntentPicker({
         account={<AccountBadge name={viewer.profile.name} email={viewer.profile.email} />}
       />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
           What does {shortName(location.name)} need?
         </h1>

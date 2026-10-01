@@ -39,7 +39,7 @@ export default async function StaffPage({ params }: { params: Promise<{ brand: s
         backHref={`/${slug}`}
         account={<AccountBadge name={owner.viewer.profile.name} email={owner.viewer.profile.email} />}
       />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-xl font-bold text-gray-900">Store staff</h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
           Invite your store managers and choose which stores each one sees. They can order signage

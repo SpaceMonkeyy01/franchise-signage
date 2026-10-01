@@ -107,7 +107,7 @@ export function Walkthrough({
   return (
     <main className="flex flex-1 flex-col">
       <div className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex page-wide flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <div className="flex flex-wrap gap-1 rounded-lg bg-gray-100 p-1">
             {PERSONAS.map((p) => (
               <button
@@ -165,7 +165,7 @@ export function Walkthrough({
           </div>
         </div>
 
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-3 text-xs sm:px-6">
+        <div className="mx-auto flex page-wide flex-wrap items-center gap-x-3 gap-y-1 px-4 pb-3 text-xs sm:px-6">
           <p className="text-gray-500">{current.how}</p>
           {(persona === 'franchisee' || persona === 'team') && (
             <div className="flex gap-2">

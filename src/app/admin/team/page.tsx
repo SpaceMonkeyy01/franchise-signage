@@ -36,7 +36,7 @@ export default async function TeamPage() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
       <h1 className="text-xl font-bold text-gray-900">Team</h1>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
         Signage.com admins reach every brand. Each signs in with a password and a code from their

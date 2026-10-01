@@ -28,7 +28,7 @@ export function SkeletonCard({ lines = 2 }: { lines?: number }) {
 /** A page's worth of waiting: a heading, then a few cards. */
 export function SkeletonPage({
   cards = 3,
-  width = 'max-w-4xl',
+  width = 'page',
 }: {
   cards?: number;
   width?: string;

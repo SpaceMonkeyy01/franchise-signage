@@ -12,7 +12,12 @@ import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { ReadinessCard } from '@/components/ReadinessCard';
 import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { SignThumbnail } from '@/components/SignThumbnail';
-import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
+import {
+  formatPrice,
+  ItemStatusChip,
+  RequestStatusChip,
+  VendorChip,
+} from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
@@ -81,7 +86,7 @@ export default async function RequestStatusPage({
       <BrandTheme brand={request.brand} />
       <BrandHeader brand={request.brand} backHref={`/${slug}`} />
 
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{request.code}</h1>
@@ -108,87 +113,100 @@ export default async function RequestStatusPage({
           </section>
         )}
 
-        {readiness && <ReadinessCard readiness={readiness} audience="franchisee" />}
+        {/* One column on a phone or laptop, in reading order. On a wide screen
+            the signs and the quote take the main column and what is ABOUT the
+            request — readiness, documents sent, history — moves to a side
+            column beside them. The rows are auto then 1fr, so the main column's
+            height lands in the second row and readiness stays snug at the top. */}
+        <div className="grid gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
+          <div className="xl:col-start-2 xl:row-start-1">
+            {readiness && <ReadinessCard readiness={readiness} audience="franchisee" />}
 
-        {/* §8b: the documents come with the quote, but the franchisee told us a
+            {/* §8b: the documents come with the quote, but the franchisee told us a
             lender is involved at submission — so acknowledge it from the start
             rather than only once there is something to attach. */}
-        {request.financing_involved && !quote && (
-          <p className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900/80">
-            You told us a lender is funding this location. Once the quote lands, the budgetary
-            quote, formal invoice and paid receipt your lender asks for are generated from it — you
-            will not have to ask us for them.
-          </p>
-        )}
+            {request.financing_involved && !quote && (
+              <p className="mt-4 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-xs text-indigo-900/80">
+                You told us a lender is funding this location. Once the quote lands, the budgetary
+                quote, formal invoice and paid receipt your lender asks for are generated from it —
+                you will not have to ask us for them.
+              </p>
+            )}
+          </div>
 
-        {request.change_request && reopened.length > 0 && (
-          <ResubmitPanel
-            token={token}
-            brandSlug={slug}
-            items={reopened}
-            comment={request.change_request.comment}
-          />
-        )}
+          <div className="min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
+            {request.change_request && reopened.length > 0 && (
+              <ResubmitPanel
+                token={token}
+                brandSlug={slug}
+                items={reopened}
+                comment={request.change_request.comment}
+              />
+            )}
 
-        <section className="mt-5 space-y-3">
-          {request.items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              brand={request.brand}
-              flagged={changed.has(item.id)}
-            />
-          ))}
-        </section>
-
-        {request.files.length > 0 && (
-          <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
-            <h2 className="text-sm font-semibold text-gray-900">Documents you sent</h2>
-            <ul className="mt-2 space-y-1">
-              {request.files.map((file) => (
-                <li key={file.id} className="text-xs text-gray-600">
-                  <a
-                    href={fileUrl(file.storage_path)}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    {FILE_KIND_LABEL[file.kind] ?? 'File'}: {file.file_name ?? 'view'}
-                  </a>
-                </li>
+            <section className="mt-5 space-y-3">
+              {request.items.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  brand={request.brand}
+                  flagged={changed.has(item.id)}
+                />
               ))}
-            </ul>
-          </section>
-        )}
+            </section>
 
-        {/* One card per package. Routing (SPEC §4) can split a request between
+            {/* One card per package. Routing (SPEC §4) can split a request between
             Signage.com and the brand's vendor, and showing only the first left
             the franchisee reading one half of their own number — which the §8b
             PDF, which totals every package, would then contradict. */}
-        {request.quotes.map((packageQuote) => (
-          <QuoteCard
-            key={packageQuote.id}
-            request={request}
-            quote={packageQuote}
-            token={token}
-            split={request.quotes.length > 1}
-            acceptAccess={acceptAccess}
-          />
-        ))}
+            {request.quotes.map((packageQuote) => (
+              <QuoteCard
+                key={packageQuote.id}
+                request={request}
+                quote={packageQuote}
+                token={token}
+                split={request.quotes.length > 1}
+                acceptAccess={acceptAccess}
+              />
+            ))}
 
-        {request.quotes.some((q) => q.priced_count > 0) && (
-          <LenderDocuments request={request} token={token} />
-        )}
+            {request.quotes.some((q) => q.priced_count > 0) && (
+              <LenderDocuments request={request} token={token} />
+            )}
 
-        {/* The bar tracks the SIGNAGE.COM package, not the request (SPEC §6,
+            {/* The bar tracks the SIGNAGE.COM package, not the request (SPEC §6,
             amended v2.2). On a split the request sits at the least advanced
             package, so drawing the bar from it would show a franchisee "accepted"
             while their storefront letters were already shipped. */}
-        {internalPackage && PRODUCTION_STAGES.includes(quoteStage(internalPackage)) && (
-          <ProductionProgress status={quoteStage(internalPackage)} />
-        )}
+            {internalPackage && PRODUCTION_STAGES.includes(quoteStage(internalPackage)) && (
+              <ProductionProgress status={quoteStage(internalPackage)} />
+            )}
+          </div>
 
-        <Timeline request={request} />
+          <div className="xl:col-start-2 xl:row-start-2">
+            {request.files.length > 0 && (
+              <section className="mt-4 rounded-xl border border-gray-200 bg-white p-4 xl:mt-5">
+                <h2 className="text-sm font-semibold text-gray-900">Documents you sent</h2>
+                <ul className="mt-2 space-y-1">
+                  {request.files.map((file) => (
+                    <li key={file.id} className="text-xs text-gray-600">
+                      <a
+                        href={fileUrl(file.storage_path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2"
+                      >
+                        {FILE_KIND_LABEL[file.kind] ?? 'File'}: {file.file_name ?? 'view'}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            <Timeline request={request} />
+          </div>
+        </div>
       </main>
     </>
   );
@@ -213,7 +231,8 @@ function ItemCard({
     >
       <div className="flex gap-3">
         <SignThumbnail
-          renderKey={item.render_key} imagePath={item.image_path}
+          renderKey={item.render_key}
+          imagePath={item.image_path}
           label={item.brand_item_name}
           className="h-12 w-16 shrink-0 rounded"
         />
@@ -232,8 +251,14 @@ function ItemCard({
               {ORIGIN_LABEL[item.origin] ?? item.origin}
             </span>
             {item.sizing && <span>{item.sizing}</span>}
-            <span className="font-medium text-gray-900">{formatPrice(item.est_price_snapshot)}</span>
-            <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
+            <span className="font-medium text-gray-900">
+              {formatPrice(item.est_price_snapshot)}
+            </span>
+            <VendorChip
+              policy={policy}
+              vendorName={brand.vendor_name}
+              brandPolicy={brand.vendor_policy}
+            />
           </div>
 
           {item.site_notes && (
@@ -452,7 +477,9 @@ function ProductionProgress({ status }: { status: RequestStatus }) {
           <li key={stage} className="flex-1">
             <div
               className="h-1.5 rounded-full"
-              style={{ background: i <= current ? 'var(--color-brand)' : '#e5e7eb' }}
+              style={{
+                background: i <= current ? 'var(--color-brand)' : '#e5e7eb',
+              }}
             />
             <p
               className={`mt-1.5 text-[10px] ${

@@ -41,7 +41,7 @@ export default async function ReviewPage({
   return (
     <>
       <BrandTheme brand={request.brand} />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
         <p className="text-xs uppercase tracking-wider text-gray-400">
           {request.brand.name} · signage approval
         </p>

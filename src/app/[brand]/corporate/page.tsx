@@ -99,7 +99,7 @@ export default async function CorporateDashboard({
         account={<AccountBadge name={access.viewer.profile.name} email={access.viewer.profile.email} />}
       />
 
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-lg font-semibold text-gray-900">{brand.name} signage program</h1>

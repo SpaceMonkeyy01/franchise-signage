@@ -36,7 +36,7 @@ export default async function SetupPage({ params }: { params: Promise<{ brand: s
         account={<AccountBadge name={viewer.profile.name} email={viewer.profile.email} />}
       />
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
         <SetupWizard
           brand={brand}
           packages={packages}

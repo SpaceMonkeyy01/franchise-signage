@@ -33,13 +33,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <>
       <header className="border-b border-gray-200 bg-gray-900">
-        <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link href="/admin" className="flex items-center gap-2.5 text-sm text-gray-400">
+        <div className="mx-auto flex page-wide flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+          <Link href="/admin" className="flex shrink-0 items-center gap-2.5 text-sm text-gray-400">
             <SignageLogo onDark className="h-5 w-auto" />
             <span>operator console</span>
           </Link>
           {member && (
-            <div className="ml-auto flex items-center gap-3 text-xs text-gray-400">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-gray-400">
               {/* Support tools, not daily ones — findable from every screen, and
                   never competing with the queue for attention. */}
               <Link href="/admin/demo" className="text-gray-300 underline-offset-2 hover:underline">
@@ -51,16 +51,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               >
                 Entry points
               </Link>
-              <Link href="/admin/outbox" className="text-gray-300 underline-offset-2 hover:underline">
+              <Link
+                href="/admin/outbox"
+                className="text-gray-300 underline-offset-2 hover:underline"
+              >
                 Outbox
               </Link>
-              <Link href="/admin/catalog" className="text-gray-300 underline-offset-2 hover:underline">
+              <Link
+                href="/admin/catalog"
+                className="text-gray-300 underline-offset-2 hover:underline"
+              >
                 Catalog
               </Link>
               <Link href="/admin/team" className="text-gray-300 underline-offset-2 hover:underline">
                 Team
               </Link>
-              <span>{member.name ?? member.email}</span>
+              <span className="hidden sm:inline">{member.name ?? member.email}</span>
               <form action={signOut}>
                 <button type="submit" className="text-gray-300 underline-offset-2 hover:underline">
                   Sign out

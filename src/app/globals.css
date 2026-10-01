@@ -24,6 +24,52 @@ html {
   background: #f8fafb;
 }
 
+/* On a big monitor the type steps up a little, and every rem-based size —
+   spacing, cards, page widths — steps up with it, so a 1920px screen reads at
+   the density a laptop does instead of as a small island of text. */
+@media (min-width: 1680px) {
+  html {
+    font-size: 106.25%;
+  }
+}
+@media (min-width: 2240px) {
+  html {
+    font-size: 112.5%;
+  }
+}
+
+/* Page widths, in three tiers that widen with the screen. Every page frame
+   uses one, and the headers use the wide one, so the shell lines up from page
+   to page. Wide: dashboards, queues, lists. Page: one record read top to
+   bottom. Narrow: forms, where a line of input should not run the full screen. */
+@utility page-wide {
+  max-width: 72rem;
+  @media (width >= 96rem) {
+    max-width: 86rem;
+  }
+}
+@utility page {
+  max-width: 48rem;
+  @media (width >= 64rem) {
+    max-width: 56rem;
+  }
+  @media (width >= 80rem) {
+    max-width: 68rem;
+  }
+  @media (width >= 96rem) {
+    max-width: 78rem;
+  }
+}
+@utility page-narrow {
+  max-width: 42rem;
+  @media (width >= 80rem) {
+    max-width: 48rem;
+  }
+  @media (width >= 96rem) {
+    max-width: 54rem;
+  }
+}
+
 /* The page is a drafting board: a faint grid, 24px with a stronger line every
    fifth, the way a sign shop's layout sheet reads. It is texture, not
    content — white cards stay white and sit on top of it. On a brand's pages it

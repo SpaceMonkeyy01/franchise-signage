@@ -125,7 +125,7 @@ export function Signs({
               {group.title} <span className="font-normal">({group.signs.length})</span>
             </h3>
             {group.hint && <p className="mt-0.5 text-xs text-gray-400">{group.hint}</p>}
-            <div className="mt-2 space-y-2">
+            <div className="mt-2 grid gap-2 xl:grid-cols-2">
               {group.signs.map((sign) =>
                 revising === sign.id ? (
                   <ProposalForm
@@ -311,7 +311,7 @@ function ProposalForm({
           onDone,
         );
       }}
-      className="space-y-3 rounded-xl border border-[var(--color-brand)]/30 bg-white p-4"
+      className="space-y-3 rounded-xl xl:col-span-2 border border-[var(--color-brand)]/30 bg-white p-4"
     >
       <p className="text-sm font-semibold text-gray-900">
         {existing ? `Revise ${existing.name}` : 'Propose a new sign'}

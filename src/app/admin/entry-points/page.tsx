@@ -52,7 +52,7 @@ export default async function EntryPoints() {
   ]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
       <h1 className="text-xl font-bold text-gray-900">Entry points</h1>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-gray-500">
         Every live link, so you can open what a franchisee or a franchisor is looking at without

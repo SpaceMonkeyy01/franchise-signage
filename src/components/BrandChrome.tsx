@@ -62,7 +62,7 @@ export function BrandHeader({
           className="h-1"
           style={{ background: 'linear-gradient(90deg, var(--color-brand-dark), var(--color-brand))' }}
         />
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex page-wide items-center gap-3 px-4 py-3 sm:px-6">
           {brand.logo_url ? (
             // A brand's own wordmark says its name; Signage.com follows it, smaller.
             <div className="flex min-w-0 items-center gap-3">

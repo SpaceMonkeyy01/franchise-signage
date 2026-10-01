@@ -70,18 +70,33 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
 
       {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
-      {/* The franchisee's own card, read the same way — what to chase before
-          the package goes out, until a quote is accepted. */}
-      {!request.quotes.some((quote) => quote.accepted_at) && (
-        <ReadinessCard readiness={packageReadiness(request)} audience="team" />
-      )}
-
-      <ActionPanel request={request} act={act} />
-      <InvoicePanel request={request} act={act} />
-      <ItemsPanel request={request} act={act} />
-      <FilesPanel request={request} />
-      <LandlordPanel request={request} act={act} />
-      <TimelinePanel request={request} act={act} />
+      {/* One column in reading order; on a wide screen the work — next step,
+          invoice, line items — takes the main column, and readiness, files,
+          landlord and history sit beside it (same grid as the franchisee's
+          request page). */}
+      <div className="grid gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
+        <div className="xl:col-start-2 xl:row-start-1">
+          {/* The franchisee's own card, read the same way — what to chase before
+              the package goes out, until a quote is accepted. */}
+          {!request.quotes.some((quote) => quote.accepted_at) && (
+            <ReadinessCard
+              readiness={packageReadiness(request)}
+              audience="team"
+              className="mt-4"
+            />
+          )}
+        </div>
+        <div className="min-w-0 xl:col-start-1 xl:row-span-2 xl:row-start-1">
+          <ActionPanel request={request} act={act} />
+          <InvoicePanel request={request} act={act} />
+          <ItemsPanel request={request} act={act} />
+        </div>
+        <div className="min-w-0 xl:col-start-2 xl:row-start-2">
+          <FilesPanel request={request} />
+          <LandlordPanel request={request} act={act} />
+          <TimelinePanel request={request} act={act} />
+        </div>
+      </div>
     </div>
   );
 }

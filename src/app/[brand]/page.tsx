@@ -169,7 +169,7 @@ function Shell({
     <>
       <BrandTheme brand={brand} />
       <BrandHeader brand={brand} account={account} />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-12">{children}</main>
+      <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6 sm:py-12">{children}</main>
     </>
   );
 }
@@ -191,7 +191,7 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
       <BrandHeader brand={brand} />
       <main className="relative flex-1">
         <CursorGlow />
-        <section className="mx-auto grid w-full max-w-5xl items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
+        <section className="mx-auto grid w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div>
             <p
               className="inline-block rounded-full border bg-white px-3 py-1 text-xs font-semibold"
@@ -238,7 +238,7 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
         </section>
 
         <section id="how-it-works" className="border-t border-gray-200/70 bg-white">
-          <div className="mx-auto w-full max-w-5xl px-4 py-14 sm:px-6">
+          <div className="mx-auto w-full page-wide px-4 py-14 sm:px-6">
             <p
               className="text-center text-xs font-semibold uppercase tracking-widest"
               style={{ color: 'var(--color-brand)' }}
@@ -271,7 +271,7 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
           </div>
         </section>
 
-        <section className="mx-auto w-full max-w-5xl px-4 py-12 text-center sm:px-6">
+        <section className="mx-auto w-full page-wide px-4 py-12 text-center sm:px-6">
           <h2 className="text-xl font-bold tracking-tight text-gray-900">
             Already invited? Your stores are one sign-in away.
           </h2>
@@ -449,7 +449,7 @@ function LocationCard({
       )}
 
       {location.installed_signs.length > 0 ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {location.installed_signs.map((sign) => (
             <div key={sign.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2">
               <SignThumbnail

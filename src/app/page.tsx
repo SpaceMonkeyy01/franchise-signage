@@ -73,7 +73,7 @@ export default async function Home() {
       <Backdrop />
 
       <header className="relative border-b border-gray-200/80 bg-white/70 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full page-wide items-center justify-between px-4 py-3 sm:px-6">
           <span className="text-sm font-semibold tracking-tight text-gray-900">
             Franchise <span className="font-normal text-gray-500">by</span> Signage
           </span>
@@ -83,7 +83,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="relative mx-auto grid w-full max-w-6xl flex-1 items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:py-20">
+      <main className="relative mx-auto grid w-full page-wide flex-1 items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:py-20">
         <section>
           <p className="text-xs font-medium uppercase tracking-widest text-brand">
             Signage for franchise brands
@@ -191,7 +191,7 @@ export default async function Home() {
       </main>
 
       <footer className="relative border-t border-gray-200/80 bg-white/70 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-gray-500 sm:px-6">
+        <div className="mx-auto flex w-full page-wide flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-gray-500 sm:px-6">
           <span>Franchise by Signage · Signage.com</span>
           <Link href="/admin/demo" className="hover:text-gray-900 hover:underline">
             Product walkthrough (Signage.com team)

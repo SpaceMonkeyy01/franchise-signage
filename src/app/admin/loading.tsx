@@ -11,5 +11,5 @@
 import { SkeletonPage } from '@/components/Skeleton';
 
 export default function Loading() {
-  return <SkeletonPage cards={4} width="max-w-6xl" />;
+  return <SkeletonPage cards={4} width="page-wide" />;
 }

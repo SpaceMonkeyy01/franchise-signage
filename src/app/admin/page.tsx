@@ -93,7 +93,7 @@ export default async function AdminQueue({
   const tbdItems = all.reduce((sum, row) => sum + row.tbd_count, 0);
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
       <h1 className="text-xl font-bold text-gray-900">Request queue</h1>
       <p className="mt-1 text-sm text-gray-500">
         {waitingOnUs} waiting on us · {pendingItems} item(s) with corporate · {tbdItems} TBD field(s)

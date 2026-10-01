@@ -1530,6 +1530,18 @@ item 7's "CRUD UI only when onboarding brand #2".
      the grid lights up around the pointer (`CursorGlow`), only for a mouse and
      never under reduced motion; working screens stay still.
 
+159. **Pages widen with the screen** (asked for on 1 Oct: "on a monitor it
+     looks too compact, empty space left and right"). Fixed caps of 672–896px
+     gave way to three width tiers in `globals.css` that grow at 1280 and
+     1536px: `page-wide` (dashboards, queues, lists, and every header, so the
+     shell lines up), `page` (one record), `page-narrow` (forms, kept narrow on
+     purpose). From 1680px the root font steps up (17px, then 18px at 2240px),
+     scaling every rem with it. The two request pages — the franchisee's and the
+     console's — go two-column from 1280px: the work in the main column,
+     readiness, files and history beside it, in reading order on anything
+     smaller. Corporate's sign list goes two-up; installed signs three-up. The
+     console header now wraps on a phone, where it ran 98px off the screen.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
