@@ -33,6 +33,7 @@ import type {
   RequestState,
   RequestStatus,
 } from './types';
+import { isReviewOpen } from './types';
 
 export interface StatusStore {
   getRequest(requestId: string): Promise<RequestState | null>;
@@ -110,6 +111,18 @@ export class RequestNotFoundError extends Error {
   constructor(requestId: string) {
     super(`Request ${requestId} not found`);
     this.name = 'RequestNotFoundError';
+  }
+}
+
+/** A decision on a request whose review has not opened (or has closed). */
+export class ReviewNotOpenError extends Error {
+  constructor(status: RequestStatus) {
+    super(
+      status === 'submitted'
+        ? 'Signage.com is still preparing this package; it comes to corporate once it is ready.'
+        : `This request is not in review (it is ${status}).`,
+    );
+    this.name = 'ReviewNotOpenError';
   }
 }
 
@@ -462,6 +475,10 @@ export async function decideLineItem(
 ): Promise<DecisionOutcome> {
   const request = await store.getRequest(options.requestId);
   if (!request) throw new RequestNotFoundError(options.requestId);
+  // Package prep hands the review to corporate (SPEC §6). Deciding before it
+  // would skip prep, and the last decision would move the request straight
+  // from `submitted` to `approved`.
+  if (!isReviewOpen(request)) throw new ReviewNotOpenError(request.status);
 
   const items = await store.getLineItems(options.requestId);
   const item = items.find((candidate) => candidate.id === options.lineItemId);
@@ -524,6 +541,9 @@ export async function requestChanges(
   }
   const request = await store.getRequest(requestId);
   if (!request) throw new RequestNotFoundError(requestId);
+  // Checked before anything is written: the status move at the end would refuse
+  // too, but only after the items had already been reopened.
+  if (!isReviewOpen(request)) throw new ReviewNotOpenError(request.status);
 
   const items = await store.getLineItems(requestId);
   const { items: next } = applyChangeRequest(items, flaggedItemIds);

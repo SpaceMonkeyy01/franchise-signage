@@ -18,7 +18,7 @@ import {
 } from '@/lib/db/queries';
 
 import { Registrations } from './Registrations';
-import type { RequestStatus } from '@/lib/status/types';
+import { isReviewOpen, type RequestStatus } from '@/lib/status/types';
 
 const INTENT_LABEL: Record<string, string> = {
   initial_setup: 'Initial setup',
@@ -89,7 +89,11 @@ export default async function AdminQueue({
   const waitingOnUs = all.filter((row) =>
     BUCKETS.filter((b) => b.ours).some((b) => b.statuses?.includes(row.status)),
   ).length;
-  const pendingItems = all.reduce((sum, row) => sum + row.pending_count, 0);
+  // With corporate means after prep: a submitted request's pending items are
+  // still ours to prepare (SPEC §6).
+  const pendingItems = all
+    .filter((row) => isReviewOpen({ status: row.status, packageVersion: row.package_version }))
+    .reduce((sum, row) => sum + row.pending_count, 0);
   const tbdItems = all.reduce((sum, row) => sum + row.tbd_count, 0);
 
   return (

@@ -469,13 +469,20 @@ function LocationCard({
                 <span className="w-20 font-medium tabular-nums text-gray-900">{request.code}</span>
                 {progress && <StageBar current={progress.current} />}
                 <RequestStatusChip status={request.status} />
-                {request.pending_count > 0 && (
+                {request.pending_count > 0 ? (
                   <Link
                     href={approvalsHref}
                     className="ml-auto font-semibold text-amber-800 underline-offset-2 hover:underline"
                   >
                     {request.pending_count} awaiting you →
                   </Link>
+                ) : (
+                  request.status === 'submitted' && (
+                    // Not corporate's yet: the review opens at package prep (SPEC §6).
+                    <span className="ml-auto text-gray-500">
+                      Signage.com is preparing the package
+                    </span>
+                  )
                 )}
               </li>
             );

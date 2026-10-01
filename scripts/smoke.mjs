@@ -1653,7 +1653,11 @@ const portfolio = await withDb(async (client) =>
            where l.brand_id = b.id) as installed,
          (select count(*) from requests where brand_id = b.id and status <> 'completed') as open,
          (select count(*) from line_items li join requests r on r.id = li.request_id
-           where r.brand_id = b.id and li.item_status = 'pending_review') as pending
+           where r.brand_id = b.id and li.item_status = 'pending_review'
+             -- Corporate's review opens at package prep (SPEC §6), and a
+             -- resubmission (submitted above v1) goes straight back to it.
+             and (r.status in ('needs_review', 'changes_requested')
+                  or (r.status = 'submitted' and r.package_version > 1))) as pending
        from brands b where b.slug = 'freshbites'`,
     )
   ).rows[0],

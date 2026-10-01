@@ -1559,6 +1559,24 @@ item 7's "CRUD UI only when onboarding brand #2".
      passing WCAG AA) everywhere but the dark console header and a struck-through
      retired row.
 
+161. **Corporate's review opens at package prep, and the code now enforces it**
+     (agreed 1 Oct). SPEC §6 puts `needs_review` after the team prepares the
+     package, but the dashboard counted every `pending_review` item, so
+     corporate saw "22 awaiting approval" when 20 had not been prepared or
+     emailed. Worse, `decideLineItem()` and `requestChanges()` checked only the
+     item: a signed-in reviewer could decide a `submitted` request from the
+     Approvals tab, and the last decision moved it straight to `approved`,
+     skipping prep (and a change request reopened items before its status move
+     refused). Both now throw `ReviewNotOpenError` unless `isReviewOpen()`; the
+     metric, the location cards, the Approvals tab, the console's "with
+     corporate" count and the readiness line ("go to corporate next") use the
+     same rule. **The rule has to include resubmission:** the machine's only
+     exit from `changes_requested` is `submitted`, yet the re-review email goes
+     straight back to corporate with no second prep. Only resubmission raises
+     `package_version`, so `submitted` above v1 counts as open. Worth a spec
+     look: sending a resubmission to `needs_review` would make the status say
+     what it means, but it changes the status machine, so it is not done here.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

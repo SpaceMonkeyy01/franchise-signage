@@ -15,6 +15,7 @@ import type {
   RequestStatus,
   VendorPolicy,
 } from '../status/types';
+import { REVIEW_OPEN_STATUSES } from '../status/types';
 
 const rows = query;
 const maybeOne = queryOne;
@@ -439,6 +440,7 @@ export interface QueueRow {
   code: string;
   intent: RequestIntent;
   status: RequestStatus;
+  package_version: number;
   access_token: string;
   submitted_at: string | null;
   brand_slug: string;
@@ -463,7 +465,7 @@ export interface QueueRow {
  */
 export function getRequestQueue(statuses?: readonly RequestStatus[]): Promise<QueueRow[]> {
   return rows<QueueRow>(
-    `select r.id, r.code, r.intent, r.status, r.access_token, r.submitted_at,
+    `select r.id, r.code, r.intent, r.status, r.package_version, r.access_token, r.submitted_at,
             b.slug as brand_slug, b.name as brand_name, l.name as location_name,
             count(li.id)::int as item_count,
             count(*) filter (where li.item_status = 'pending_review')::int as pending_count,
@@ -742,6 +744,13 @@ export interface Portfolio {
 
 const OPEN_REQUEST_SQL = `status <> 'completed'`;
 
+// Corporate's review is open from package prep until the last decision (SPEC §6;
+// REVIEW_OPEN_STATUSES). Before prep a pending item is Signage.com's to prepare,
+// not corporate's to decide, so nothing corporate sees counts it as waiting.
+// The same rule as isReviewOpen(), for a request aliased `r`.
+const REVIEW_OPEN_SQL = `(r.status in (${REVIEW_OPEN_STATUSES.map((s) => `'${s}'`).join(', ')})
+  or (r.status = 'submitted' and r.package_version > 1))`;
+
 export async function getPortfolio(brandId: string): Promise<Portfolio> {
   const [counts, spend, locations] = await Promise.all([
     maybeOne<{
@@ -759,7 +768,8 @@ export async function getPortfolio(brandId: string): Promise<Portfolio> {
            as open_requests,
          (select count(*) from line_items li
             join requests r on r.id = li.request_id
-           where r.brand_id = $1 and li.item_status = 'pending_review') as pending_approvals`,
+           where r.brand_id = $1 and li.item_status = 'pending_review'
+             and ${REVIEW_OPEN_SQL}) as pending_approvals`,
       [brandId],
     ),
     maybeOne<{ committed: string; quoted: string; custom_lines: string }>(
@@ -809,7 +819,8 @@ export async function getPortfolio(brandId: string): Promise<Portfolio> {
   }>(
     `select r.id, r.code, r.status, r.location_id,
             (select count(*) from line_items li
-              where li.request_id = r.id and li.item_status = 'pending_review') as pending_count
+              where li.request_id = r.id and li.item_status = 'pending_review'
+                and ${REVIEW_OPEN_SQL}) as pending_count
        from requests r
       where r.brand_id = $1 and r.${OPEN_REQUEST_SQL}
       order by r.created_at`,
@@ -856,7 +867,7 @@ export async function getPendingApprovalRequestIds(brandId: string): Promise<str
     `select r.id, min(r.submitted_at) as submitted
        from requests r
        join line_items li on li.request_id = r.id
-      where r.brand_id = $1 and li.item_status = 'pending_review'
+      where r.brand_id = $1 and li.item_status = 'pending_review' and ${REVIEW_OPEN_SQL}
       group by r.id
       order by submitted nulls last`,
     [brandId],

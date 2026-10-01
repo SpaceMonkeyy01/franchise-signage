@@ -279,6 +279,62 @@ describe('line-item decisions (SPEC §7)', () => {
     ).rejects.toThrow(/not awaiting review/);
   });
 
+  // SPEC §6: the review opens at package prep. Before it, a decision would skip
+  // prep — the last one moving the request from submitted straight to approved.
+  it('refuses a decision before the package is prepared', async () => {
+    const store = createMemoryStore({
+      request: request({ status: 'submitted' }),
+      lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
+    });
+    await expect(
+      decideLineItem(store, { requestId: 'REQ-0016', lineItemId: 'b', decision: 'approved' }),
+    ).rejects.toThrow(/still preparing/);
+    expect(store.request.status).toBe('submitted');
+    expect(store.lineItems[0].itemStatus).toBe('pending_review');
+    expect(store.events).toEqual([]);
+  });
+
+  it('refuses a change request before the package is prepared, writing nothing', async () => {
+    const store = createMemoryStore({
+      request: request({ status: 'submitted' }),
+      lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
+    });
+    await expect(requestChanges(store, 'REQ-0016', ['b'], 'Smaller, please.')).rejects.toThrow(
+      /still preparing/,
+    );
+    expect(store.lineItems[0].itemStatus).toBe('pending_review');
+    expect(store.events).toEqual([]);
+  });
+
+  it('decides a resubmission, which goes straight back to corporate', async () => {
+    const store = createMemoryStore({
+      request: request({ status: 'submitted', packageVersion: 2 }),
+      lineItems: [lineItem({ id: 'b', origin: 'addon', itemStatus: 'pending_review' })],
+    });
+    const outcome = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'b',
+      decision: 'approved',
+    });
+    expect(outcome.itemStatus).toBe('approved');
+  });
+
+  it('still decides a sibling while a change request is out (SPEC §7)', async () => {
+    const store = createMemoryStore({
+      request: request({ status: 'changes_requested' }),
+      lineItems: [
+        lineItem({ id: 'b', origin: 'addon', itemStatus: 'changes_requested' }),
+        lineItem({ id: 'c', origin: 'addon', itemStatus: 'pending_review' }),
+      ],
+    });
+    const outcome = await decideLineItem(store, {
+      requestId: 'REQ-0016',
+      lineItemId: 'c',
+      decision: 'approved',
+    });
+    expect(outcome.itemStatus).toBe('approved');
+  });
+
   it('parks an all-declined request rather than inventing a status', async () => {
     const store = createMemoryStore({
       request: request({ status: 'needs_review' }),

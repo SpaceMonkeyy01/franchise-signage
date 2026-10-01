@@ -11,6 +11,7 @@
 // follows up, never what the franchisee must do before anything can move.
 
 import type { RequestDetail } from './db/queries';
+import { isReviewOpen } from './status/types';
 
 export type ReadinessState = 'done' | 'follow_up' | 'with_corporate';
 
@@ -29,7 +30,8 @@ export interface Readiness {
   followUps: number;
 }
 
-type ReadinessInput = Pick<RequestDetail, 'intent' | 'location' | 'items' | 'files' | 'events'>;
+type ReadinessInput = Pick<RequestDetail, 'intent' | 'location' | 'items' | 'files' | 'events'> &
+  Partial<Pick<RequestDetail, 'status' | 'package_version'>>;
 
 const APPROVED = new Set(['auto_approved', 'approved']);
 
@@ -92,7 +94,13 @@ export function packageReadiness(request: ReadinessInput): Readiness {
     state: needsChanges > 0 ? 'follow_up' : withCorporate > 0 ? 'with_corporate' : 'done',
     value: [
       `${approved} of ${decided} approved`,
-      withCorporate > 0 && `${withCorporate} with corporate`,
+      // Before package prep the items are not with corporate yet (SPEC §6).
+      withCorporate > 0 &&
+        (request.status &&
+        request.package_version !== undefined &&
+        !isReviewOpen({ status: request.status, packageVersion: request.package_version })
+          ? `${withCorporate} go to corporate next`
+          : `${withCorporate} with corporate`),
       needsChanges > 0 && `${needsChanges} ${needsChanges === 1 ? 'needs' : 'need'} changes`,
       declined > 0 && `${declined} declined`,
     ]
