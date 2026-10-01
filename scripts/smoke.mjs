@@ -732,6 +732,11 @@ const reReview = await withDb(async (client) =>
   ).rows[0],
 );
 record('resubmission sent the re-review email', Boolean(reReview));
+// DECISIONS #162: straight back to corporate, not to Signage.com's prep queue.
+const afterResubmit = await withDb(async (client) =>
+  (await client.query('select status from requests where id = $1', [lifecycleId])).rows[0].status,
+);
+record('a resubmission goes back to corporate review', afterResubmit === 'needs_review', afterResubmit);
 
 // SPEC v2.3 §10.7 D4: the approval email goes to the brand's reviewer
 // ACCOUNTS once it has any, not to the address configured at setup.
@@ -1043,6 +1048,62 @@ const franchiseeMail = async (requestId, kind) =>
       )
     ).rows[0],
   );
+
+// ------------------------------------------------- every item declined (#162)
+console.log('\nEvery item declined');
+await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+await page.getByRole('link', { name: /Request signage/i }).first().click();
+await page.getByRole('link', { name: /Add a new sign/i }).click();
+await page.waitForURL('**/add', { timeout: TIMEOUT });
+await page
+  .locator('div:has(> p:text-is("Freshbites Neon Leaf")) >> button:has-text("Add · needs approval")')
+  .first()
+  .click();
+await page.getByRole('button', { name: /Submit .*for approval/ }).click();
+await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
+await captureCode();
+const declinedCode = createdCodes.at(-1);
+const declinedRequest = await withDb(async (client) =>
+  (await client.query('select id, access_token from requests where code = $1', [declinedCode]))
+    .rows[0],
+);
+await page.goto(`${BASE}/admin/request/${declinedRequest.id}`, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Prepare package' }).click();
+await expectVisible(page, 'text=/Package prepared/', 'a one-sign request goes to corporate');
+const declineEmail = await withDb(async (client) =>
+  (
+    await client.query(
+      `select id from sent_emails where request_id = $1 and kind = 'review_requested'
+        order by created_at desc limit 1`,
+      [declinedRequest.id],
+    )
+  ).rows[0],
+);
+await page.goto(`${BASE}/admin/outbox/${declineEmail.id}`, { waitUntil: 'networkidle' });
+const declineHref = await page
+  .frameLocator('iframe')
+  .locator('a:has-text("Approve")')
+  .first()
+  .getAttribute('href');
+await page.goto(declineHref, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Decline', exact: true }).first().click();
+await page.getByRole('button', { name: 'Decline this sign' }).first().click();
+await expectVisible(page, 'text=Every item on this request has been decided', 'the reviewer declines the only sign');
+const declinedStatus = await withDb(async (client) =>
+  (await client.query('select status from requests where id = $1', [declinedRequest.id])).rows[0]
+    .status,
+);
+record('a request with every item declined ends as declined', declinedStatus === 'declined', declinedStatus);
+await page.goto(`${BASE}/freshbites/request/${declinedRequest.access_token}`, {
+  waitUntil: 'networkidle',
+});
+await expectVisible(page, 'main span:text-is("Declined") >> visible=true', 'the franchisee sees it declined');
+await page.goto(`${BASE}/admin?filter=declined`, { waitUntil: 'networkidle' });
+await expectVisible(
+  page,
+  `a:text-is("${declinedCode}") >> visible=true`,
+  'the team finds it under Declined, not among open work',
+);
 
 // The Neon Leaf is the only add-on with NO vendor override, so a request holding
 // just it resolves to exactly one INTERNAL package — the tail the lifecycle
