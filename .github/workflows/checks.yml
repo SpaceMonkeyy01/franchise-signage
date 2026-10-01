@@ -1,0 +1,31 @@
+# The checks that need no running app, on every push and pull request.
+#
+# npm run smoke and npm run shots drive the real app in a browser against the
+# dev database, so they stay a local step (docs/STATE.md, "Running it").
+# db:verify builds its own in-process Postgres (PGlite), so no service is needed.
+
+name: Checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - name: Schema and RLS checks
+        run: npm run db:verify
