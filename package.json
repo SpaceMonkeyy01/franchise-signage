@@ -20,7 +20,8 @@
     "dev:db:reset": "tsx scripts/dev-db-server.ts --reset",
     "sla": "tsx scripts/run-sla.ts",
     "invite": "tsx scripts/invite.ts",
-    "backfill-owners": "tsx scripts/backfill-owners.ts"
+    "backfill-owners": "tsx scripts/backfill-owners.ts",
+    "format": "prettier --write"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.6.1",
@@ -46,6 +47,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "playwright": "^1.62.1",
+    "prettier": "3.9.9",
     "supabase": "^2.114.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",

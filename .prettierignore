@@ -1,0 +1,6 @@
+# The retail Design Studio is a read-only reference with its own style.
+reference/
+.next/
+node_modules/
+graphify-out/
+*.md
