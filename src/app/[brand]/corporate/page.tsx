@@ -17,6 +17,7 @@ import Link from 'next/link';
 
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
+import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { requireCorporate, type CorporateAccess } from '@/lib/auth/corporate';
 import { pendingInvitations, ROLE_LABEL } from '@/lib/auth/invitations';
@@ -450,28 +451,37 @@ function LocationCard({
           {location.open_requests.map((request) => {
             const progress = setupProgress(request.status);
             return (
-              <li
-                key={request.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2.5 text-xs [&:not(:last-child)]:pb-2.5"
-              >
-                <span className="w-20 font-medium tabular-nums text-gray-900">{request.code}</span>
-                {progress && <StageBar current={progress.current} />}
-                <RequestStatusChip status={request.status} />
-                {request.pending_count > 0 ? (
-                  <Link
-                    href={approvalsHref}
-                    className="ml-auto font-semibold text-amber-800 underline-offset-2 hover:underline"
-                  >
-                    {request.pending_count} awaiting you →
-                  </Link>
-                ) : (
-                  request.status === 'submitted' && (
-                    // Not corporate's yet: the review opens at package prep (SPEC §6).
-                    <span className="ml-auto text-gray-500">
-                      Signage.com is preparing the package
+              <li key={request.id} data-request-row={request.code}>
+                {/* The signs it asks for sit in the row; it opens to the list. */}
+                <details className="group">
+                  <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg py-2.5 text-xs transition-colors hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
+                    <span className="w-20 font-medium tabular-nums text-gray-900">
+                      {request.code}
                     </span>
-                  )
-                )}
+                    {progress && <StageBar current={progress.current} />}
+                    <RequestStatusChip status={request.status} />
+                    <SignStrip signs={request.signs} />
+                    <span className="ml-auto flex items-center gap-3">
+                      {request.pending_count > 0 ? (
+                        <Link
+                          href={approvalsHref}
+                          className="font-semibold text-amber-800 underline-offset-2 hover:underline"
+                        >
+                          {request.pending_count} awaiting you →
+                        </Link>
+                      ) : (
+                        request.status === 'submitted' && (
+                          // Not corporate's yet: the review opens at package prep (SPEC §6).
+                          <span className="text-gray-500">Signage.com is preparing the package</span>
+                        )
+                      )}
+                      <ExpandChevron />
+                    </span>
+                  </summary>
+                  <div className="pb-3">
+                    <RequestSignList signs={request.signs} />
+                  </div>
+                </details>
               </li>
             );
           })}

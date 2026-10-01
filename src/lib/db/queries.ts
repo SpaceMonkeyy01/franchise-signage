@@ -136,6 +136,42 @@ export interface OpenRequestRow {
   status: RequestStatus;
   access_token: string;
   item_count: number;
+  /** The signs it asks for, in the request's own order — what a row shows. */
+  signs: RequestSign[];
+}
+
+/** One sign on a request: enough for a thumbnail strip and its expanded list. */
+export interface RequestSign {
+  name: string;
+  item_status: LineItemStatus;
+  render_key: string | null;
+  /** The sign's picture, else its catalog type's icon (#157); null → schematic. */
+  image_path: string | null;
+}
+
+/**
+ * The signs on each of several requests, in one query rather than one per row,
+ * declined ones included: the expanded list says what happened to every sign.
+ */
+async function signsByRequest(requestIds: string[]): Promise<Map<string, RequestSign[]>> {
+  const bySign = new Map<string, RequestSign[]>();
+  if (requestIds.length === 0) return bySign;
+  const found = await rows<RequestSign & { request_id: string }>(
+    `select li.request_id, bi.name, li.item_status, mc.render_key,
+            coalesce(bi.thumbnail_url, mc.icon_path) as image_path
+       from line_items li
+       join brand_items bi on bi.id = li.brand_item_id
+       join master_catalog mc on mc.id = bi.master_catalog_id
+      where li.request_id = any($1)
+      order by li.request_id, li.sort_order, li.created_at`,
+    [requestIds],
+  );
+  for (const { request_id, ...sign } of found) {
+    const list = bySign.get(request_id) ?? [];
+    list.push(sign);
+    bySign.set(request_id, list);
+  }
+  return bySign;
 }
 
 /**
@@ -175,7 +211,7 @@ export async function getLocationsForBrand(
     [ids],
   );
 
-  const requests = await rows<OpenRequestRow & { location_id: string }>(
+  const requests = await rows<Omit<OpenRequestRow, 'signs'> & { location_id: string }>(
     `select r.id, r.location_id, r.code, r.intent, r.status, r.access_token,
             (select count(*) from line_items li where li.request_id = r.id)::int as item_count
        from requests r
@@ -184,10 +220,14 @@ export async function getLocationsForBrand(
     [ids],
   );
 
+  const requestSigns = await signsByRequest(requests.map((r) => r.id));
+
   return locations.map((location) => ({
     ...location,
     installed_signs: signs.filter((s) => s.location_id === location.id),
-    open_requests: requests.filter((r) => r.location_id === location.id),
+    open_requests: requests
+      .filter((r) => r.location_id === location.id)
+      .map((r) => ({ ...r, signs: requestSigns.get(r.id) ?? [] })),
   }));
 }
 
@@ -743,7 +783,13 @@ export interface PortfolioLocation {
    */
   days_to_opening: number | null;
   oldest_install: string | null;
-  open_requests: Array<{ id: string; code: string; status: RequestStatus; pending_count: number }>;
+  open_requests: Array<{
+    id: string;
+    code: string;
+    status: RequestStatus;
+    pending_count: number;
+    signs: RequestSign[];
+  }>;
 }
 
 export interface Portfolio {
@@ -836,6 +882,8 @@ export async function getPortfolio(brandId: string): Promise<Portfolio> {
     [brandId],
   );
 
+  const openSigns = await signsByRequest(open.map((request) => request.id));
+
   return {
     metrics: {
       locations: Number(counts?.locations ?? 0),
@@ -859,6 +907,7 @@ export async function getPortfolio(brandId: string): Promise<Portfolio> {
           code,
           status,
           pending_count: Number(pending_count),
+          signs: openSigns.get(id) ?? [],
         })),
     })),
   };

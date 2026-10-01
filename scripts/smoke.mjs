@@ -426,7 +426,17 @@ await expectCount(page, 'text=/installed (Sep|Oct) 2025/', 5, 'Oak Plaza shows i
 await expectCount(page, '[data-testid="setup-tracker"]', 1, 'Cedar Park, mid-setup, shows its setup stages');
 await expectCount(page, '[data-testid="setup-tracker"] li[aria-current="step"]', 1, 'with exactly one stage under way');
 await expectVisible(page, '[data-testid="setup-tracker"] >> text=/Opens|Opened/', 'and its opening date');
-await expectCount(page, 'text=/REQ-00(16|17|18)/', 3, 'the three open requests are listed');
+// Visible matches only: each request row also holds its sign list and an
+// "Open REQ-…" link, folded away until the row is opened.
+await expectCount(page, 'text=/REQ-00(16|17|18)/ >> visible=true', 3, 'the three open requests are listed');
+// A row shows its signs as thumbnails and opens to the full list. Clicked away
+// from the code, which is a link to the request itself.
+await page.locator('details[data-request-row="REQ-0017"] summary').click({ position: { x: 600, y: 10 } });
+await expectVisible(
+  page,
+  'details[data-request-row="REQ-0017"] li >> visible=true',
+  'a request row opens to the signs it asks for',
+);
 
 // -------------------------------------------------------------- status page
 console.log('\nStatus page (REQ-0016, initial setup)');
@@ -1007,7 +1017,8 @@ await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
 await expectVisible(page, 'text=Freshbites Neon Leaf', 'our installed sign is on the location record');
 await expectCount(
   page,
-  'text=Freshbites Road Sign',
+  // On the record, not in a request's folded sign list.
+  'text=Freshbites Road Sign >> visible=true',
   0,
   'and the vendor’s is not — it has not been installed yet',
 );

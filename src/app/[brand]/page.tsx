@@ -26,6 +26,7 @@ import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { CursorGlow } from '@/components/CursorGlow';
 import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
+import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
 import { budgetByFormat, budgetMoney } from '@/lib/budget';
@@ -477,20 +478,47 @@ function LocationCard({
       )}
 
       {location.open_requests.length > 0 && (
-        <div className="mt-4 space-y-2 border-t border-gray-100 pt-3">
-          {location.open_requests.map((request) => (
-            <Link
-              key={request.id}
-              href={`/${brandSlug}/request/${request.access_token}`}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg px-1 py-1 transition-colors hover:bg-gray-50"
-            >
-              <span className="text-sm" style={{ color: 'var(--color-brand-dark)' }}>
-                {request.code} · {INTENT_LABEL[request.intent] ?? request.intent} ·{' '}
-                {request.item_count} item(s)
-              </span>
-              <RequestStatusChip status={request.status} />
-            </Link>
-          ))}
+        <div className="mt-4 space-y-1 border-t border-gray-100 pt-3">
+          {/* Each request shows the signs it asks for, and opens to the full
+              list; the code stays a link to the request itself. */}
+          {location.open_requests.map((request) => {
+            const href = `/${brandSlug}/request/${request.access_token}`;
+            return (
+              <details key={request.id} className="group rounded-lg" data-request-row={request.code}>
+                <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg px-1 py-1.5 transition-colors hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
+                  <span className="text-sm">
+                    <Link
+                      href={href}
+                      className="font-medium underline-offset-2 hover:underline"
+                      style={{ color: 'var(--color-brand-dark)' }}
+                    >
+                      {request.code}
+                    </Link>
+                    <span className="text-gray-600">
+                      {' '}
+                      · {INTENT_LABEL[request.intent] ?? request.intent} · {request.item_count}{' '}
+                      {request.item_count === 1 ? 'sign' : 'signs'}
+                    </span>
+                  </span>
+                  <SignStrip signs={request.signs} />
+                  <span className="ml-auto flex items-center gap-2">
+                    <RequestStatusChip status={request.status} />
+                    <ExpandChevron />
+                  </span>
+                </summary>
+                <div className="px-1 pb-2 pt-1">
+                  <RequestSignList signs={request.signs} />
+                  <Link
+                    href={href}
+                    className="mt-2 inline-block text-xs font-medium underline-offset-2 hover:underline"
+                    style={{ color: 'var(--color-brand-dark)' }}
+                  >
+                    Open {request.code} →
+                  </Link>
+                </div>
+              </details>
+            );
+          })}
         </div>
       )}
     </section>
