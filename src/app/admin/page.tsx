@@ -53,6 +53,19 @@ const BUCKETS: Bucket[] = [
   { key: 'declined', label: 'Declined', statuses: ['declined'] },
 ];
 
+const CLOSED: RequestStatus[] = ['completed', 'declined'];
+
+/** A request waiting this long in one status is shown in amber. */
+const LONG_WAIT_DAYS = 3;
+
+function waited(seconds: number): { label: string; long: boolean } {
+  const minutes = Math.max(0, Math.floor(seconds / 60));
+  const days = Math.floor(minutes / 1440);
+  const label =
+    minutes < 60 ? `${minutes}m` : minutes < 2880 ? `${Math.floor(minutes / 60)}h` : `${days}d`;
+  return { label, long: days >= LONG_WAIT_DAYS };
+}
+
 const NEXT_STEP: Record<string, string> = {
   submitted: 'Prepare the package',
   needs_review: 'Waiting on corporate',
@@ -84,9 +97,17 @@ export default async function AdminQueue({
     getBrandsWithPackages(),
     getRegistrations(),
   ]);
-  const shown = bucket.statuses
-    ? all.filter((row) => bucket.statuses!.includes(row.status))
-    : all;
+  // Oldest wait first, so the top of the list is what to pick up next; closed
+  // requests (installed, declined) after them, most recent first.
+  const shown = (bucket.statuses ? all.filter((row) => bucket.statuses!.includes(row.status)) : all)
+    .slice()
+    .sort((a, b) => {
+      const closedA = CLOSED.includes(a.status);
+      const closedB = CLOSED.includes(b.status);
+      if (closedA !== closedB) return closedA ? 1 : -1;
+      const order = b.waiting_seconds - a.waiting_seconds;
+      return closedA ? -order : order;
+    });
 
   const waitingOnUs = all.filter((row) =>
     BUCKETS.filter((b) => b.ours).some((b) => b.statuses?.includes(row.status)),
@@ -131,14 +152,29 @@ export default async function AdminQueue({
         })}
       </nav>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
-        <table className="w-full min-w-[52rem] text-sm">
+      {/* On a phone, one card per request; the table needs a wider screen. */}
+      <ul className="mt-4 space-y-2 sm:hidden">
+        {shown.map((row) => (
+          <QueueCard key={row.id} row={row} />
+        ))}
+        {shown.length === 0 && (
+          <li className="rounded-xl border border-gray-200 bg-white px-4 py-8 text-center text-sm text-gray-500">
+            Nothing in {bucket.label.toLowerCase()}.
+          </li>
+        )}
+      </ul>
+
+      <div className="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white sm:block">
+        <table className="w-full min-w-[56rem] text-sm">
           <thead className="border-b border-gray-100 text-left text-xs text-gray-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Request</th>
               <th className="px-4 py-2.5 font-medium">Brand · location</th>
               <th className="px-4 py-2.5 font-medium">Items</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
+              <th className="px-4 py-2.5 font-medium" title="Time in its current status">
+                Waiting
+              </th>
               <th className="px-4 py-2.5 font-medium">Next step</th>
             </tr>
           </thead>
@@ -148,7 +184,7 @@ export default async function AdminQueue({
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
                   Nothing in {bucket.label.toLowerCase()}.
                 </td>
               </tr>
@@ -205,6 +241,7 @@ function BrandDocuments({ brands }: { brands: BrandWithFormats[] }) {
 }
 
 function QueueLine({ row }: { row: QueueRow }) {
+  const wait = CLOSED.includes(row.status) ? null : waited(row.waiting_seconds);
   return (
     <tr className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
       <td className="px-4 py-2.5">
@@ -235,8 +272,54 @@ function QueueLine({ row }: { row: QueueRow }) {
       <td className="px-4 py-2.5">
         <RequestStatusChip status={row.status} />
       </td>
+      <td
+        className={`px-4 py-2.5 text-xs tabular-nums ${
+          wait?.long ? 'font-semibold text-amber-700' : 'text-gray-500'
+        }`}
+      >
+        {wait ? wait.label : '—'}
+      </td>
       <td className="px-4 py-2.5 text-xs text-gray-500">{NEXT_STEP[row.status] ?? '—'}</td>
     </tr>
+  );
+}
+
+/** The queue row as a card, for a phone. Same facts, stacked. */
+function QueueCard({ row }: { row: QueueRow }) {
+  const wait = CLOSED.includes(row.status) ? null : waited(row.waiting_seconds);
+  return (
+    <li className="rounded-xl border border-gray-200 bg-white p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Link
+            href={`/admin/request/${row.id}`}
+            className="font-medium text-gray-900 underline-offset-2 hover:underline"
+          >
+            {row.code}
+          </Link>
+          <span className="ml-2 text-xs text-gray-500">{INTENT_LABEL[row.intent] ?? row.intent}</span>
+          <p className="truncate text-xs text-gray-500">
+            {row.brand_name} · {row.location_name}
+          </p>
+        </div>
+        <RequestStatusChip status={row.status} />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-y-1 text-xs text-gray-600">
+        {row.item_count} item{row.item_count === 1 ? '' : 's'}
+        {row.fast_lane && <Pill className="bg-green-100 text-green-800">⚡ fast lane</Pill>}
+        {row.pending_count > 0 && <Pill className="bg-amber-100 text-amber-800">{row.pending_count} to review</Pill>}
+        {row.changes_count > 0 && <Pill className="bg-rose-100 text-rose-800">{row.changes_count} reopened</Pill>}
+        {row.tbd_count > 0 && <Pill className="bg-gray-100 text-gray-600">{row.tbd_count} TBD</Pill>}
+      </div>
+      <p className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-500">
+        <span>{NEXT_STEP[row.status] ?? '—'}</span>
+        {wait && (
+          <span className={wait.long ? 'font-semibold text-amber-700' : ''}>
+            waiting {wait.label}
+          </span>
+        )}
+      </p>
+    </li>
   );
 }
 

@@ -645,7 +645,9 @@ await page.getByLabel('Six-digit code').fill(totpCode(DEV_ADMIN.totpSecret));
 await page.getByRole('button', { name: 'Continue' }).click();
 await page.waitForURL(/\/admin$/, { timeout: TIMEOUT });
 await expectVisible(page, 'h1:has-text("Request queue")', 'the right code reaches the queue');
-await expectVisible(page, 'text=fast lane', 'fast-lane requests are badged in the queue');
+// The queue renders as cards on a phone and a table above that, so ask for the
+// copy on screen rather than the first in the document.
+await expectVisible(page, 'text=fast lane >> visible=true', 'fast-lane requests are badged in the queue');
 
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
 await page.getByRole('link', { name: /Request signage/i }).first().click();

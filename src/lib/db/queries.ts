@@ -451,6 +451,8 @@ export interface QueueRow {
   changes_count: number;
   tbd_count: number;
   quote_count: number;
+  /** Seconds since the request reached its current status: how long it has waited there. */
+  waiting_seconds: number;
   /** True when nothing needed corporate — the fast lane (SPEC §7). */
   fast_lane: boolean;
 }
@@ -472,6 +474,13 @@ export function getRequestQueue(statuses?: readonly RequestStatus[]): Promise<Qu
             count(*) filter (where li.item_status = 'changes_requested')::int as changes_count,
             count(*) filter (where cardinality(li.tbd_fields) > 0)::int as tbd_count,
             (select count(*) from quotes q where q.request_id = r.id)::int as quote_count,
+            -- The event that moved it to where it is now (every transition
+            -- writes one), else when it was submitted.
+            extract(epoch from now() - coalesce(
+              (select max(e.created_at) from request_events e
+                where e.request_id = r.id and e.to_status = r.status),
+              r.submitted_at, r.created_at
+            ))::int as waiting_seconds,
             bool_and(li.item_status = 'auto_approved') as fast_lane
        from requests r
        join brands b on b.id = r.brand_id
