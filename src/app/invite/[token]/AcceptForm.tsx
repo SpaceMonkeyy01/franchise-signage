@@ -91,7 +91,7 @@ export function AcceptForm({
             </label>
           )}
           <label className={labelClass}>
-            Phone <span className="font-normal text-gray-400">(optional)</span>
+            Phone <span className="font-normal text-gray-500">(optional)</span>
             <input
               type="tel"
               autoComplete="tel"
@@ -114,7 +114,7 @@ export function AcceptForm({
           required
         />
         {!hasAccount && (
-          <span className="mt-1 block font-normal text-gray-400">At least {minPassword} characters.</span>
+          <span className="mt-1 block font-normal text-gray-500">At least {minPassword} characters.</span>
         )}
       </label>
 

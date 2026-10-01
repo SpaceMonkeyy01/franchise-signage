@@ -69,7 +69,7 @@ export function BrandHeader({
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={brand.logo_url} alt={brand.name} className="h-8 w-auto shrink-0 sm:h-9" />
               <span className="h-7 w-px shrink-0 bg-gray-300/70" aria-hidden="true" />
-              <p className="flex flex-col gap-0.5 text-[10px] uppercase leading-tight tracking-wider text-gray-400">
+              <p className="flex flex-col gap-0.5 text-[10px] uppercase leading-tight tracking-wider text-gray-500">
                 Powered by
                 <SignageLogo className="h-3.5 w-auto" />
               </p>
@@ -86,7 +86,7 @@ export function BrandHeader({
                 <p className="truncate text-base font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
                   {brand.name}
                 </p>
-                <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-400">
+                <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-gray-500">
                   Powered by <SignageLogo className="h-3 w-auto" />
                 </p>
               </div>

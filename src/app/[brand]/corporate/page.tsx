@@ -34,6 +34,7 @@ import {
 import type { LocationFormat } from '@/lib/status/types';
 
 import { listBrandPackages, listBrandSigns, listMasterCatalog, listStoreTypes } from '@/lib/catalog/manage';
+import { SETUP_STAGES, setupProgress } from '@/lib/setup-progress';
 import { brandFranchiseePeople } from '@/lib/staff';
 
 import { Approvals } from './Approvals';
@@ -134,23 +135,8 @@ export default async function CorporateDashboard({
 
         {tab === 'dashboard' && (
           <>
-            <Metrics metrics={portfolio.metrics} />
+            <Metrics metrics={portfolio.metrics} approvalsHref={`${base}?tab=approvals`} />
             <VendorPolicyCard brand={brand} />
-
-            {portfolio.metrics.pendingApprovals > 0 && (
-              <Link
-                href={`${base}?tab=approvals`}
-                className="card-lift mt-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 transition-colors hover:bg-amber-100"
-              >
-                <span className="text-sm text-amber-900">
-                  {portfolio.metrics.pendingApprovals} item
-                  {portfolio.metrics.pendingApprovals === 1 ? '' : 's'} awaiting your approval
-                </span>
-                <span className="text-amber-700" aria-hidden="true">
-                  →
-                </span>
-              </Link>
-            )}
 
             <h2 className="mt-6 text-sm font-semibold text-gray-900">Locations</h2>
             {portfolio.locations.length === 0 ? (
@@ -161,12 +147,16 @@ export default async function CorporateDashboard({
             ) : (
               <div className="mt-2 space-y-2">
                 {portfolio.locations.map((location) => (
-                  <LocationCard key={location.id} location={location} />
+                  <LocationCard
+                    key={location.id}
+                    location={location}
+                    approvalsHref={`${base}?tab=approvals`}
+                  />
                 ))}
               </div>
             )}
 
-            <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-400">
+            <p className="mt-3 text-center text-[11px] leading-relaxed text-gray-500">
               Standard packages and like-for-like replacements auto-approve under your brand rules —
               only add-ons and flagged exceptions reach your approval queue.
             </p>
@@ -183,7 +173,7 @@ export default async function CorporateDashboard({
           </>
         )}
 
-        <p className="mt-8 text-center text-xs text-gray-400">
+        <p className="mt-8 text-center text-xs text-gray-500">
           Signed in as {access.viewer.profile.email} · {ROLE_LABEL[access.role]}
         </p>
       </main>
@@ -294,7 +284,13 @@ function Tab({ href, label, active }: { href: string; label: string; active: boo
  * packages someone has accepted. What is quoted but not yet accepted is real
  * and is not that, so it is named separately rather than folded in.
  */
-function Metrics({ metrics }: { metrics: PortfolioMetrics }) {
+function Metrics({
+  metrics,
+  approvalsHref,
+}: {
+  metrics: PortfolioMetrics;
+  approvalsHref: string;
+}) {
   const tiles: Array<[string, string | number, boolean?]> = [
     ['Locations', metrics.locations],
     ['Installed signs', metrics.installedSigns],
@@ -306,25 +302,44 @@ function Metrics({ metrics }: { metrics: PortfolioMetrics }) {
   return (
     <>
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {tiles.map(([label, value, alert]) => (
-          <div
-            key={label}
-            className={`rounded-xl border bg-white p-3 text-center ${
-              alert ? 'border-amber-300' : 'border-gray-200'
-            }`}
-          >
-            <p
-              className="text-lg font-semibold tabular-nums"
-              style={{ color: alert ? '#B45309' : 'var(--color-brand-dark)' }}
+        {tiles.map(([label, value, alert]) => {
+          const body = (
+            <>
+              <p
+                className="text-lg font-semibold tabular-nums"
+                style={{ color: alert ? '#B45309' : 'var(--color-brand-dark)' }}
+              >
+                {value}
+              </p>
+              <p className="text-[11px] text-gray-500">{label}</p>
+              {alert && (
+                <p className="mt-1 text-[11px] font-semibold text-amber-800">Review now →</p>
+              )}
+            </>
+          );
+          // Approvals waiting is the one tile that asks something of corporate,
+          // so it is the way in to the queue rather than a second banner below.
+          return alert ? (
+            <div
+              key={label}
+              className="card-lift rounded-xl border border-amber-300 bg-amber-50 text-center transition-colors hover:bg-amber-100"
             >
-              {value}
-            </p>
-            <p className="text-[10px] text-gray-500">{label}</p>
-          </div>
-        ))}
+              <Link href={approvalsHref} className="block p-3">
+                {body}
+              </Link>
+            </div>
+          ) : (
+            <div
+              key={label}
+              className="rounded-xl border border-gray-200 bg-white p-3 text-center max-sm:last:col-span-2"
+            >
+              {body}
+            </div>
+          );
+        })}
       </div>
 
-      <p className="mt-1.5 text-[11px] leading-relaxed text-gray-400">
+      <p className="mt-1.5 text-[11px] leading-relaxed text-gray-500">
         Program spend is what has been accepted — quote packages a franchisee or the Signage.com
         team has signed off.
         {metrics.quotedNotAccepted > 0 && (
@@ -368,7 +383,7 @@ function VendorPolicyCard({ brand }: { brand: BrandPublic }) {
           brand.corporate_cc ? '. Corporate is copied on every package.' : '.'
         }`}
       </p>
-      <p className="mt-0.5 text-[10px] leading-relaxed text-gray-400">
+      <p className="mt-0.5 text-[10px] leading-relaxed text-gray-500">
         {external
           ? 'Your vendor quotes and fulfils directly; the portal keeps your approval control and the location records.'
           : 'Signage.com quotes and fulfils; production is tracked in the portal.'}{' '}
@@ -387,7 +402,13 @@ function VendorPolicyCard({ brand }: { brand: BrandPublic }) {
  * compliance ruling: the portal never promises an approval or permit outcome
  * (CLAUDE.md), and a location can be fully signed and still waiting on a city.
  */
-function LocationCard({ location }: { location: PortfolioLocation }) {
+function LocationCard({
+  location,
+  approvalsHref,
+}: {
+  location: PortfolioLocation;
+  approvalsHref: string;
+}) {
   const complete = location.package_size > 0 && location.installed_count >= location.package_size;
   const opening = location.opening_date ? new Date(location.opening_date) : null;
   const daysOut = location.days_to_opening;
@@ -420,7 +441,7 @@ function LocationCard({ location }: { location: PortfolioLocation }) {
           {location.installed_count} installed
           {location.package_size > 0 && ` of ${location.package_size} standard`}
         </span>
-        <span className="text-gray-400">{location.format_label}</span>
+        <span className="text-gray-500">{location.format_label}</span>
         {opening && (
           <span className={urgent ? 'font-medium text-amber-700' : ''}>
             opens {opening.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -428,19 +449,66 @@ function LocationCard({ location }: { location: PortfolioLocation }) {
           </span>
         )}
         {location.oldest_install && (
-          <span className="text-gray-400">
+          <span className="text-gray-500">
             oldest sign {new Date(location.oldest_install).getFullYear()}
           </span>
         )}
-        {location.open_requests.length > 0 && (
-          <span className="ml-auto flex flex-wrap items-center gap-1.5">
-            {location.open_requests.map((request) => (
-              <RequestStatusChip key={request.id} status={request.status} />
-            ))}
-          </span>
-        )}
       </div>
+
+      {/* Each open request on its own line, so a status reads against its
+          code, with the same six stages the franchisee sees on their store. */}
+      {location.open_requests.length > 0 && (
+        <ul className="mt-3 divide-y divide-gray-100 border-t border-gray-100">
+          {location.open_requests.map((request) => {
+            const progress = setupProgress(request.status);
+            return (
+              <li
+                key={request.id}
+                className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-2.5 text-xs [&:not(:last-child)]:pb-2.5"
+              >
+                <span className="w-20 font-medium tabular-nums text-gray-900">{request.code}</span>
+                {progress && <StageBar current={progress.current} />}
+                <RequestStatusChip status={request.status} />
+                {request.pending_count > 0 && (
+                  <Link
+                    href={approvalsHref}
+                    className="ml-auto font-semibold text-amber-800 underline-offset-2 hover:underline"
+                  >
+                    {request.pending_count} awaiting you →
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
+  );
+}
+
+/** The six stages as a compact bar, the stage under way named beside it. */
+function StageBar({ current }: { current: number }) {
+  return (
+    <span className="flex items-center gap-2">
+      <span className="flex gap-0.5" aria-hidden="true">
+        {SETUP_STAGES.map((stage, index) => (
+          <span
+            key={stage}
+            className="h-1.5 w-5 rounded-full"
+            style={{
+              background: index <= current ? 'var(--color-brand)' : '#e5e7eb',
+              opacity: index === current ? 0.55 : 1,
+            }}
+          />
+        ))}
+      </span>
+      <span className="text-gray-600">
+        <span className="sr-only">
+          Step {current + 1} of {SETUP_STAGES.length}:{' '}
+        </span>
+        {SETUP_STAGES[current]}
+      </span>
+    </span>
   );
 }
 

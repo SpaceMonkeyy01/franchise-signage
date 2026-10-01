@@ -520,11 +520,11 @@ await page.locator('input[placeholder="Sizing / site notes"]').first().fill('48"
 await page.getByRole('button', { name: /Submit .*for approval/ }).click();
 await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
 await captureCode();
-// Scoped to the item card's chip: the same words appear in the timeline
-// summary, which is correct and not what this assertion is about.
+// Scoped to the item groups: the same words appear in the timeline summary,
+// which is correct and not what this assertion is about.
 await expectCount(
   page,
-  'article span:has-text("Needs corporate approval")',
+  '[data-item-group="pending_review"] article',
   1,
   'an add-on goes to corporate',
 );
@@ -589,7 +589,7 @@ await expectCount(
 );
 await expectCount(
   page,
-  'article span:text-is("Approved")',
+  '[data-item-group="approved"] article',
   1,
   'the sibling item keeps its approval',
 );

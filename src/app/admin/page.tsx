@@ -117,7 +117,7 @@ export default async function AdminQueue({
               }`}
             >
               {entry.label}
-              <span className={active ? 'ml-1.5 text-gray-300' : 'ml-1.5 text-gray-400'}>
+              <span className={active ? 'ml-1.5 text-gray-300' : 'ml-1.5 text-gray-500'}>
                 {count}
               </span>
             </Link>
@@ -142,7 +142,7 @@ export default async function AdminQueue({
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-500">
                   Nothing in {bucket.label.toLowerCase()}.
                 </td>
               </tr>
@@ -208,7 +208,7 @@ function QueueLine({ row }: { row: QueueRow }) {
         >
           {row.code}
         </Link>
-        <span className="ml-2 text-xs text-gray-400">{INTENT_LABEL[row.intent] ?? row.intent}</span>
+        <span className="ml-2 text-xs text-gray-500">{INTENT_LABEL[row.intent] ?? row.intent}</span>
         {/* The fast lane is worth its own badge: it is the promise the program
             makes, and an operator seeing it knows corporate is not involved. */}
         {row.fast_lane && (
@@ -218,7 +218,7 @@ function QueueLine({ row }: { row: QueueRow }) {
         )}
       </td>
       <td className="px-4 py-2.5 text-gray-600">
-        <span className="text-xs text-gray-400">{row.brand_name}</span> · {row.location_name}
+        <span className="text-xs text-gray-500">{row.brand_name}</span> · {row.location_name}
       </td>
       <td className="px-4 py-2.5 text-xs text-gray-600">
         {row.item_count}

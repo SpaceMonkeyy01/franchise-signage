@@ -59,7 +59,7 @@ export default async function Outbox() {
           >
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="text-sm font-medium text-gray-900">{email.subject}</span>
-              <span className="text-[11px] text-gray-400">
+              <span className="text-[11px] text-gray-500">
                 {new Date(email.created_at).toLocaleString('en-US')}
               </span>
             </div>
@@ -75,7 +75,7 @@ export default async function Outbox() {
         ))}
 
         {emails.length === 0 && (
-          <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-400">
+          <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
             Nothing sent yet. Prepare a package with pending items at{' '}
             <Link href="/admin" className="underline">
               /admin

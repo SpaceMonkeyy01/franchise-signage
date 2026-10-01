@@ -114,9 +114,9 @@ export function Registrations({
             <li key={registration.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
               <span className="text-sm text-gray-900">{registration.email}</span>
               {registration.name && (
-                <span className="text-xs text-gray-400">{registration.name}</span>
+                <span className="text-xs text-gray-500">{registration.name}</span>
               )}
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-500">
                 {new Date(registration.created_at).toLocaleDateString('en-US', {
                   month: 'short',
                   day: 'numeric',

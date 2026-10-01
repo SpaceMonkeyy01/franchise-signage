@@ -77,7 +77,7 @@ function Company({ brandSlug, company }: { brandSlug: string; company: Franchise
           {plural(activeStaff, 'staff member', 'staff members')}
           {company.invitations.length > 0 && ` · ${company.invitations.length} invited`}
         </span>
-        <span className="ml-auto text-xs text-gray-400" aria-hidden="true">
+        <span className="ml-auto text-xs text-gray-500" aria-hidden="true">
           {open ? '▾' : '▸'}
         </span>
       </button>

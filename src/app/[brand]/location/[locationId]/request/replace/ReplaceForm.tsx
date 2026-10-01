@@ -82,7 +82,7 @@ export function ReplaceForm({
                   <span className="block truncate text-sm font-medium text-gray-900">
                     {sign.brand_item_name}
                   </span>
-                  <span className="block truncate text-xs text-gray-400">
+                  <span className="block truncate text-xs text-gray-500">
                     {sign.sizing ?? 'Sizing on file'} · installed{' '}
                     {new Date(sign.installed_at).toLocaleDateString('en-US', {
                       month: 'short',

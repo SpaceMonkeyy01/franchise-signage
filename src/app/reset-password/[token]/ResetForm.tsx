@@ -34,7 +34,7 @@ export function ResetForm({ token, minPassword }: { token: string; minPassword: 
           className={fieldClass}
           required
         />
-        <span className="mt-1 block font-normal text-gray-400">At least {minPassword} characters.</span>
+        <span className="mt-1 block font-normal text-gray-500">At least {minPassword} characters.</span>
       </label>
       <label className={labelClass}>
         Confirm new password

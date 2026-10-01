@@ -132,7 +132,7 @@ export function ResubmitPanel({
       >
         {pending ? 'Resubmitting…' : 'Resubmit for review →'}
       </button>
-      <p className="mt-2 text-center text-[11px] text-gray-400">
+      <p className="mt-2 text-center text-[11px] text-gray-500">
         Only these items go back to corporate. Everything already approved keeps its approval.
       </p>
     </section>

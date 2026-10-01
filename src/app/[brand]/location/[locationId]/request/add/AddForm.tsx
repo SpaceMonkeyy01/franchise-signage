@@ -96,7 +96,7 @@ export function AddForm({
             </span>
           </div>
           {chosen.length > priced.length && (
-            <p className="mt-1 text-[11px] text-gray-400">
+            <p className="mt-1 text-[11px] text-gray-500">
               + {chosen.length - priced.length} custom-quote item
               {chosen.length - priced.length === 1 ? '' : 's'} priced by the Signage.com team after
               submission

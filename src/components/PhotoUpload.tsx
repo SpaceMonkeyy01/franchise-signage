@@ -63,7 +63,7 @@ export function PhotoUpload({
               onChange(null);
               if (input.current) input.current.value = '';
             }}
-            className="text-[11px] text-gray-400 hover:text-gray-700"
+            className="text-[11px] text-gray-500 hover:text-gray-700"
           >
             Remove
           </button>

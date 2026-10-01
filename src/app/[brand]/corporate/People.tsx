@@ -78,7 +78,7 @@ export function People({
                 </p>
               </div>
               {person.isSelf ? (
-                <span className="text-xs text-gray-400">you</span>
+                <span className="text-xs text-gray-500">you</span>
               ) : (
                 <ActiveToggle brandSlug={brandSlug} person={person} />
               )}

@@ -104,7 +104,7 @@ export function MemberActions({
   locked: boolean;
   isSelf: boolean;
 }) {
-  if (isSelf) return <span className="text-xs text-gray-400">you</span>;
+  if (isSelf) return <span className="text-xs text-gray-500">you</span>;
   return (
     <div className="flex flex-wrap items-center gap-3">
       {locked && <ActionButton label="Clear lockout" run={() => clearTeamMemberLockout(profileId)} />}

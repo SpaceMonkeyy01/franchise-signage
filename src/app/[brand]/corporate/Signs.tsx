@@ -124,7 +124,7 @@ export function Signs({
             <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
               {group.title} <span className="font-normal">({group.signs.length})</span>
             </h3>
-            {group.hint && <p className="mt-0.5 text-xs text-gray-400">{group.hint}</p>}
+            {group.hint && <p className="mt-0.5 text-xs text-gray-500">{group.hint}</p>}
             <div className="mt-2 grid gap-2 xl:grid-cols-2">
               {group.signs.map((sign) =>
                 revising === sign.id ? (
@@ -411,7 +411,7 @@ function ProposalForm({
             ) : (
               <p className="text-xs text-gray-500">This type has no options to lock; describe it in the note.</p>
             )}
-            <p className="text-[11px] text-gray-400">
+            <p className="text-[11px] text-gray-500">
               A mockup and a live price from the Design Studio will appear here once it is connected.
             </p>
           </div>

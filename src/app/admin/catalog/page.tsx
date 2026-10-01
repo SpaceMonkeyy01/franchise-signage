@@ -128,7 +128,7 @@ export default async function CatalogPage({
                     </p>
                   )}
                 </div>
-                <p className="mt-2 text-xs text-gray-400">
+                <p className="mt-2 text-xs text-gray-500">
                   Mockup and engine price: added here once Design Studio is connected.
                 </p>
                 <ReviewForm
@@ -207,7 +207,7 @@ export default async function CatalogPage({
                           standin={sign.pricing_basis === 'standin'}
                         />
                       ) : (
-                        <span className="text-xs text-gray-400">set on approval</span>
+                        <span className="text-xs text-gray-500">set on approval</span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-gray-700">{sign.installed}</td>
@@ -276,7 +276,7 @@ export default async function CatalogPage({
                                   <span className={row.active ? 'text-gray-800' : 'text-gray-400 line-through'}>
                                     {row.variant ?? 'Standard'}
                                   </span>
-                                  <span className="text-gray-400">
+                                  <span className="text-gray-500">
                                     {row.pricing_basis === 'standin' ? 'custom quote' : 'priced'}
                                     {row.brand_items > 0 && ` · ${row.brand_items} brand sign${row.brand_items === 1 ? '' : 's'}`}
                                     {Object.keys(row.options).length > 0 &&
@@ -310,7 +310,7 @@ export default async function CatalogPage({
           <ul className="mt-2 space-y-1 text-xs text-gray-600">
             {history.map((event) => (
               <li key={event.id}>
-                <span className="text-gray-400">{new Date(event.created_at).toLocaleString('en-US')}</span> ·{' '}
+                <span className="text-gray-500">{new Date(event.created_at).toLocaleString('en-US')}</span> ·{' '}
                 {event.summary}
               </li>
             ))}

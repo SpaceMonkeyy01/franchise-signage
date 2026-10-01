@@ -381,7 +381,7 @@ function StepBasics({
           lease exhibit, nothing that promises an outcome. */}
       <fieldset className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
         <legend className="px-1 text-xs font-medium text-gray-700">
-          Landlord &amp; lease sign criteria <span className="text-gray-400">· optional</span>
+          Landlord &amp; lease sign criteria <span className="text-gray-500">· optional</span>
         </legend>
         <p className="text-[11px] text-gray-500">
           Most leases carry a sign exhibit setting what the landlord allows. Upload it and the team
@@ -509,7 +509,7 @@ function StepPackage({
                         {formatPrice(brandItem.est_price)}
                       </span>
                     </span>
-                    <span className="block truncate text-[11px] text-gray-400">
+                    <span className="block truncate text-[11px] text-gray-500">
                       {brandItem.spec_summary}
                       {item.exceptionIssue && (
                         <span className="text-rose-500"> · issue flagged</span>
@@ -517,7 +517,7 @@ function StepPackage({
                     </span>
                   </span>
                 </span>
-                <span className="shrink-0 text-gray-400">{isOpen ? '▾' : '▸'}</span>
+                <span className="shrink-0 text-gray-500">{isOpen ? '▾' : '▸'}</span>
               </button>
 
               {isOpen && (
@@ -598,7 +598,7 @@ function StepPackage({
                       <button
                         type="button"
                         onClick={() => setFlagging(item.key)}
-                        className="text-xs text-gray-400 transition-colors hover:text-rose-600"
+                        className="text-xs text-gray-500 transition-colors hover:text-rose-600"
                       >
                         ⚑ This standard sign won&rsquo;t work at my site
                       </button>
@@ -757,13 +757,13 @@ function StepReview({
           </span>
         </div>
         {items.length > priced.length && (
-          <p className="mt-1 text-[11px] text-gray-400">
+          <p className="mt-1 text-[11px] text-gray-500">
             + {items.length - priced.length} custom-quote item
             {items.length - priced.length === 1 ? '' : 's'} priced by the Signage.com team after
             submission
           </p>
         )}
-        <p className="mt-1 text-[10px] text-gray-400">
+        <p className="mt-1 text-[10px] text-gray-500">
           {external
             ? `Per ${brand.name} vendor policy, approved items route to ${
                 brand.vendor_name ?? 'the brand’s vendor'
@@ -811,7 +811,7 @@ function ReviewRow({
           brandPolicy={brand.vendor_policy}
         />
       </span>
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {item.exceptionIssue
           ? `“${item.exceptionIssue}”`
           : item.tbd

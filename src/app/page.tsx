@@ -140,7 +140,7 @@ export default async function Home() {
                       The team: queue, pricing, routing and fulfilment
                     </span>
                   </span>
-                  <span className="text-gray-400 group-hover:text-gray-900" aria-hidden="true">
+                  <span className="text-gray-500 group-hover:text-gray-900" aria-hidden="true">
                     &rarr;
                   </span>
                 </Link>
@@ -169,7 +169,7 @@ export default async function Home() {
                         Franchisees, store staff and {brand.name} corporate
                       </span>
                     </span>
-                    <span className="text-gray-400 group-hover:text-gray-900" aria-hidden="true">
+                    <span className="text-gray-500 group-hover:text-gray-900" aria-hidden="true">
                       &rarr;
                     </span>
                   </a>

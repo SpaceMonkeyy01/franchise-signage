@@ -362,7 +362,7 @@ async function BeforeASite({ brand, canCreate }: { brand: BrandPublic; canCreate
               >
                 <span className="text-gray-700">
                   <strong className="text-gray-900">{budget.formatLabel}</strong>
-                  <span className="text-gray-400"> · {budget.packageLabel}</span>
+                  <span className="text-gray-500"> · {budget.packageLabel}</span>
                 </span>
                 <span className="flex items-center gap-3">
                   <span className="font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
@@ -535,7 +535,7 @@ function SetupTracker({
               />
               <p
                 className={`mt-1.5 truncate text-[11px] max-sm:sr-only ${
-                  current ? 'font-semibold text-gray-900' : done ? 'text-gray-700' : 'text-gray-400'
+                  current ? 'font-semibold text-gray-900' : done ? 'text-gray-700' : 'text-gray-500'
                 }`}
               >
                 {done && <span className="sr-only">Done: </span>}

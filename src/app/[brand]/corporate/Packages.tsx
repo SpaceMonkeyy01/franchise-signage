@@ -158,7 +158,7 @@ function AddStoreType({ brandSlug }: { brandSlug: string }) {
           Cancel
         </button>
       </div>
-      <p className="text-xs text-gray-400">It starts with an empty package, for you to fill.</p>
+      <p className="text-xs text-gray-500">It starts with an empty package, for you to fill.</p>
       {error && <p className="text-xs text-rose-700">{error}</p>}
     </form>
   );
@@ -177,7 +177,7 @@ function RetiredStoreType({
   return (
     <li className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
       <span>{storeType.label}</span>
-      <span className="text-xs text-gray-400">
+      <span className="text-xs text-gray-500">
         {storeType.locations} store{storeType.locations === 1 ? '' : 's'}
       </span>
       {canManage && (
@@ -305,7 +305,7 @@ function PackageCard({
           ) : (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-600">{formatLabel} stores</p>
-              {storeType.description && <p className="text-xs text-gray-400">{storeType.description}</p>}
+              {storeType.description && <p className="text-xs text-gray-500">{storeType.description}</p>}
               {canManage && !editing && (
                 <span className="flex items-center gap-2 text-xs text-gray-500">
                   <button
@@ -374,7 +374,7 @@ function PackageCard({
             {priced > 0 ? `$${priced.toLocaleString('en-US')}` : '—'}
             {custom > 0 && <span className="font-normal text-gray-500"> + {custom} custom</span>}
           </p>
-          <p className="text-[11px] text-gray-400">estimate, {shown.length} sign{shown.length === 1 ? '' : 's'}</p>
+          <p className="text-[11px] text-gray-500">estimate, {shown.length} sign{shown.length === 1 ? '' : 's'}</p>
         </div>
       </div>
 
@@ -456,7 +456,7 @@ function PackageCard({
               >
                 Cancel
               </button>
-              <span className="text-xs text-gray-400">Applies to the next {formatLabel.toLowerCase()} store set up.</span>
+              <span className="text-xs text-gray-500">Applies to the next {formatLabel.toLowerCase()} store set up.</span>
             </>
           ) : (
             <button

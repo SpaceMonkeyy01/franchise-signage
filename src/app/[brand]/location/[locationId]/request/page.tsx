@@ -132,7 +132,7 @@ function IntentRow({ intent }: { intent: Intent }) {
           <span className="block text-sm font-medium text-gray-900">
             {intent.label}
             {!intent.href && !intent.fastLane && (
-              <span className="ml-1 text-[10px] font-normal text-gray-400">· coming in v1.1</span>
+              <span className="ml-1 text-[10px] font-normal text-gray-500">· coming in v1.1</span>
             )}
           </span>
           <span className="block text-xs text-gray-500">{intent.description}</span>

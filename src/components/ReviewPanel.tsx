@@ -120,7 +120,7 @@ export function ReviewPanel({
         </section>
       )}
 
-      <p className="mt-6 text-center text-xs text-gray-400">
+      <p className="mt-6 text-center text-xs text-gray-500">
         Decisions are recorded against {request.code} and are visible to the franchisee immediately.
       </p>
     </div>
@@ -280,9 +280,9 @@ function DecisionCard({
             : 'Decline this sign'}
       </button>
       {action === 'changes' && !note.trim() && (
-        <p className="mt-1 text-[11px] text-gray-400">A note is required to request changes.</p>
+        <p className="mt-1 text-[11px] text-gray-500">A note is required to request changes.</p>
       )}
-      <p className="mt-1.5 text-[11px] text-gray-400">
+      <p className="mt-1.5 text-[11px] text-gray-500">
         Decided item by item — whatever you choose, the rest of this request carries on.
       </p>
     </article>

@@ -1542,6 +1542,23 @@ item 7's "CRUD UI only when onboarding brand #2".
      smaller. Corporate's sign list goes two-up; installed signs three-up. The
      console header now wraps on a phone, where it ran 98px off the screen.
 
+160. **Cards say each thing once** (agreed 1 Oct). On the franchisee's request
+     page, items are grouped by status under one chip and count — what needs
+     the franchisee first, then waiting, declined, approved, pre-approved —
+     instead of the same chip on every card; the pre-approved line never
+     mentions corporate. Until a quote exists, an **Estimate** card adds up the
+     direct-priced signs and counts the custom-quote ones ("$18,750 + 3 custom
+     quotes"), declined signs left out, labelled an estimate and not a quote.
+     **Departing from the demo**, corporate's dashboard drops the amber "N items
+     awaiting your approval" banner: the Awaiting approval tile is itself the
+     link ("Review now →"). Each location lists its open requests one per line —
+     code, the six setup stages as a compact bar, status, and "N awaiting you"
+     linking to Approvals — where it used to show bare status chips with no way
+     to tell which request each belonged to. Light grey body text
+     (`text-gray-400`, about 2.5:1 on white) is `text-gray-500` (about 4.8:1,
+     passing WCAG AA) everywhere but the dark console header and a struck-through
+     retired row.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

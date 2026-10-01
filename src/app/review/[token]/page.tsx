@@ -42,7 +42,7 @@ export default async function ReviewPage({
     <>
       <BrandTheme brand={request.brand} />
       <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
-        <p className="text-xs uppercase tracking-wider text-gray-400">
+        <p className="text-xs uppercase tracking-wider text-gray-500">
           {request.brand.name} · signage approval
         </p>
         <h1 className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
@@ -105,7 +105,7 @@ function LinkProblem({ failure }: { failure: LinkFailure }) {
     <main className="mx-auto w-full max-w-md flex-1 px-4 py-20">
       <h1 className="text-lg font-semibold text-gray-900">{message.title}</h1>
       <p className="mt-2 text-sm leading-relaxed text-gray-600">{message.body}</p>
-      <p className="mt-6 text-xs text-gray-400">
+      <p className="mt-6 text-xs text-gray-500">
         Nothing was changed by opening this page.
       </p>
     </main>

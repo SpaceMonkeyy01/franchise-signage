@@ -65,7 +65,7 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
             §8b lender documents needed
           </span>
         )}
-        {pending && <span className="text-xs text-gray-400">working…</span>}
+        {pending && <span className="text-xs text-gray-500">working…</span>}
       </div>
 
       {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -120,7 +120,7 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
           </p>
           <label className="block text-xs text-gray-600">
             §8b · lease sign criteria reviewed{' '}
-            <span className="text-gray-400">
+            <span className="text-gray-500">
               ({hasLandlordExhibit ? 'exhibit attached below' : 'no exhibit provided'})
             </span>
             <select
@@ -133,7 +133,7 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
               <option value="no">no — conflict found</option>
             </select>
           </label>
-          <p className="text-[11px] text-gray-400">
+          <p className="text-[11px] text-gray-500">
             A conflict is not recorded here: flag the offending item as an exception so corporate
             decides it through the normal review path.
           </p>
@@ -226,7 +226,7 @@ function PackageChain({
         <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
           {PACKAGE_STAGE_LABEL[stage]}
         </span>
-        <span className="text-xs text-gray-400">
+        <span className="text-xs text-gray-500">
           {quote.external ? 'external tail' : 'Signage.com fulfils'} · {items.length} item(s) ·{' '}
           {formatPrice(quote.priced_total)}
           {quote.manual_count > 0 && ` · ${quote.manual_count} custom`}
@@ -669,7 +669,7 @@ function TimelinePanel({ request, act }: { request: RequestDetail; act: Act }) {
         {request.events.map((event) => (
           <li key={event.id} className="text-xs">
             <span className="text-gray-800">{event.summary}</span>
-            <span className="ml-1.5 text-gray-400">
+            <span className="ml-1.5 text-gray-500">
               — {event.actor} · {new Date(event.created_at).toLocaleString('en-US')}
             </span>
           </li>

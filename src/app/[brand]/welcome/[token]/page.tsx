@@ -42,7 +42,7 @@ export default async function WelcomePage({
 
       <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
-          <p className="text-xs font-medium uppercase tracking-wider text-gray-400">
+          <p className="text-xs font-medium uppercase tracking-wider text-gray-500">
             Planning stage
           </p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">
@@ -88,7 +88,7 @@ export default async function WelcomePage({
                   >
                     {budgetMoney(budget.priced)}
                     {budget.customLines > 0 && (
-                      <span className="ml-1 text-xs font-medium text-gray-400">+ custom</span>
+                      <span className="ml-1 text-xs font-medium text-gray-500">+ custom</span>
                     )}
                   </p>
                   <a
@@ -126,13 +126,13 @@ export default async function WelcomePage({
             estimate above becomes a number for your site rather than your format. Tell your{' '}
             {brand.name} contact when you are close.
           </p>
-          <p className="mt-3 text-xs text-gray-400">
+          <p className="mt-3 text-xs text-gray-500">
             Concept drawings are design intent for planning and lending. They are not construction
             or permit documents.
           </p>
         </section>
 
-        <p className="mt-6 text-center text-xs text-gray-400">
+        <p className="mt-6 text-center text-xs text-gray-500">
           Registered to {registration.email} by {brand.name}. Signage.com operates this portal for{' '}
           {brand.name}.
         </p>

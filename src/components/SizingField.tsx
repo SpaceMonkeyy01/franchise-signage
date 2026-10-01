@@ -24,7 +24,7 @@ export function SizingField({
   return (
     <div>
       {siteVariables && siteVariables.length > 0 && (
-        <p className="mb-1 text-[10px] text-gray-400">
+        <p className="mb-1 text-[10px] text-gray-500">
           Site details — {siteVariables.join(', ').replace(/_/g, ' ')}
         </p>
       )}
@@ -41,7 +41,7 @@ export function SizingField({
           onClick={() => onTbdChange(!tbd)}
           aria-pressed={tbd}
           className={`whitespace-nowrap rounded-lg border px-2 py-1.5 text-[11px] ${
-            tbd ? 'font-medium' : 'border-gray-200 text-gray-400 hover:border-gray-300'
+            tbd ? 'font-medium' : 'border-gray-200 text-gray-500 hover:border-gray-300'
           }`}
           style={
             tbd

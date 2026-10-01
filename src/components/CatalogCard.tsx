@@ -59,7 +59,7 @@ export function CatalogCard({
           {selected ? '× Remove' : '+ Add · needs approval'}
         </button>
         <span className="flex items-center gap-1">
-          {installed && <span className="text-[9px] text-gray-400">installed</span>}
+          {installed && <span className="text-[9px] text-gray-500">installed</span>}
           <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
         </span>
       </div>

@@ -39,7 +39,7 @@ export default async function DevMailItem({
         </p>
       )}
 
-      <p className="mt-4 text-xs text-gray-400">
+      <p className="mt-4 text-xs text-gray-500">
         Links inside open in this tab — clicking Approve here is exactly what a reviewer clicking it
         in their inbox does.
       </p>

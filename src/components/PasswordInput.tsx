@@ -35,7 +35,7 @@ export function PasswordInput({
         aria-label={visible ? 'Hide password' : 'Show password'}
         aria-pressed={visible}
         title={visible ? 'Hide password' : 'Show password'}
-        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-gray-400 hover:text-gray-700 focus-visible:text-gray-900 focus-visible:outline-none"
+        className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-lg text-gray-500 hover:text-gray-700 focus-visible:text-gray-900 focus-visible:outline-none"
       >
         <EyeIcon open={!visible} />
       </button>

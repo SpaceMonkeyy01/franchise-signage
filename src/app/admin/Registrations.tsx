@@ -95,7 +95,7 @@ export function Registrations({
         >
           Register &amp; welcome
         </button>
-        {pending && <span className="text-xs text-gray-400">working…</span>}
+        {pending && <span className="text-xs text-gray-500">working…</span>}
       </div>
 
       {error && <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -106,9 +106,9 @@ export function Registrations({
             <li key={registration.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2">
               <span className="text-sm text-gray-900">{registration.email}</span>
               {registration.name && (
-                <span className="text-xs text-gray-400">{registration.name}</span>
+                <span className="text-xs text-gray-500">{registration.name}</span>
               )}
-              <span className="text-xs text-gray-400">{registration.brand_name}</span>
+              <span className="text-xs text-gray-500">{registration.brand_name}</span>
               {registration.has_account ? (
                 <span className="rounded bg-emerald-600 px-1.5 py-0.5 text-[10px] font-medium text-white">
                   account created

@@ -21,7 +21,7 @@ import {
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
-import type { RequestStatus } from '@/lib/status/types';
+import type { LineItemStatus, RequestStatus } from '@/lib/status/types';
 import { fileUrl } from '@/lib/storage';
 
 import { acceptQuote } from './actions';
@@ -42,6 +42,18 @@ const ORIGIN_LABEL: Record<string, string> = {
   exception: 'Exception',
   replacement: 'Like-for-like replacement',
 };
+
+// The order items are grouped in on the status page: what needs the
+// franchisee first, then what is waiting, then what is settled. The
+// pre-approved line never mentions corporate — a fast-lane request is the
+// promise that corporate is not involved.
+const ITEM_GROUPS: { status: LineItemStatus; hint: string }[] = [
+  { status: 'changes_requested', hint: 'Update these and resubmit.' },
+  { status: 'pending_review', hint: 'Corporate reviews these; nothing else waits on them.' },
+  { status: 'declined', hint: 'The rest of your request carries on without these.' },
+  { status: 'approved', hint: 'Approved by corporate.' },
+  { status: 'auto_approved', hint: 'Standard and like-for-like signs need no review.' },
+];
 
 // The internal tail's visible progress (SPEC §4). The external tail has no
 // production stages to show — the vendor works off-platform.
@@ -120,6 +132,10 @@ export default async function RequestStatusPage({
             height lands in the second row and readiness stays snug at the top. */}
         <div className="grid gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
           <div className="xl:col-start-2 xl:row-start-1">
+            {/* Until a quote carries the real number, add the estimates up so
+                the franchisee is not doing it card by card. */}
+            {request.quotes.length === 0 && <EstimateCard items={request.items} />}
+
             {readiness && <ReadinessCard readiness={readiness} audience="franchisee" />}
 
             {/* §8b: the documents come with the quote, but the franchisee told us a
@@ -144,16 +160,35 @@ export default async function RequestStatusPage({
               />
             )}
 
-            <section className="mt-5 space-y-3">
-              {request.items.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  brand={request.brand}
-                  flagged={changed.has(item.id)}
-                />
-              ))}
-            </section>
+            {/* Grouped by where each item stands, so ten signs waiting on the same
+                review read as one line rather than ten identical badges. */}
+            {ITEM_GROUPS.map((group) => {
+              const items = request.items.filter((item) => item.item_status === group.status);
+              if (items.length === 0) return null;
+              return (
+                <section key={group.status} data-item-group={group.status} className="mt-5">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+                      <ItemStatusChip status={group.status} />
+                      <span>
+                        {items.length} sign{items.length === 1 ? '' : 's'}
+                      </span>
+                    </h2>
+                    <p className="text-xs text-gray-500">{group.hint}</p>
+                  </div>
+                  <div className="mt-2 space-y-3">
+                    {items.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        item={item}
+                        brand={request.brand}
+                        flagged={changed.has(item.id)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
 
             {/* One card per package. Routing (SPEC §4) can split a request between
             Signage.com and the brand's vendor, and showing only the first left
@@ -212,6 +247,37 @@ export default async function RequestStatusPage({
   );
 }
 
+/**
+ * The request's estimate before any quote: the direct-priced signs added up,
+ * with the custom-quote ones counted rather than guessed. Declined signs are
+ * left out — they will not be quoted.
+ */
+function EstimateCard({ items }: { items: LineItemRow[] }) {
+  const live = items.filter((item) => item.item_status !== 'declined');
+  const priced = live.filter((item) => item.est_price_snapshot !== null);
+  const total = priced.reduce((sum, item) => sum + Number(item.est_price_snapshot), 0);
+  const custom = live.length - priced.length;
+  if (live.length === 0) return null;
+
+  return (
+    <section className="mt-5 rounded-xl border border-gray-200 bg-white p-4">
+      <h2 className="text-sm font-semibold text-gray-900">Estimate</h2>
+      <p className="mt-1 text-2xl font-bold tracking-tight text-gray-900">
+        {priced.length > 0 ? formatPrice(total) : 'Custom quote'}
+        {priced.length > 0 && custom > 0 && (
+          <span className="ml-1.5 text-sm font-medium text-gray-500">
+            + {custom} custom quote{custom === 1 ? '' : 's'}
+          </span>
+        )}
+      </p>
+      <p className="mt-1 text-xs leading-relaxed text-gray-500">
+        {live.length} sign{live.length === 1 ? '' : 's'}. An estimate, not a quote: Signage.com
+        confirms every price, and prices any custom sign, in your quote.
+      </p>
+    </section>
+  );
+}
+
 function ItemCard({
   item,
   brand,
@@ -237,10 +303,7 @@ function ItemCard({
           className="h-12 w-16 shrink-0 rounded"
         />
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
-            <ItemStatusChip status={item.item_status} />
-          </div>
+          <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
 
           {item.spec_summary && (
             <p className="mt-1 text-xs leading-relaxed text-gray-500">{item.spec_summary}</p>
@@ -483,7 +546,7 @@ function ProductionProgress({ status }: { status: RequestStatus }) {
             />
             <p
               className={`mt-1.5 text-[10px] ${
-                i <= current ? 'font-medium text-gray-900' : 'text-gray-400'
+                i <= current ? 'font-medium text-gray-900' : 'text-gray-500'
               }`}
             >
               {STAGE_LABEL[stage]}
@@ -513,7 +576,7 @@ function Timeline({ request }: { request: RequestDetail }) {
             <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-gray-300" />
             <div className="min-w-0">
               <p className="text-sm leading-snug text-gray-800">{event.summary}</p>
-              <p className="mt-0.5 text-[11px] text-gray-400">
+              <p className="mt-0.5 text-[11px] text-gray-500">
                 {ACTOR_LABEL[event.actor] ?? event.actor} ·{' '}
                 {new Date(event.created_at).toLocaleString('en-US', {
                   month: 'short',
@@ -526,7 +589,7 @@ function Timeline({ request }: { request: RequestDetail }) {
           </li>
         ))}
       </ol>
-      <p className="mt-4 border-t border-gray-100 pt-3 text-[11px] text-gray-400">
+      <p className="mt-4 border-t border-gray-100 pt-3 text-[11px] text-gray-500">
         Keep this link — it stays live for the whole project.{' '}
         <Link href={`/${request.brand.slug}`} className="underline">
           All your locations
