@@ -1,5 +1,23 @@
 # Where the build is
 
+## 30 Sep 2026 (evening): look and feel, and a faster dev sign-in
+
+- **A drafting-board grid behind every page** (#158): brand-tinted on brand
+  pages, neutral on the console, hidden in print; it glows around the pointer
+  on the two signed-out front pages (mouse only, off under reduced motion).
+- **The Signage.com logo** (`public/brands/signage/`, dark and light
+  lettering) in the console header, as "Powered by" in brand headers, and on
+  the front page, sign-in and two-factor. The product name is unchanged.
+- **The brand header has no bar at the top of the page**: logo and links sit on
+  the brand's colour wash, and a frosted white bar fades in once content
+  scrolls under it (`HeaderShell.tsx`). A thin brand-colour stripe stays.
+- **Password fields have a show/hide eye** (`PasswordInput.tsx`), on all five.
+- **Dev sign-in picker**: without Supabase, each sign-in lists its seeded
+  accounts as buttons that fill the form; two-factor's dev code has "Use this
+  code". Never shown under Supabase.
+- Checks on 1 Oct: **306 smoke**, **188 unit**, **63 schema** (43
+  behavioural), typecheck, lint.
+
 ## 30 Sep 2026 (later): the catalog and packages, managed on screen (spec v2.4)
 
 - **Signage.com: `/admin/catalog`.** Brands' proposals waiting on a price;
