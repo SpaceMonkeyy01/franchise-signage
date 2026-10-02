@@ -1669,6 +1669,30 @@ item 7's "CRUD UI only when onboarding brand #2".
        price, automatically fetched", owner, 2 Oct). A proposal still waits for
        the team's approval to go live (§2.3).
 
+167. **Franchisees adjust a design while ordering** (built 2 Oct; SPEC v2.6
+     §8 points 3–4). A designed sign with anything left adjustable shows
+     "Customize in Studio" in setup (package and add-ons) and "Add a new sign":
+     only the open settings, with their limits; Preview prices and renders;
+     "Use this design" keeps it for the request.
+     - **Checked and priced on the server, before the transaction**
+       (`src/lib/designs/submit.ts`): pricing is a ~15 s network call, and the
+       dev database serves one connection at a time. The browser's price is
+       never used.
+     - **Outside the limits:** a standard sign becomes an `exception` with the
+       breaches as its issue; an add-on (reviewed anyway) carries them in its
+       site notes. Going outside is allowed and warned, not blocked — corporate
+       decides, as SPEC §7 has it for exceptions.
+     - The line keeps the design, the Studio price as its snapshot
+       (`price_source` 'engine'), its size as the sizing text, and the mockup
+       as its `mockup_file_id` — the first time a request carries a generated
+       mockup rather than a team upload.
+     - **Not for like-for-like replacements:** they reorder what is installed.
+     - Smoke covers access only (brand admin reaches the Studio; a reviewer
+       gets no link and a 404): engine calls are billed and CI has no Signize
+       credential. The engine path is unit-tested on its request and response,
+       and was driven end to end by hand on 2 Oct (34" letters outside an
+       18–30" limit: $1,000, flagged, submitted to corporate).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

@@ -1,5 +1,22 @@
 # Where the build is
 
+## 2 Oct 2026 (night): the Design Studio, both sides (SPEC v2.6 §8)
+
+- **Brand admins design a sign** (#166): "Design" on each sign in the Signs tab
+  opens `/{brand}/corporate/design/{signId}` — logo (or the brand's own), options
+  from the engine's data, one dimension, depth; Preview renders and prices
+  (~15 s); Save re-prices on the server and sets the sign's price, spec line,
+  design and what franchisees may change. The mockup becomes the sign's picture.
+- **Franchisees adjust it while ordering** (#167): "Customize in Studio" in
+  setup and "Add a new sign", within the brand's limits; outside them the
+  sign goes to corporate. Submission checks and prices the design itself.
+- **The engine:** `src/lib/signize/` (server only), session endpoint
+  `/api/sign-pricing` with `SIGNIZE_SESSION_TOKEN`; one call returns cost and a
+  mockup. Cost and margin live only in `engine_quotes` (team only).
+- Migration `20261002100000_sign_designs.sql` (local applied; **live not yet**).
+- **Renewing the session:** when the engine answers 401 the Studio says it is
+  unavailable; signing in to signize.ai again needs the owner's 2FA code.
+
 ## 2 Oct 2026 (evening): margins, and the Signize engine reached
 
 - **Margins per brand and sign type** (#165): `/admin/pricing` (team only) sets

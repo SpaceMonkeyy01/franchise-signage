@@ -6,6 +6,7 @@
 // takes the access token and filters on it in the statement itself — the same
 // predicate the RLS policy applies, so the two cannot drift apart.
 
+import type { DesignRules, SignDesign } from '../designs/design';
 import { query, queryOne } from './pool';
 import type {
   LineItemOrigin,
@@ -547,12 +548,17 @@ export interface BrandItemRow {
   image_path: string | null;
   vendor_policy_override: VendorPolicy | null;
   sort_order: number;
+  /** The brand admin's Studio design, if any (SPEC v2.6 §8) — our price only, never cost. */
+  design: SignDesign | null;
+  /** What a franchisee may change in it; an unlisted setting is locked. */
+  design_rules: DesignRules;
 }
 
 export function getBrandCatalog(brandId: string): Promise<BrandItemRow[]> {
   return rows<BrandItemRow>(
     `select bi.id, bi.name, bi.spec_summary, bi.site_variables, bi.est_price,
-            bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.sort_order
+            bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.sort_order,
+            bi.design, bi.design_rules
        from brand_items bi
        join master_catalog mc on mc.id = bi.master_catalog_id
       where bi.brand_id = $1 and bi.active

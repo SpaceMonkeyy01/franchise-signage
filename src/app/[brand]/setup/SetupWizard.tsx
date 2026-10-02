@@ -11,6 +11,9 @@ import type { BrandItemRow, BrandPublic, PackageRow } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 import type { StoredObject } from '@/lib/storage';
 
+import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
+import type { SignDesign } from '@/lib/designs/design';
+
 import { submitInitialSetup } from './actions';
 
 interface ItemState {
@@ -22,6 +25,14 @@ interface ItemState {
   tbd: boolean;
   exceptionIssue: string | null;
   photo: StoredObject | null;
+  /** Adjusted in the Studio (SPEC v2.6 §8); null keeps the brand's design. */
+  design: SignDesign | null;
+}
+
+/** Its Studio price when adjusted, else the catalog's. */
+function itemPrice(item: ItemState, brandItem: BrandItemRow | undefined): number | null {
+  if (item.design?.price) return item.design.price;
+  return brandItem?.est_price == null ? null : Number(brandItem.est_price);
 }
 
 const STEP_COUNT = 4;
@@ -79,6 +90,7 @@ export function SetupWizard({
         tbd: false,
         exceptionIssue: null,
         photo: null,
+        design: null,
       })),
     );
   }
@@ -103,6 +115,7 @@ export function SetupWizard({
           tbd: false,
           exceptionIssue: null,
           photo: null,
+          design: null,
         },
       ];
     });
@@ -138,6 +151,7 @@ export function SetupWizard({
           tbd: item.tbd,
           exceptionIssue: item.exceptionIssue,
           photo: item.photo,
+          design: item.design,
         })),
       });
       if (failure) setError(failure.error);
@@ -506,7 +520,7 @@ function StepPackage({
                         brandPolicy={brand.vendor_policy}
                       />
                       <span className="text-[11px] font-normal text-gray-500">
-                        {formatPrice(brandItem.est_price)}
+                        {formatPrice(itemPrice(item, brandItem))}
                       </span>
                     </span>
                     <span className="block truncate text-[11px] text-gray-500">
@@ -544,6 +558,17 @@ function StepPackage({
                     onValueChange={(sizing) => patch(item.key, { sizing })}
                     onTbdChange={(tbd) => patch(item.key, { tbd })}
                   />
+                  {hasAdjustableDesign(brandItem.design, brandItem.design_rules) && (
+                    <StudioAdjust
+                      brandSlug={brand.slug}
+                      locationId={null}
+                      brandItemId={brandItem.id}
+                      base={brandItem.design}
+                      rules={brandItem.design_rules}
+                      value={item.design}
+                      onChange={(design) => patch(item.key, { design })}
+                    />
+                  )}
 
                   <div className="mt-3">
                     {item.exceptionIssue ? (
@@ -669,6 +694,17 @@ function StepAddons({
                   onTbdChange={(tbd) => patch(chosen.key, { tbd })}
                 />
               )}
+              {chosen && hasAdjustableDesign(item.design, item.design_rules) && (
+                <StudioAdjust
+                  brandSlug={brand.slug}
+                  locationId={null}
+                  brandItemId={item.id}
+                  base={item.design}
+                  rules={item.design_rules}
+                  value={chosen.design}
+                  onChange={(design) => patch(chosen.key, { design })}
+                />
+              )}
             </CatalogCard>
           );
         })}
@@ -714,8 +750,8 @@ function StepReview({
   const immediate = items.filter((item) => !goesToCorporate(item));
   const pendingItems = items.filter(goesToCorporate);
 
-  const priced = items.filter((item) => byId.get(item.brandItemId)?.est_price != null);
-  const total = priced.reduce((sum, item) => sum + Number(byId.get(item.brandItemId)!.est_price), 0);
+  const priced = items.filter((item) => itemPrice(item, byId.get(item.brandItemId)) !== null);
+  const total = priced.reduce((sum, item) => sum + (itemPrice(item, byId.get(item.brandItemId)) ?? 0), 0);
   const external = brand.vendor_policy !== 'signage_com';
 
   return (

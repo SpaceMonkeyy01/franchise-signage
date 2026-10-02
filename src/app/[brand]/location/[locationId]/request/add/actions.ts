@@ -11,6 +11,9 @@ import { redirect } from 'next/navigation';
 
 import { checkStoreOrdering } from '@/lib/auth/stores';
 import { createAndSubmitRequest } from '@/lib/db/create-request';
+import type { SignDesign } from '@/lib/designs/design';
+import { prepareDesignedItems } from '@/lib/designs/submit';
+import { StudioError } from '@/lib/designs/studio';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
@@ -19,7 +22,7 @@ import { plural } from '@/lib/format';
 export interface AddSignsInput {
   brandSlug: string;
   locationId: string;
-  items: Array<{ brandItemId: string; sizing: string | null; tbd: boolean }>;
+  items: Array<{ brandItemId: string; sizing: string | null; tbd: boolean; design?: SignDesign | null }>;
 }
 
 export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailure | undefined> {
@@ -36,6 +39,19 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
   );
   if (!location) return { error: 'That location is not on this brand.' };
 
+  // Studio designs are checked and priced here, before the request's
+  // transaction: pricing is a ~15 s network call (src/lib/designs/submit.ts).
+  let designed;
+  try {
+    designed = await prepareDesignedItems(
+      location.brand_id,
+      input.items.map((item) => ({ brandItemId: item.brandItemId, origin: 'addon' as const, design: item.design })),
+    );
+  } catch (error) {
+    if (error instanceof StudioError) return { error: error.message };
+    throw error;
+  }
+
   let token: string;
   let requestId: string;
   try {
@@ -44,13 +60,23 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
       locationId: input.locationId,
       intent: 'add',
       createdBy: access.viewer.profile.id,
-      items: input.items.map((item) => ({
+      items: input.items.map((item, index) => ({
         brandItemId: item.brandItemId,
-        origin: 'addon',
-        sizing: item.tbd ? null : item.sizing,
+        origin: designed[index].origin,
+        siteNotes: designed[index].siteNotes,
+        design: designed[index].design,
+        estPrice: designed[index].estPrice,
+        priceSource: designed[index].priceSource,
+        files: designed[index].mockup ? [{ kind: 'mockup' as const, ...designed[index].mockup }] : [],
+        // A Studio design carries its own size; the sizing field is for the rest.
+        sizing: designed[index].design
+          ? `${designed[index].design.dimension.inches}" ${designed[index].design.dimension.axis}`
+          : item.tbd
+            ? null
+            : item.sizing,
         // TBD is always allowed and never blocks submission (SPEC §5.4); it
         // flags the team to follow up, and the status page says so.
-        tbdFields: item.tbd ? ['sizing'] : [],
+        tbdFields: item.tbd && !designed[index].design ? ['sizing'] : [],
       })),
       summary: ({ total, pendingReview }) =>
         pendingReview > 0

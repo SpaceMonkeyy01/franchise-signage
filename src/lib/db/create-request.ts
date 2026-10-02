@@ -12,6 +12,7 @@
 // trusted from the form. That is why this is a single transaction with its own
 // lookups instead of a thin insert helper.
 
+import type { SignDesign } from '../designs/design';
 import { createPgStatusStore } from './pg-status-store';
 import { transaction } from './pool';
 import { deriveInitialItemStatus } from '../status/machine';
@@ -48,6 +49,14 @@ export interface NewRequestItem {
    * flow ever blocks on one being present.
    */
   files?: NewRequestFile[];
+  /**
+   * The franchisee's design from the Design Studio, already checked and priced
+   * on the server (src/lib/designs/submit.ts, SPEC v2.6 §8). Its price is the
+   * line's snapshot; without one the catalog price is.
+   */
+  design?: SignDesign | null;
+  estPrice?: number | null;
+  priceSource?: 'engine' | null;
 }
 
 export interface NewRequestFile {
@@ -210,8 +219,8 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
         `insert into line_items
            (request_id, brand_item_id, origin, item_status, sizing, site_notes,
             tbd_fields, exception_issue, replaces_sign_id, replace_reason,
-            est_price_snapshot, sort_order)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+            est_price_snapshot, sort_order, design, price_source)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
          returning id`,
         [
           request.id,
@@ -226,8 +235,10 @@ async function insertAndSubmit(exec: Exec, input: NewRequestInput): Promise<Crea
           item.origin === 'replacement' ? (item.replaceReason ?? 'damaged') : null,
           // The snapshot, not a live join: the catalog price moves, the number a
           // franchisee saw must not (SPEC §5.4).
-          brandItem.est_price,
+          item.estPrice ?? brandItem.est_price,
           sortOrder,
+          item.design ? JSON.stringify(item.design) : null,
+          item.design ? (item.priceSource ?? 'engine') : null,
         ],
       );
       sortOrder += 10;

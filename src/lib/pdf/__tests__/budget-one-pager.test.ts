@@ -26,6 +26,8 @@ const item = (
   image_path: null,
   vendor_policy_override: null,
   sort_order,
+  design: null,
+  design_rules: {},
 });
 
 // The Freshbites seed's prices, so these tests fail if the seed moves under them.

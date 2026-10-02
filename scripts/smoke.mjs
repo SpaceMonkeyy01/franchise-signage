@@ -2564,6 +2564,33 @@ await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on 
 await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
 await expectVisible(page, 'iframe[src$="/freshbites/corporate"]', 'and its corporate tab opens the dashboard');
 
+// ------------------------------------------- the Design Studio (DECISIONS #166)
+// What does not call the engine (every call is billed, and CI has no Signize
+// credential): brand admins reach the Studio from each sign, reviewers do not.
+console.log('\nThe Design Studio: who reaches it (SPEC v2.6 §8)');
+{
+  const studio = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const studioPage = await studio.newPage();
+  studioPage.on('pageerror', (error) => pageErrors.push(error.message));
+  await signInWithPassword(studioPage, BRAND_ADMIN, '/freshbites/corporate?tab=signs');
+  await studioPage.waitForURL((url) => url.pathname.endsWith('/corporate'), { timeout: TIMEOUT });
+  const designLinks = studioPage.locator('a[href*="/corporate/design/"]');
+  await expectVisible(studioPage, 'a[href*="/corporate/design/"]', 'a brand admin has a Design link on each sign');
+  const designHref = await designLinks.first().getAttribute('href');
+  await studioPage.goto(`${BASE}${designHref}`, { waitUntil: 'networkidle' });
+  await expectVisible(studioPage, 'h1:has-text("Design ")', 'and the Studio opens for that sign');
+  await studio.close();
+
+  const reviewerStudio = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const reviewerPage = await reviewerStudio.newPage();
+  await signInWithPassword(reviewerPage, BRAND_REVIEWER, '/freshbites/corporate?tab=signs');
+  await reviewerPage.waitForURL((url) => url.pathname.endsWith('/corporate'), { timeout: TIMEOUT });
+  await expectCount(reviewerPage, 'a[href*="/corporate/design/"]', 0, 'a reviewer has no Design link');
+  const reviewerStudioResponse = await reviewerPage.goto(`${BASE}${designHref}`, { waitUntil: 'networkidle' });
+  record('and the Studio is a 404 for them', reviewerStudioResponse?.status() === 404, `status ${reviewerStudioResponse?.status()}`);
+  await reviewerStudio.close();
+}
+
 // ------------------------------------------------ margins (DECISIONS #165)
 // The team sets a margin per brand and sign type; the example price follows
 // it, the change is logged with no brand, and clearing it falls back.

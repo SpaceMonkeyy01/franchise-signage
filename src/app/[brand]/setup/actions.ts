@@ -12,6 +12,9 @@ import { redirect } from 'next/navigation';
 
 import { checkStoreCreation } from '@/lib/auth/stores';
 import { createLocationWithRequest, toRequestFile } from '@/lib/db/create-request';
+import type { SignDesign } from '@/lib/designs/design';
+import { prepareDesignedItems } from '@/lib/designs/submit';
+import { StudioError } from '@/lib/designs/studio';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
@@ -27,6 +30,8 @@ export interface SetupItemInput {
   /** Set when the franchisee flagged a standard sign as unworkable at the site. */
   exceptionIssue: string | null;
   photo: StoredObject | null;
+  /** Adjusted in the Design Studio; checked and priced again here (SPEC v2.6 §8). */
+  design?: SignDesign | null;
 }
 
 export interface SetupInput {
@@ -75,6 +80,25 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   const inPackage = new Map<string, number>();
   for (const id of pkg?.items ?? []) inPackage.set(id, (inPackage.get(id) ?? 0) + 1);
 
+  // Studio designs are checked and priced before the transaction: pricing is
+  // a ~15 s network call (src/lib/designs/submit.ts). Outside the brand's
+  // limits, a standard sign becomes an exception.
+  let designed;
+  try {
+    designed = await prepareDesignedItems(
+      brand.id,
+      input.items.map((item) => ({
+        brandItemId: item.brandItemId,
+        origin: originOf(item, inPackage),
+        design: item.design,
+        exceptionIssue: item.exceptionIssue,
+      })),
+    );
+  } catch (error) {
+    if (error instanceof StudioError) return { error: error.message };
+    throw error;
+  }
+
   let token: string;
   let requestId: string;
   try {
@@ -111,14 +135,28 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
               'Lease sign exhibit not provided at submission — the Signage.com team will ' +
                 'follow up before the package is prepared.',
             ],
-        items: input.items.map((item) => ({
-          brandItemId: item.brandItemId,
-          origin: originOf(item, inPackage),
-          sizing: item.tbd ? null : item.sizing,
-          tbdFields: item.tbd ? ['sizing'] : [],
-          exceptionIssue: item.exceptionIssue,
-          files: item.photo ? [toRequestFile('placement_photo', item.photo)] : [],
-        })),
+        items: input.items.map((item, index) => {
+          const studio = designed[index];
+          return {
+            brandItemId: item.brandItemId,
+            origin: studio.origin,
+            // A Studio design carries its own size; the sizing field is for the rest.
+            sizing: studio.design
+              ? `${studio.design.dimension.inches}" ${studio.design.dimension.axis}`
+              : item.tbd
+                ? null
+                : item.sizing,
+            tbdFields: item.tbd && !studio.design ? ['sizing'] : [],
+            exceptionIssue: studio.exceptionIssue,
+            design: studio.design,
+            estPrice: studio.estPrice,
+            priceSource: studio.priceSource,
+            files: [
+              ...(item.photo ? [toRequestFile('placement_photo', item.photo)] : []),
+              ...(studio.mockup ? [{ kind: 'mockup' as const, ...studio.mockup }] : []),
+            ],
+          };
+        }),
         summary: ({ total, pendingReview }) =>
           `Initial setup submitted (${total - pendingReview} standard + ${pendingReview} needing review)`,
       },

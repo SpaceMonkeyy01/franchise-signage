@@ -4,14 +4,24 @@ import { useState, useTransition } from 'react';
 
 import { CatalogCard } from '@/components/CatalogCard';
 import { SizingField } from '@/components/SizingField';
+import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import { formatPrice } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic } from '@/lib/db/queries';
+import type { SignDesign } from '@/lib/designs/design';
 
 import { submitAddSigns } from './actions';
 
 interface Selection {
   sizing: string;
   tbd: boolean;
+  /** Adjusted in the Studio (SPEC v2.6 §8); null keeps the brand's design. */
+  design: SignDesign | null;
+}
+
+/** What a chosen sign costs: its Studio price when adjusted, else the catalog's. */
+function priceOf(item: BrandItemRow, selection: Selection | undefined): number | null {
+  if (selection?.design?.price) return selection.design.price;
+  return item.est_price === null ? null : Number(item.est_price);
 }
 
 export function AddForm({
@@ -30,14 +40,14 @@ export function AddForm({
   const [pending, startTransition] = useTransition();
 
   const chosen = catalog.filter((item) => selected[item.id]);
-  const priced = chosen.filter((item) => item.est_price !== null);
-  const total = priced.reduce((sum, item) => sum + Number(item.est_price), 0);
+  const priced = chosen.filter((item) => priceOf(item, selected[item.id]) !== null);
+  const total = priced.reduce((sum, item) => sum + (priceOf(item, selected[item.id]) ?? 0), 0);
 
   function toggle(id: string) {
     setSelected((current) => {
       const next = { ...current };
       if (next[id]) delete next[id];
-      else next[id] = { sizing: '', tbd: false };
+      else next[id] = { sizing: '', tbd: false, design: null };
       return next;
     });
   }
@@ -56,6 +66,7 @@ export function AddForm({
           brandItemId: item.id,
           sizing: selected[item.id].sizing.trim() || null,
           tbd: selected[item.id].tbd,
+          design: selected[item.id].design,
         })),
       });
       if (failure) setError(failure.error);
@@ -81,6 +92,17 @@ export function AddForm({
               onValueChange={(value) => patch(item.id, { sizing: value })}
               onTbdChange={(tbd) => patch(item.id, { tbd })}
             />
+            {selected[item.id] && hasAdjustableDesign(item.design, item.design_rules) && (
+              <StudioAdjust
+                brandSlug={brand.slug}
+                locationId={locationId}
+                brandItemId={item.id}
+                base={item.design}
+                rules={item.design_rules}
+                value={selected[item.id].design}
+                onChange={(design) => patch(item.id, { design })}
+              />
+            )}
           </CatalogCard>
         ))}
       </div>
