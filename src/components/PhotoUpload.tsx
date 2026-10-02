@@ -19,6 +19,7 @@ export function PhotoUpload({
   onChange,
   accept = 'image/jpeg,image/png,image/webp,image/heic,application/pdf',
   compact = false,
+  token,
 }: {
   label: string;
   /** Storage folder — the brand slug, so dev uploads are legible on disk. */
@@ -28,6 +29,8 @@ export function PhotoUpload({
   accept?: string;
   /** A small text button rather than the full-width drop target, for dense lists. */
   compact?: boolean;
+  /** A request link, for a franchisee who is not signed in (the upload checks it). */
+  token?: string;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,7 @@ export function PhotoUpload({
     const data = new FormData();
     data.set('file', file);
     data.set('prefix', prefix);
+    if (token) data.set('token', token);
     startTransition(async () => {
       const result = await uploadPhoto(data);
       if (result.ok) onChange(result.file);

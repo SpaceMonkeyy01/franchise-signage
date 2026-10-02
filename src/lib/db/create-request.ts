@@ -332,10 +332,18 @@ export async function createLocationWithRequest(input: {
  * a date, so anything unparseable is dropped rather than rejected — a target
  * opening date is never worth blocking a submission over.
  */
-function parseDate(value: string | null | undefined): string | null {
-  if (!value?.trim()) return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+export function parseDate(value: string | null | undefined): string | null {
+  const text = value?.trim();
+  if (!text) return null;
+  // Already a calendar date: keep it exactly.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  // "Jan 15, 2027" parses as local midnight. Read the calendar date in that
+  // same zone — toISOString() would convert to UTC first, and any server ahead
+  // of UTC stored the day before (found 2 Oct 2026: Jan 15 became Jan 14).
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
 }
 
 // -------------------------------------------------------------------- helpers

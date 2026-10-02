@@ -69,9 +69,11 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
         estPrice: designed[index].estPrice,
         priceSource: designed[index].priceSource,
         files: designed[index].mockup ? [{ kind: 'mockup' as const, ...designed[index].mockup }] : [],
-        // A Studio design carries its own size; the sizing field is for the rest.
+        // A Studio design carries its own size; the franchisee's site note follows it.
         sizing: designed[index].design
-          ? `${designed[index].design.dimension.inches}" ${designed[index].design.dimension.axis}`
+          ? [`${designed[index].design.dimension.inches}" ${designed[index].design.dimension.axis}`, item.sizing?.trim()]
+              .filter(Boolean)
+              .join(' · ')
           : item.tbd
             ? null
             : item.sizing,

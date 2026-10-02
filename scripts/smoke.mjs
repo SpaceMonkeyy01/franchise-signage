@@ -1499,7 +1499,10 @@ await expectVisible(
 );
 await expectVisible(
   page,
-  'section:has(h2:text-is("Franchisee registrations")) >> text=welcomed',
+  // The row's own chip: "invited" since Phase B (the welcome carries the
+  // account invitation). It read "welcomed" before, and the old selector only
+  // passed while some other text on the page happened to contain the word.
+  `section:has(h2:text-is("Franchisee registrations")) li:has-text("${SMOKE_REGISTRATION}") >> text=invited`,
   'and the welcome email went out on that one action',
 );
 

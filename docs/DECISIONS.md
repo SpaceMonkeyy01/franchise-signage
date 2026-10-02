@@ -1718,6 +1718,26 @@ item 7's "CRUD UI only when onboarding brand #2".
        one (the history is kept); the resubmit screen does not yet offer the
        Studio, so today this cannot happen.
 
+169. **Found driving a franchisee's setup end to end** (2 Oct, on the owner's
+     ask: reset the order data, then set up a store and order as Dana would).
+     - **Uploads were open to anyone.** `uploadPhoto` stored any file for any
+       caller. It now needs Signage.com, an active role on the brand named by
+       the upload, or one of that brand's request links (the signed-out
+       change-request answer).
+     - **A phone photo crashed setup.** Server Actions accept 1 MB by default;
+       our upload rule is 10 MB, so a 1.5 MB photo threw "Body exceeded 1 MB"
+       and the page fell to the error screen. `bodySizeLimit: '11mb'`. Smoke
+       never saw it: its test images are a few bytes.
+     - **Opening dates landed a day early ahead of UTC.** "Jan 15, 2027"
+       parsed as local midnight and was stored through `toISOString()`, so a
+       server east of UTC kept Jan 14. Render runs in UTC, which hid it.
+     - **A designed sign ordered as-is now carries the brand's design**, its
+       mockup and its quote sheet (no engine call: the brand's design is
+       already priced). Before, only customised lines did.
+     - **A line ordered from a design reads as that design** — its spec line
+       and picture — not the brand's default; the franchisee's site note is
+       kept beside the Studio size rather than replaced by it.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

@@ -6,7 +6,7 @@
 // takes the access token and filters on it in the statement itself — the same
 // predicate the RLS policy applies, so the two cannot drift apart.
 
-import type { DesignRules, SignDesign } from '../designs/design';
+import { designSummary, type DesignRules, type SignDesign } from '../designs/design';
 import { query, queryOne } from './pool';
 import type {
   LineItemOrigin,
@@ -238,7 +238,10 @@ export interface LineItemRow {
   id: string;
   brand_item_id: string;
   brand_item_name: string;
+  /** The line's own Studio design when it has one, else the brand item's spec line. */
   spec_summary: string | null;
+  /** The design this line was ordered with (SPEC v2.6 §8), or null. */
+  design?: SignDesign | null;
   /** Which attributes stay per-site — what the resubmission form asks for. */
   site_variables: string[];
   /** The brand's locked-down spec (SPEC §2.2) — what a vendor actually builds to. */
@@ -395,8 +398,11 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
 
   const items = await rows<Omit<LineItemRow, 'files'>>(
     `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override,
-            mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, mc.pricing_basis,
+            bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override, li.design,
+            mc.render_key,
+            -- The line's own mockup first: it is the sign as ordered.
+            coalesce(li.design->>'mockupPath', bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,
+            mc.pricing_basis,
             li.origin, li.item_status,
             li.sizing, li.site_notes, li.tbd_fields, li.exception_issue,
             li.review_note, li.est_price_snapshot
@@ -457,6 +463,9 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
     brand,
     items: items.map((item) => ({
       ...item,
+      // A line ordered from a Studio design reads as that design ("30" high …"),
+      // not the brand's default, everywhere the line is shown.
+      spec_summary: item.design ? designSummary(item.design) : item.spec_summary,
       files: files.filter((file) => file.line_item_id === item.id),
     })),
     quotes,

@@ -46,13 +46,28 @@ export async function prepareDesignedItems(
       mockup: null,
     };
     // Like-for-like replaces what is installed; the Studio adjusts new signs.
-    if (!item.design || item.origin === 'replacement') {
+    if (item.origin === 'replacement') {
       out.push(unchanged);
       continue;
     }
     const sign = await getDesignableSign(item.brandItemId, brandId);
     if (!sign?.design) {
       out.push(unchanged);
+      continue;
+    }
+    // Ordered as the brand designed it: the line still carries that design,
+    // its price and mockup (and so gets its quote sheet). Already priced when
+    // the brand admin saved it, so no engine call.
+    if (!item.design) {
+      out.push({
+        ...unchanged,
+        design: sign.design,
+        estPrice: sign.design.price ?? null,
+        priceSource: 'engine',
+        mockup: sign.design.mockupPath
+          ? { storagePath: sign.design.mockupPath, fileName: `${sign.name} mockup.jpg`, contentType: 'image/jpeg' }
+          : null,
+      });
       continue;
     }
 

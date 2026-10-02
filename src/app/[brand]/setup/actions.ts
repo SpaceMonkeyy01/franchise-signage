@@ -141,9 +141,11 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
           return {
             brandItemId: item.brandItemId,
             origin: studio.origin,
-            // A Studio design carries its own size; the sizing field is for the rest.
+            // A Studio design carries its own size; the franchisee's site note follows it.
             sizing: studio.design
-              ? `${studio.design.dimension.inches}" ${studio.design.dimension.axis}`
+              ? [`${studio.design.dimension.inches}" ${studio.design.dimension.axis}`, item.sizing?.trim()]
+                  .filter(Boolean)
+                  .join(' · ')
               : item.tbd
                 ? null
                 : item.sizing,

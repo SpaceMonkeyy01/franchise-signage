@@ -113,6 +113,7 @@ export function ResubmitPanel({
               <PhotoUpload
                 label="Add an updated photo"
                 prefix={brandSlug}
+                token={token}
                 value={edits[item.id].photo}
                 onChange={(photo) => patch(item.id, { photo })}
               />

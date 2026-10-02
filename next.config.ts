@@ -14,6 +14,14 @@ const nextConfig: NextConfig = {
   // sign-up and password reset take passwords as arguments. Found when a real
   // password appeared in the dev log during the Supabase accounts check.
   logging: { serverFunctions: false },
+  // Photos and lease exhibits are uploaded through a Server Action
+  // (src/app/actions/upload.ts), which allows 10 MB a file. Next's default
+  // action body limit is 1 MB, so an ordinary phone photo crashed the setup
+  // page. Found 2 Oct 2026 driving a franchisee's setup with a 1.5 MB photo.
+  // 11 MB = the file limit plus multipart overhead.
+  experimental: {
+    serverActions: { bodySizeLimit: '11mb' },
+  },
 };
 
 export default nextConfig;
