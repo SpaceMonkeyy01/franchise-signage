@@ -70,3 +70,6 @@ scripts/.smoke-leftovers.json
 
 # Screenshots from npm run shots
 shots/
+
+# Accounts made by scripts/prove-supabase.mjs (passwords, TOTP secrets)
+.prove-supabase.json

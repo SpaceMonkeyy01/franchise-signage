@@ -1,5 +1,26 @@
 # Where the build is
 
+## 2 Oct 2026 (later): accounts proven on the live Supabase project
+
+- **docs/SUPABASE.md §7, steps 7.1.2–7.4, all pass against the live project**
+  — real Supabase Auth and TOTP, links read from the live outbox: invite and
+  two-factor setup, sign-in again, deactivation signs a second browser out on
+  its next click, password reset from another device (old password refused),
+  the owner backfill and "My stores", "Sign in to accept" on a signed-out
+  link, brand admin and reviewer accounts, a dashboard approval recorded as
+  the reviewer's session, a franchisee registered from People and signed up
+  from the welcome email, and a manager scoped to one store, changed and
+  deactivated from corporate. 41 checks.
+- **`npm run prove:supabase -- --email-base <you@…>`** reruns it
+  (`scripts/prove-supabase.mjs`; resumable, writes to the live project).
+  The test accounts are listed in docs/SUPABASE.md §7 and were kept.
+- Learned: on a request with one sign waiting, a dashboard approval completes
+  the review, so that sign's email link says "This review is complete" rather
+  than "already approved by…". §7.3.2 now says so.
+- **Spec v2.6** (awaiting your review): §8 rewritten around the Design Studio
+  flow (#164). Waiting on the Signize code and API, and a margin policy.
+- Still owed: one real Resend send (§8).
+
 ## 2 Oct 2026: a UI pass across every role
 
 - **Corporate's review card matches the demo:** Approve, Request changes (needs

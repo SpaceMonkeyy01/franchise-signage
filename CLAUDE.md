@@ -62,7 +62,7 @@ Modify/remove/rebrand intents (stub in UI like the demo) · franchisor self-serv
 - The v13 flow demo (DID screens) is not in the repo yet — Session 8 is blocked on it, and any DID UX built before it arrives is a guess.
 
 ## Working style
-- Follow SPEC.md §9 build order strictly; each interface should be demoable before starting the next. Accounts (§9b, phases A–D) are built as of 28 Sep 2026; proving them against the live Supabase project is owed. Sessions 7 and 8 remain. The DID module is Session 8, gated on corporate template sign-off and a Stripe account.
+- Follow SPEC.md §9 build order strictly; each interface should be demoable before starting the next. Accounts (§9b, phases A–D) are built as of 28 Sep 2026 and proven against the live Supabase project on 2 Oct (`npm run prove:supabase`, docs/SUPABASE.md §7). Sessions 7 and 8 remain. The DID module is Session 8, gated on corporate template sign-off and a Stripe account.
 - Small commits per feature. Migrations are additive.
 - When the spec is silent, match the demo. When both are silent, ask — one-line question, don't build speculatively.
 

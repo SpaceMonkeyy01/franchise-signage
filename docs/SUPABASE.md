@@ -161,8 +161,19 @@ should return one brand's locations and never another's.
 
 With no Supabase project the app uses the dev identity provider: real passwords
 and TOTP codes, stored in a `dev_auth` schema in the local database. With a
-project configured it uses Supabase Auth — **and that path has not yet executed
-against a real project.** The magic-link flow proven on 28 Aug is gone.
+project configured it uses Supabase Auth. **Proven against the live project on
+2 Oct 2026: steps 7.1.2–7.4 all pass** (41 checks), driven by
+`npm run prove:supabase -- --email-base you@example.com`
+(`scripts/prove-supabase.mjs`). It writes to the live project — accounts on
+`+alias` addresses, the owner backfill, one approval, one registration — and is
+resumable: what it created is kept in `.prove-supabase.json` (gitignored), and a
+passed phase is skipped. The steps below are what it does, and still work by hand.
+
+Accounts the 2 Oct run left on the live project (kept, not deleted):
+`saad+admin@` and `saad+admin2@` (platform admins, two-factor on),
+`saad+brandadmin@`, `saad+brandreviewer@`, `saad+franchisee@`,
+`saad+manager@` (deactivated), all `@bluecascade.org`, and the backfilled owner
+`dana@freshbites-austin.com`. REQ-0018's one sign is now approved.
 
 Everything below runs the app on this machine against the live project: set the
 four Supabase lines in `.env.local` (URL, anon key, `DATABASE_URL`,
@@ -201,7 +212,9 @@ dashboard (sign-ups OFF, TOTP on, minimum length 10, email provider on), then
    same with `--role brand_reviewer`. Accept both.
 2. As the reviewer, approve an item from the dashboard's Approvals tab; then
    open that item's button from the approval email in the outbox. **It should
-   say the item was already approved, by whom, from the dashboard.**
+   say the item was already approved, by whom, from the dashboard** — when
+   other signs on the request are still waiting. If that was the last one, the
+   review is complete and the link says so instead ("This review is complete").
 3. As the brand admin, register a franchisee from People → Franchisees. The
    welcome email is in the outbox; its "Create your account" link signs them up.
 
