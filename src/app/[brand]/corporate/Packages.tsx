@@ -364,8 +364,11 @@ function PackageCard({
             </div>
           ) : (
             <>
-              <p className="text-sm font-semibold text-gray-900">{pkg ? pkg.label : 'No package yet'}</p>
-              {pkg?.description && <p className="text-xs text-gray-500">{pkg.description}</p>}
+              <p className="text-sm text-gray-900">
+                <span className="text-gray-500">Standard package: </span>
+                <span className="font-semibold">{pkg ? pkg.label : 'none yet'}</span>
+                {pkg?.description && <span className="text-xs text-gray-500"> · {pkg.description}</span>}
+              </p>
             </>
           )}
         </div>
@@ -379,15 +382,19 @@ function PackageCard({
       </div>
 
       <ul className="mt-3 divide-y divide-gray-100">
-        {shown.map((id, index) => {
+        {(editing ? shown.map((id) => ({ id, count: 1 })) : grouped(shown)).map(({ id, count }, index) => {
           const sign = byId.get(id)!;
           return (
             <li key={`${id}-${index}`} className="flex items-center gap-3 py-2">
               <SignThumbnail renderKey={sign.render_key} imagePath={sign.image_path} label={sign.name} className="h-8 w-11 shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-gray-900">{sign.name}</p>
+                <p className="text-sm text-gray-900">
+                  {sign.name}
+                  {count > 1 && <span className="ml-1.5 font-medium text-gray-500">× {count}</span>}
+                </p>
                 <p className="text-xs text-gray-500">
                   {sign.est_price === null ? 'Custom quote' : `$${Number(sign.est_price).toLocaleString('en-US')} est.`}
+                  {count > 1 && sign.est_price !== null && ' each'}
                 </p>
               </div>
               {editing && (
@@ -475,4 +482,11 @@ function PackageCard({
       {error && <p className="mt-2 text-xs text-rose-700">{error}</p>}
     </article>
   );
+}
+
+/** One row per sign with how many times the package holds it, in first-seen order. */
+function grouped(ids: readonly string[]): { id: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
+  return [...counts].map(([id, count]) => ({ id, count }));
 }
