@@ -1,5 +1,26 @@
 # Where the build is
 
+## 2 Oct 2026: a UI pass across every role
+
+- **Corporate's review card matches the demo:** Approve, Request changes (needs
+  the note) and Decline act on one press. From an email link the pressed button
+  is ringed, "press it to confirm"; opening a link still decides nothing.
+- **Request items are rows in one card** on the franchisee's page (one card per
+  status group, price on the right) and the team console (compact "Attach a
+  mockup" link).
+- **Store types** say "Standard package: …"; a sign held twice reads "× 2".
+- **Smaller fixes:** "(s)" plurals gone (`plural()` in `src/lib/format.ts`);
+  "addon" → "Add-on" for corporate and the team; installed-sign tiles no
+  longer overflow the store card on a phone (every responsive grid now has a
+  base `grid-cols-1`); no "§8b" on screen; team history dates formatted; the
+  brand is not repeated before a location name that carries it; corporate
+  reads "5 signs installed · 4-sign standard package".
+- **Smoke's REQ-0016 rewind** now also removes its "Every package is accepted"
+  rollup; 70 left by earlier runs were deleted from the local database.
+- **Local dev database:** a failing SQL statement from a script jams PGlite for
+  everyone, the app included (500s). Restart `npm run dev` if it happens.
+- Checks: **313 smoke**, **192 unit**, typecheck, lint, shots.
+
 ## 1 Oct 2026: layout for big screens, clearer cards, and the review rule enforced
 
 - **Pages widen with the screen** (#159): `page-wide` / `page` / `page-narrow`
