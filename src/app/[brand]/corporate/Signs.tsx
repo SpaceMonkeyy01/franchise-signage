@@ -8,6 +8,7 @@
 // franchisee sees it. Live signs can be retired at once. Reviewers read.
 // Prices are shown, never entered: Signage.com sets every one.
 
+import Link from 'next/link';
 import { useMemo, useState, useTransition } from 'react';
 
 import { ImageUpload } from '@/components/ImageUpload';
@@ -209,6 +210,12 @@ function SignRow({
         </div>
         {canManage && (
           <div className="flex flex-wrap gap-3 text-xs">
+            <Link
+              href={`/${brandSlug}/corporate/design/${sign.id}`}
+              className="font-medium text-gray-900 underline-offset-2 hover:underline"
+            >
+              {sign.price_source === 'engine' ? 'Edit design' : 'Design'}
+            </Link>
             {underReview && (
               <>
                 <button type="button" onClick={onRevise} className="text-gray-700 underline-offset-2 hover:underline">

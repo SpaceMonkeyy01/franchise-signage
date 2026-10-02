@@ -1043,6 +1043,30 @@ const checks: NamedCheck[] = [
       );
     },
   },
+  {
+    label: "the engine's cost is the team's alone: no brand role reads an engine quote",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into engine_quotes (brand_id, sign_type, cost, margin_percent, price)
+        values ('${alphaBrandId}', 'Halo Lit Channel Letters', 340, 40, 567)`);
+      const quotes = () => count(db, `select count(*) as n from engine_quotes`);
+      await asAuthenticated(db, PERSON.team);
+      const team = await quotes();
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const admin = await quotes();
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewer = await quotes();
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await quotes();
+      await asOwner(db);
+      await db.exec(`delete from engine_quotes`);
+      return expect(
+        team === 1 && admin === 0 && reviewer === 0 && owner === 0,
+        `team ${team}, admin ${admin}, reviewer ${reviewer}, owner ${owner} (want 1, 0, 0, 0)`,
+      );
+    },
+  },
   // ------------------------------------------- store types (DECISIONS #156)
   {
     label: 'a brand admin adds and renames store types in their brand only; a reviewer cannot',

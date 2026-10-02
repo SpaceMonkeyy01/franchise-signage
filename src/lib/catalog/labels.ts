@@ -17,7 +17,10 @@ export function signStatus(sign: { review_status: ReviewStatus; active: boolean 
 
 /** `mounting_type` → "Mounting type". */
 export function attributeLabel(attribute: string): string {
-  const words = attribute.replace(/_/g, ' ').trim();
+  const words = attribute
+    .replace(/_/g, ' ')
+    .trim()
+    .replace(/\b(ul|uv|led|tat)\b/gi, (acronym) => acronym.toUpperCase());
   return words.charAt(0).toUpperCase() + words.slice(1);
 }
 

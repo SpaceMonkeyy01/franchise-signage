@@ -1646,6 +1646,29 @@ item 7's "CRUD UI only when onboarding brand #2".
        Signize integration is built. The engine call is proven by hand (2 Oct,
        session login: 24" Halo Lit letters, $310 cost, 14 days, ~14 s).
 
+166. **The brand admin's Design Studio** (built 2 Oct; SPEC v2.6 §8 points 1–2,
+     5). `/{brand}/corporate/design/{signId}`, from "Design" on the Signs tab:
+     logo (upload, or the brand's own), options from the sign type's engine
+     data, one dimension, optional depth; Preview prices and renders through
+     Signize; Save prices again on the server and sets the sign's est_price
+     (price_source 'engine'), locked choices, spec line, design and rules.
+     - **Engine route: the session endpoint** `/api/sign-pricing` with
+       `SIGNIZE_SESSION_TOKEN`, because the keyed v1 API refuses a session and
+       takes fewer options. One call returns cost AND a mockup (~0.5 MB JPEG),
+       so the mockup is stored with every quote and is the sign's picture
+       wherever it is drawn, after an uploaded one.
+     - **Cost never sits beside price where a brand can read it.** brand_items
+       is brand-readable, so the design holds our price only; cost, margin and
+       Signize's quotation id go to `engine_quotes` (team only, RLS-checked).
+     - **Rules:** unlisted settings are locked; a new design starts with the
+       size adjustable a quarter either way; a choice list always includes the
+       design's own value, and a range must contain it.
+     - **Billed calls:** Preview runs on request, never per keystroke; quotes
+       are cached for six hours and identical in-flight calls are shared.
+     - Saving a design changes a live sign's price at once ("Signage sets the
+       price, automatically fetched", owner, 2 Oct). A proposal still waits for
+       the team's approval to go live (§2.3).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
