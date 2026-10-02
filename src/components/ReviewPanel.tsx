@@ -157,6 +157,7 @@ function DecisionCard({
   const [note, setNote] = useState('');
   const mockup = item.files.find((file) => file.kind === 'mockup');
   const photo = item.files.find((file) => file.kind === 'placement_photo');
+  const sheet = item.files.find((file) => file.kind === 'quote_sheet');
 
   return (
     <article
@@ -204,7 +205,7 @@ function DecisionCard({
               block your decision.
             </p>
           )}
-          {(mockup || photo) && (
+          {(mockup || photo || sheet) && (
             <p className="mt-2 flex gap-3 text-[11px]">
               {mockup && (
                 <a href={fileUrl(mockup.storage_path)} target="_blank" rel="noreferrer" className="underline">
@@ -214,6 +215,11 @@ function DecisionCard({
               {photo && (
                 <a href={fileUrl(photo.storage_path)} target="_blank" rel="noreferrer" className="underline">
                   Site photo
+                </a>
+              )}
+              {sheet && (
+                <a href={fileUrl(sheet.storage_path)} target="_blank" rel="noreferrer" className="underline">
+                  Quote sheet (PDF)
                 </a>
               )}
             </p>

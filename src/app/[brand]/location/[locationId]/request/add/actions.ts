@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation';
 import { checkStoreOrdering } from '@/lib/auth/stores';
 import { createAndSubmitRequest } from '@/lib/db/create-request';
 import type { SignDesign } from '@/lib/designs/design';
+import { attachQuoteSheets } from '@/lib/designs/sheets';
 import { prepareDesignedItems } from '@/lib/designs/submit';
 import { StudioError } from '@/lib/designs/studio';
 import { notifyFranchisee } from '@/lib/email/franchisee';
@@ -92,6 +93,9 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
 
   // Outside the try: the request is committed, and a mail failure must not tell
   // the franchisee their submission failed when it did not.
+  // Each Studio-designed sign gets its quote sheet, kept with the request
+  // (#168). Never fatal: the request is already committed.
+  await attachQuoteSheets(requestId).catch((error) => console.error('quote sheets failed', error));
   await notifyFranchisee(requestId, 'submitted');
 
   redirect(`/${input.brandSlug}/request/${token}`);

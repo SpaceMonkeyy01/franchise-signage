@@ -18,6 +18,10 @@ export interface SignDesign {
   widthInches?: number | null;
   heightInches?: number | null;
   pricedAt?: string | null;
+  /** The engine's side view, copied into our storage. */
+  sideViewPath?: string | null;
+  materials?: string[];
+  mounting?: string | null;
 }
 
 export type DesignRule =

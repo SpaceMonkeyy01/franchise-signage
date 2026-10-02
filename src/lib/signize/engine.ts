@@ -39,6 +39,8 @@ export interface EngineQuote {
   mounting: string | null;
   materials: string[];
   quotationId: string | null;
+  /** The engine's side-view drawing for the type and mounting (a public image on its host). */
+  sideViewUrl: string | null;
   /** The rendered mockup, when the engine made one. */
   mockup: { bytes: Buffer; contentType: string } | null;
 }
@@ -107,6 +109,8 @@ export function readPricing(body: unknown): EngineQuote {
     mounting: typeof data.mountingType === 'string' ? data.mountingType : null,
     materials: Array.isArray(data.materialsList) ? data.materialsList.filter((m): m is string => typeof m === 'string') : [],
     quotationId: data.quotationId === undefined || data.quotationId === null ? null : String(data.quotationId),
+    sideViewUrl:
+      typeof data.sideViewImage === 'string' && data.sideViewImage.startsWith('https://') ? data.sideViewImage : null,
     mockup: image
       ? {
           bytes: Buffer.from(image, 'base64'),

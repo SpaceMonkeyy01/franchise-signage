@@ -26,8 +26,9 @@
 //      package are priced here; anything still in review is disclosed as a
 //      count, so the total cannot read as final when it is not.
 
-import { Text, View } from '@react-pdf/renderer';
+import { Image, Text, View } from '@react-pdf/renderer';
 
+import type { SheetImage } from './sign-quote-sheet';
 import type { LineItemRow, QuoteRow, RequestDetail } from '../db/queries';
 import {
   DocumentShell,
@@ -161,9 +162,11 @@ export interface BudgetaryQuoteProps {
   brand: PdfBrand & { name: string; vendor_name: string | null };
   request: RequestDetail;
   issuedAt: Date;
+  /** Each sign's mockup, when it has one (#168): what the money buys, shown. */
+  mockups?: { name: string; image: SheetImage }[];
 }
 
-export function BudgetaryQuote({ brand, request, issuedAt }: BudgetaryQuoteProps) {
+export function BudgetaryQuote({ brand, request, issuedAt, mockups = [] }: BudgetaryQuoteProps) {
   const sections = toQuoteSections(request.items, request.quotes, brand);
   const totals = quoteTotals(sections);
   const unpriced = unpricedItems(request.items, request.quotes);
@@ -256,6 +259,21 @@ export function BudgetaryQuote({ brand, request, issuedAt }: BudgetaryQuoteProps
               .join('; ')}
             . Disbursement should follow each supplier’s own invoice.
           </Text>
+        </View>
+      )}
+
+      {mockups.length > 0 && (
+        <View style={{ marginTop: 18 }} break={mockups.length > 2}>
+          <Text style={styles.sectionTitle}>SIGN DESIGNS</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            {mockups.map((mockup, index) => (
+              <View key={`${mockup.name}-${index}`} style={{ width: '48%', marginBottom: 12 }} wrap={false}>
+                {/* eslint-disable-next-line jsx-a11y/alt-text -- a PDF image, not an <img> */}
+                <Image src={mockup.image} style={{ width: '100%', height: 150, objectFit: 'cover' }} />
+                <Text style={{ fontSize: 8, color: '#374151', marginTop: 3 }}>{mockup.name}</Text>
+              </View>
+            ))}
+          </View>
         </View>
       )}
     </DocumentShell>

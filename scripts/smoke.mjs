@@ -2591,6 +2591,18 @@ console.log('\nThe Design Studio: who reaches it (SPEC v2.6 §8)');
   await reviewerStudio.close();
 }
 
+// The quote sheet downloads are not open doors (#168): no session, no sheet.
+{
+  const anonymousPreview = await fetch(`${BASE}/api/studio/sheet`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ brandSlug: 'freshbites', as: 'franchisee', brandItemId: 'x', design: { dimension: { axis: 'height', inches: 24 } } }),
+  });
+  record('a preview quote sheet needs a signed-in account', anonymousPreview.status === 403, `status ${anonymousPreview.status}`);
+  const anonymousBrandSheet = await fetch(`${BASE}/api/studio/sheet/00000000-0000-0000-0000-000000000000?brand=freshbites`);
+  record("and so does a brand's own sheet", anonymousBrandSheet.status === 403, `status ${anonymousBrandSheet.status}`);
+}
+
 // ------------------------------------------------ margins (DECISIONS #165)
 // The team sets a margin per brand and sign type; the example price follows
 // it, the change is logged with no brand, and clearing it falls back.

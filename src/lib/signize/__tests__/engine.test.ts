@@ -36,6 +36,7 @@ const RESPONSE = {
       totalCost: 340,
       tATDays: 14,
       quotationId: '88193',
+      sideViewImage: 'https://api.signize.ai/mockups/flush-stud/flush-stud-halo-lit-channel-letters.png',
       vendorName: 'internal — must not leak',
     },
   },
@@ -85,6 +86,7 @@ describe('the Signize engine response', () => {
       mounting: 'Flush/Stud mounted',
       materials: ['Aluminium face', 'LED modules'],
       quotationId: '88193',
+      sideViewUrl: 'https://api.signize.ai/mockups/flush-stud/flush-stud-halo-lit-channel-letters.png',
     });
     expect(quote.mockup?.contentType).toBe('image/jpeg');
     expect(JSON.stringify({ ...quote, mockup: null })).not.toContain('internal');

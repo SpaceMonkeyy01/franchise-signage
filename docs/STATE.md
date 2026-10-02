@@ -13,7 +13,11 @@
 - **The engine:** `src/lib/signize/` (server only), session endpoint
   `/api/sign-pricing` with `SIGNIZE_SESSION_TOKEN`; one call returns cost and a
   mockup. Cost and margin live only in `engine_quotes` (team only).
-- Migration `20261002100000_sign_designs.sql` (local applied; **live not yet**).
+- Migration `20261002100000_sign_designs.sql` applied locally and on live.
+- **Sign quote sheets** (#168): a one-page PDF per designed sign, stored at
+  submission and linked on the request card, corporate's review card and the
+  console; preview sheets from both Studios; a brand's own sheet on the Signs
+  tab; mockups added to the budgetary quote. Migration `20261002110000`.
 - **Renewing the session:** when the engine answers 401 the Studio says it is
   unavailable; signing in to signize.ai again needs the owner's 2FA code.
 

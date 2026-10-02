@@ -1693,6 +1693,31 @@ item 7's "CRUD UI only when onboarding brand #2".
        and was driven end to end by hand on 2 Oct (34" letters outside an
        18–30" limit: $1,000, flagged, submitted to corporate).
 
+168. **The sign quote sheet** (owner, 2 Oct: "do what you think is good").
+     The Signize Studio makes a one-page "Quote" PDF in the browser; ours is
+     made on the server on the §8b letterhead (Signage.com first, the brand
+     second), so it is our document and never carries Signize's cost.
+     - **One page per designed sign:** mockup and estimated price side by
+       side, the engine's side view (copied into our storage once per
+       drawing), a two-column specification, materials, turnaround, and an
+       "estimate, not a quote" disclaimer. A unit test holds it to one page.
+     - **Stored at submission** as a `quote_sheet` request file on the line
+       (migration `20261002110000`), so the franchisee, corporate and the team
+       open the same record of what was chosen; listed on the request card,
+       corporate's review card and the console. Never fatal: a failed sheet
+       leaves the request whole.
+     - **Previews are downloadable, not stored:** the franchisee from
+       "Customize in Studio", the brand admin from the Studio, both stamped
+       PREVIEW and priced again on the server. **A brand's own sheet** for a
+       designed sign is on the Signs tab, for any corporate account.
+     - **The budgetary quote now ends with each sign's mockup** (Studio or team
+       upload), so the lender sees what the money buys.
+     - Vendor packages already show prices and attach item files, so the sheet
+       goes to vendors too; its spec and side view help them build.
+     - A design changed on resubmission would get a new sheet beside the old
+       one (the history is kept); the resubmit screen does not yet offer the
+       Studio, so today this cannot happen.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

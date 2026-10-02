@@ -9,6 +9,7 @@
 import { useState, useTransition } from 'react';
 
 import { previewFranchiseeDesignAction } from '@/app/actions/studio';
+import { downloadPreviewSheet } from '@/components/downloadSheet';
 import { DEPTH, SIZE, label, ruleFor, type DesignRules, type SignDesign } from '@/lib/designs/design';
 import { fileUrl } from '@/lib/storage/url';
 
@@ -183,6 +184,27 @@ export function StudioAdjust({
         >
           Use this design
         </button>
+        {preview && (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() =>
+              startTransition(async () => {
+                const failed = await downloadPreviewSheet({
+                  brandSlug,
+                  as: 'franchisee',
+                  locationId,
+                  brandItemId,
+                  design: draft(),
+                });
+                if (failed) setError(failed);
+              })
+            }
+            className="font-medium text-gray-700 underline-offset-2 hover:underline disabled:opacity-40"
+          >
+            Download quote sheet (PDF)
+          </button>
+        )}
         <button type="button" onClick={() => setOpen(false)} className="text-gray-500">
           Cancel
         </button>

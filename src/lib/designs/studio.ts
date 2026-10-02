@@ -132,6 +132,9 @@ export async function quoteDesign(
     widthInches: quote.widthInches,
     heightInches: quote.heightInches,
     pricedAt: new Date().toISOString(),
+    sideViewPath: await storeSideView(quote.sideViewUrl, sign.brand_slug),
+    materials: quote.materials,
+    mounting: quote.mounting,
   };
 }
 
@@ -170,6 +173,29 @@ export async function saveBrandDesign(
     );
   });
   return priced;
+}
+
+/**
+ * The engine's side views are a handful of generic drawings (one per type and
+ * mounting), so each is copied into our storage once per server and reused.
+ * A failure leaves the sheet without one rather than failing the quote.
+ */
+const sideViews = new Map<string, string>();
+async function storeSideView(url: string | null, brandSlug: string): Promise<string | null> {
+  if (!url) return null;
+  const known = sideViews.get(url);
+  if (known) return known;
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    const type = response.headers.get('content-type') ?? '';
+    if (!response.ok || !['image/png', 'image/jpeg', 'image/webp'].includes(type)) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const stored = await putUpload(new File([bytes], 'side-view', { type }), `${brandSlug}/side-views`);
+    sideViews.set(url, stored.storagePath);
+    return stored.storagePath;
+  } catch {
+    return null;
+  }
 }
 
 /** A brand admin's logo for the Studio: PNG, JPG or WEBP, small enough for the engine. */

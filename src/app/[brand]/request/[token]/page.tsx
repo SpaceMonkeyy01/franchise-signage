@@ -34,6 +34,7 @@ const FILE_KIND_LABEL: Record<string, string> = {
   mockup: 'Mockup',
   site_file: 'Site file',
   landlord_criteria: 'Lease sign exhibit',
+  quote_sheet: 'Quote sheet (PDF)',
   package_pdf: 'Package',
 };
 

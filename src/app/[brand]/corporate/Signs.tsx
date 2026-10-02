@@ -216,6 +216,14 @@ function SignRow({
             >
               {sign.price_source === 'engine' ? 'Edit design' : 'Design'}
             </Link>
+            {sign.price_source === 'engine' && (
+              <a
+                href={`/api/studio/sheet/${sign.id}?brand=${brandSlug}`}
+                className="text-gray-700 underline-offset-2 hover:underline"
+              >
+                Quote sheet
+              </a>
+            )}
             {underReview && (
               <>
                 <button type="button" onClick={onRevise} className="text-gray-700 underline-offset-2 hover:underline">

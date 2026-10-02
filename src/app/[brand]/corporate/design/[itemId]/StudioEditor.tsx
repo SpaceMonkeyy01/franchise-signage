@@ -11,6 +11,8 @@ import { useMemo, useState, useTransition } from 'react';
 import { DEPTH, SIZE, label, type DesignRule, type DesignRules, type SignDesign } from '@/lib/designs/design';
 import { fileUrl } from '@/lib/storage/url';
 
+import { downloadPreviewSheet } from '@/components/downloadSheet';
+
 import { previewDesignAction, saveDesignAction, uploadLogoAction, brandLogoAction } from '../actions';
 
 type Options = Record<string, readonly { value: string; name?: string }[]>;
@@ -334,6 +336,23 @@ export function StudioEditor({
               Save design
             </button>
           </div>
+          {preview?.price && current && (
+            <button
+              type="button"
+              disabled={busy !== null}
+              onClick={() => {
+                const next = design();
+                if (!next) return;
+                run('preview', async () => {
+                  const failed = await downloadPreviewSheet({ brandSlug, as: 'brand', brandItemId: itemId, design: next });
+                  if (failed) setMessage({ tone: 'error', text: failed });
+                });
+              }}
+              className="mt-3 w-full text-center text-xs font-medium text-gray-700 underline-offset-2 hover:underline disabled:opacity-40"
+            >
+              Download quote sheet (PDF)
+            </button>
+          )}
           {message && (
             <p className={`mt-2 text-xs ${message.tone === 'error' ? 'text-rose-700' : 'text-green-800'}`}>{message.text}</p>
           )}

@@ -14,6 +14,8 @@
 import { getRequestByToken } from '@/lib/db/queries';
 import { BudgetaryQuote } from '@/lib/pdf/budgetary-quote';
 import { renderPdf } from '@/lib/pdf/letterhead';
+import { sheetImage, type SheetImage } from '@/lib/pdf/sign-quote-sheet';
+import { getUpload } from '@/lib/storage';
 
 export async function GET(_request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -32,8 +34,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ tok
     return new Response('This request is quoted but not yet priced.', { status: 404 });
   }
 
+  // Each sign's mockup, Studio-generated or team-uploaded (#168). A file that
+  // cannot be read is left out rather than failing the lender's document.
+  const mockups: { name: string; image: SheetImage }[] = [];
+  for (const item of request.items) {
+    const file = item.files.find((candidate) => candidate.kind === 'mockup');
+    const stored = file ? await getUpload(file.storage_path).catch(() => null) : null;
+    const image = stored ? sheetImage(stored.body, stored.contentType) : null;
+    if (image) mockups.push({ name: item.brand_item_name, image });
+  }
+
   const pdf = await renderPdf(
-    <BudgetaryQuote brand={request.brand} request={request} issuedAt={new Date()} />,
+    <BudgetaryQuote brand={request.brand} request={request} issuedAt={new Date()} mockups={mockups} />,
   );
 
   const filename = `${request.code.toLowerCase()}-budgetary-quote.pdf`;

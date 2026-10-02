@@ -60,7 +60,7 @@ export interface NewRequestItem {
 }
 
 export interface NewRequestFile {
-  kind: 'placement_photo' | 'condition_photo' | 'mockup' | 'site_file' | 'landlord_criteria';
+  kind: 'placement_photo' | 'condition_photo' | 'mockup' | 'site_file' | 'landlord_criteria' | 'quote_sheet';
   storagePath: string;
   fileName?: string | null;
   contentType?: string | null;

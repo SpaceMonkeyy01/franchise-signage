@@ -62,6 +62,7 @@ const FILE_KIND_LABEL: Record<string, string> = {
   site_photo: 'Site photo',
   lease_exhibit: 'Lease sign exhibit',
   landlord_criteria: 'Landlord sign criteria',
+  quote_sheet: 'Sign quote sheet',
   survey: 'Site survey',
   mockup: 'Mockup',
   other: 'Attachment',
