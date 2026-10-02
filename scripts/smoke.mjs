@@ -712,14 +712,13 @@ const statusAfterOpening = await withDb(async (client) =>
   (await client.query('select status from requests where id = $1', [lifecycleId])).rows[0].status,
 );
 record('opening the link decides nothing', statusAfterOpening === 'needs_review');
-await expectVisible(page, 'text=/already proceeding|need a decision|Approve this sign/', 'the link opens the review page');
+await expectVisible(page, 'text=/already proceeding|need a decision|Request changes needs a note/', 'the link opens the review page');
 
 // Send one item back — the note is required.
-await page.locator('button:has-text("Request changes")').first().click();
-const blocked = await page.locator('button:has-text("Send back with this note")').first().isDisabled();
+const blocked = await page.getByRole('button', { name: 'Request changes', exact: true }).first().isDisabled();
 record('request-changes is blocked without a note', blocked);
 await page.locator('textarea').first().fill('Confirm the pole height with the city.');
-await page.locator('button:has-text("Send back with this note")').first().click();
+await page.getByRole('button', { name: 'Request changes', exact: true }).first().click();
 await expectVisible(page, 'text=/Sent back to the franchisee/', 'the reviewer can send one item back');
 
 await page.goto(admin, { waitUntil: 'networkidle' });
@@ -780,7 +779,7 @@ record('a reviewer signs in and lands on the dashboard', true);
 
 await corporatePage.goto(`${BASE}/freshbites/corporate?tab=approvals`, { waitUntil: 'networkidle' });
 const onDashboard = corporatePage.locator(`section[data-request-code="${lifecycleCode}"]`);
-await onDashboard.getByRole('button', { name: 'Approve this sign' }).first().click();
+await onDashboard.getByRole('button', { name: 'Approve', exact: true }).first().click();
 await expectVisible(corporatePage, 'text=/approved\./', 'the reviewer approves one item from the dashboard');
 
 const sessionDecision = await withDb(async (client) =>
@@ -814,7 +813,7 @@ await expectVisible(
 );
 
 // The other item, from the link — the same decision code, the other route.
-await page.getByRole('button', { name: 'Approve this sign' }).first().click();
+await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
 await expectVisible(page, 'text=Every item on this request has been decided', 'both items end up decided');
 const linkVia = await withDb(async (client) =>
   (
@@ -1104,7 +1103,6 @@ const declineHref = await page
   .getAttribute('href');
 await page.goto(declineHref, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Decline', exact: true }).first().click();
-await page.getByRole('button', { name: 'Decline this sign' }).first().click();
 await expectVisible(page, 'text=Every item on this request has been decided', 'the reviewer declines the only sign');
 const declinedStatus = await withDb(async (client) =>
   (await client.query('select status from requests where id = $1', [declinedRequest.id])).rows[0]
@@ -1175,7 +1173,7 @@ const internalApprove = await page
   .first()
   .getAttribute('href');
 await page.goto(internalApprove, { waitUntil: 'networkidle' });
-await page.getByRole('button', { name: 'Approve this sign' }).first().click();
+await page.getByRole('button', { name: 'Approve', exact: true }).first().click();
 await expectVisible(
   page,
   'text=/Every item on this request has been decided|already proceeding/',

@@ -22,6 +22,12 @@ import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
 import { fileUrl } from '@/lib/storage/url';
 
 type Action = 'approve' | 'changes' | 'decline';
+
+const ACTION_LABEL: Record<Action, string> = {
+  approve: 'Approve',
+  changes: 'Request changes',
+  decline: 'Decline',
+};
 type Outcome = Promise<{ error: string } | undefined>;
 
 export type DecideFn = (input: {
@@ -145,7 +151,9 @@ function DecisionCard({
   defaultAction: Action;
   act: (label: string, fn: () => Promise<{ error: string } | undefined>) => void;
 }) {
-  const [action, setAction] = useState<Action>(defaultAction);
+  // The button the reviewer pressed in the email, ringed so it is easy to find.
+  const marked = (value: Action) =>
+    defaultOpen && defaultAction === value ? 'ring-2 ring-gray-900 ring-offset-1' : '';
   const [note, setNote] = useState('');
   const mockup = item.files.find((file) => file.kind === 'mockup');
   const photo = item.files.find((file) => file.kind === 'placement_photo');
@@ -213,76 +221,67 @@ function DecisionCard({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        {(
-          [
-            ['approve', 'Approve'],
-            ['changes', 'Request changes'],
-            ['decline', 'Decline'],
-          ] as const
-        ).map(([value, label]) => (
-          <button
-            key={value}
-            type="button"
-            onClick={() => setAction(value)}
-            aria-pressed={action === value}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              action === value
-                ? 'border-gray-900 bg-gray-900 text-white'
-                : 'border-gray-200 text-gray-600 hover:border-gray-300'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
       <textarea
         value={note}
         onChange={(event) => setNote(event.target.value)}
         rows={2}
         placeholder={
-          action === 'changes'
+          defaultAction === 'changes'
             ? 'What needs to change? The franchisee sees this and acts on it.'
-            : 'Optional note — e.g. “approved, dining area only”'
+            : 'Optional note or condition — e.g. “approved, dining area only”'
         }
-        className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
       />
 
-      <button
-        type="button"
-        disabled={action === 'changes' && !note.trim()}
-        onClick={() => {
-          if (action === 'changes') {
+      {/* One press decides, as the demo has it. The email's buttons only open
+      this page, so the one the reviewer pressed there is marked here and
+      nothing is decided until they press it again. */}
+      {defaultOpen && (
+        <p className="mt-2 text-xs font-medium text-gray-700">
+          From your email: press {ACTION_LABEL[defaultAction]} to confirm.
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            act(`${item.brand_item_name} approved.`, () =>
+              decide({ lineItemId: item.id, decision: 'approved', note }),
+            )
+          }
+          className={`min-w-28 flex-1 rounded-lg py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 ${marked('approve')}`}
+          style={{ background: 'var(--color-brand)' }}
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          disabled={!note.trim()}
+          title="Write the change in the note above"
+          onClick={() =>
             act(`Sent back to the franchisee: ${item.brand_item_name}.`, () =>
               sendBack({ lineItemIds: [item.id], comment: note }),
-            );
-          } else {
-            const decision = action === 'approve' ? 'approved' : 'declined';
-            act(`${item.brand_item_name} ${decision}.`, () =>
-              decide({ lineItemId: item.id, decision, note }),
-            );
+            )
           }
-        }}
-        className="mt-2 w-full rounded-lg py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-        style={{
-          background:
-            action === 'approve'
-              ? 'var(--color-brand)'
-              : action === 'changes'
-                ? '#d97706'
-                : '#e11d48',
-        }}
-      >
-        {action === 'approve'
-          ? 'Approve this sign'
-          : action === 'changes'
-            ? 'Send back with this note'
-            : 'Decline this sign'}
-      </button>
-      {action === 'changes' && !note.trim() && (
-        <p className="mt-1 text-[11px] text-gray-500">A note is required to request changes.</p>
-      )}
+          className={`min-w-28 flex-1 rounded-lg border border-amber-300 bg-amber-50 py-2.5 text-sm font-medium text-amber-800 transition-colors hover:bg-amber-100 disabled:opacity-40 ${marked('changes')}`}
+        >
+          Request changes
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            act(`${item.brand_item_name} declined.`, () =>
+              decide({ lineItemId: item.id, decision: 'declined', note }),
+            )
+          }
+          className={`min-w-28 flex-1 rounded-lg border border-rose-200 bg-rose-50 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100 ${marked('decline')}`}
+        >
+          Decline
+        </button>
+      </div>
+      <p className="mt-1.5 text-[11px] text-gray-500">
+        Request changes needs a note — it goes back to the franchisee to update and resubmit.
+      </p>
       <p className="mt-1.5 text-[11px] text-gray-500">
         Decided item by item — whatever you choose, the rest of this request carries on.
       </p>
