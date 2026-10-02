@@ -17,6 +17,7 @@ import { useState, useTransition } from 'react';
 
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, VendorChip } from '@/components/StatusChip';
+import { originLabel, plural } from '@/lib/format';
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
 import { fileUrl } from '@/lib/storage/url';
 
@@ -77,7 +78,7 @@ export function ReviewPanel({
           className="rounded-xl px-4 py-3 text-sm"
           style={{ background: 'var(--color-brand-light)', color: 'var(--color-brand-dark)' }}
         >
-          <strong>{proceeding.length} item(s) are already proceeding.</strong> Standard package
+          <strong>{plural(proceeding.length, 'item')} {proceeding.length === 1 ? 'is' : 'are'} already proceeding.</strong> Standard package
           signs and like-for-like replacements carry the approval you have already given.
         </p>
       )}
@@ -168,7 +169,7 @@ function DecisionCard({
           )}
           <p className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-gray-600">
             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium">
-              {item.origin}
+              {originLabel(item.origin)}
             </span>
             <VendorChip
               policy={item.vendor_policy_override ?? request.brand.vendor_policy}

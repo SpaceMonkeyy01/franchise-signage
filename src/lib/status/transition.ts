@@ -34,6 +34,7 @@ import type {
   RequestStatus,
 } from './types';
 import { isReviewOpen } from './types';
+import { plural } from '../format';
 
 export interface StatusStore {
   getRequest(requestId: string): Promise<RequestState | null>;
@@ -568,7 +569,7 @@ export async function requestChanges(
     to: 'changes_requested',
     actor: reviewer?.actor ?? 'reviewer',
     kind: 'changes_requested',
-    summary: `Changes requested on ${flaggedItemIds.length} item(s): ${comment}`,
+    summary: `Changes requested on ${plural(flaggedItemIds.length, 'item')}: ${comment}`,
     detail: { lineItemIds: flaggedItemIds, comment, ...reviewerDetail(reviewer) },
   });
 }

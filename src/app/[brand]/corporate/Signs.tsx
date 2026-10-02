@@ -125,7 +125,7 @@ export function Signs({
               {group.title} <span className="font-normal">({group.signs.length})</span>
             </h3>
             {group.hint && <p className="mt-0.5 text-xs text-gray-500">{group.hint}</p>}
-            <div className="mt-2 grid gap-2 xl:grid-cols-2">
+            <div className="mt-2 grid grid-cols-1 gap-2 xl:grid-cols-2">
               {group.signs.map((sign) =>
                 revising === sign.id ? (
                   <ProposalForm
@@ -317,7 +317,7 @@ function ProposalForm({
         {existing ? `Revise ${existing.name}` : 'Propose a new sign'}
       </p>
 
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="text-xs text-gray-600">
           Where it goes
           <select
@@ -381,7 +381,7 @@ function ProposalForm({
                 <p className="text-xs font-medium text-gray-700">
                   Lock choices for every store (leave a choice to each store to decide):
                 </p>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {Object.entries(chosen.options).map(([attribute, values]) => (
                     <label key={attribute} className="text-xs text-gray-600">
                       {attributeLabel(attribute)}
@@ -418,7 +418,7 @@ function ProposalForm({
         </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="text-xs text-gray-600">
           Name franchisees will see
           <input

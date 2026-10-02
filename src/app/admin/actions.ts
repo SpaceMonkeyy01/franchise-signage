@@ -25,6 +25,7 @@ import { registerFranchisee } from '@/lib/registrations';
 import { prepPackage, transitionPackage, type PackageStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
 import type { StoredObject } from '@/lib/storage';
+import { plural } from '@/lib/format';
 
 type Result = SubmitFailure | undefined;
 
@@ -295,7 +296,7 @@ export async function deliverQuoteAction(requestId: string, quoteId: string): Pr
         kind: 'quote_delivered',
         summary:
           `Quote delivered to franchisee — $${total.toLocaleString('en-US')}` +
-          (quote.manual_count > 0 ? ` + ${quote.manual_count} custom item(s)` : ''),
+          (quote.manual_count > 0 ? ` + ${plural(quote.manual_count, 'custom item')}` : ''),
         detail: { total, manual: quote.manual_count },
       }),
     );

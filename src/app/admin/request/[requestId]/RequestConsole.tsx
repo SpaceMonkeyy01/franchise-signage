@@ -14,6 +14,7 @@ import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
+import { originLabel, plural } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, packageName, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { fileUrl } from '@/lib/storage/url';
@@ -62,7 +63,7 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
         <RequestStatusChip status={request.status} />
         {request.financing_involved && (
           <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
-            §8b lender documents needed
+            Lender documents needed
           </span>
         )}
         {pending && <span className="text-xs text-gray-500">working…</span>}
@@ -74,7 +75,7 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
           invoice, line items — takes the main column, and readiness, files,
           landlord and history sit beside it (same grid as the franchisee's
           request page). */}
-      <div className="grid gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
+      <div className="grid grid-cols-1 gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
         <div className="xl:col-start-2 xl:row-start-1">
           {/* The franchisee's own card, read the same way — what to chase before
               the package goes out, until a quote is accepted. */}
@@ -115,11 +116,11 @@ function ActionPanel({ request, act }: { request: RequestDetail; act: Act }) {
       {request.status === 'submitted' && (
         <div className="space-y-3">
           <p className="text-xs text-gray-500">
-            Preparing derives the request forward: every item auto-approved goes straight to
-            approved and corporate is never emailed; anything pending goes to them.
+            Preparing the package moves the request on: pre-approved items go straight to
+            approved without emailing corporate; anything needing review goes to them.
           </p>
           <label className="block text-xs text-gray-600">
-            §8b · lease sign criteria reviewed{' '}
+            Lease sign criteria reviewed{' '}
             <span className="text-gray-500">
               ({hasLandlordExhibit ? 'exhibit attached below' : 'no exhibit provided'})
             </span>
@@ -227,7 +228,7 @@ function PackageChain({
           {PACKAGE_STAGE_LABEL[stage]}
         </span>
         <span className="text-xs text-gray-500">
-          {quote.external ? 'external tail' : 'Signage.com fulfils'} · {items.length} item(s) ·{' '}
+          {quote.external ? 'external tail' : 'Signage.com fulfils'} · {plural(items.length, 'item')} ·{' '}
           {formatPrice(quote.priced_total)}
           {quote.manual_count > 0 && ` · ${quote.manual_count} custom`}
         </span>
@@ -338,7 +339,7 @@ function PackageChain({
 
         {stage === 'completed' && (
           <Waiting>
-            Installed. {items.length} sign(s) went onto the location record on this transition.
+            Installed. {plural(items.length, 'sign')} went onto the location record on this transition.
           </Waiting>
         )}
       </div>
@@ -362,7 +363,7 @@ function InvoicePanel({ request, act }: { request: RequestDetail; act: Act }) {
   if (billable.length === 0) return null;
 
   return (
-    <Section title="Lender documents (§8b)">
+    <Section title="Lender documents">
       <div className="space-y-4">
         {billable.map((quote) => (
           <InvoiceRow key={quote.id} request={request} quote={quote} act={act} />
@@ -483,7 +484,9 @@ function ItemsPanel({ request, act }: { request: RequestDetail; act: Act }) {
     <Section title={`Line items (${request.items.length})`}>
       {manual.length > 0 && (
         <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-          <strong>{manual.length} item(s) need manual pricing.</strong> Their catalog rows have no
+          <strong>
+            {plural(manual.length, 'item')} {manual.length === 1 ? 'needs' : 'need'} manual pricing.
+          </strong> Their catalog rows have no
           pricing model, so the franchisee sees &ldquo;Custom quote&rdquo; until someone here puts a
           number on them.
         </p>
@@ -515,7 +518,7 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
             <span className="flex flex-wrap items-center gap-2 text-sm font-medium text-gray-900">
               {item.brand_item_name}
               <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
-                {item.origin}
+                {originLabel(item.origin)}
               </span>
               <VendorChip
                 policy={item.vendor_policy_override ?? request.brand.vendor_policy}
@@ -630,7 +633,7 @@ function LandlordPanel({ request, act }: { request: RequestDetail; act: Act }) {
   const [note, setNote] = useState('');
 
   return (
-    <Section title="Landlord approval (§8b — tracked, never automated)">
+    <Section title="Landlord approval — tracked, never automated">
       <p className="text-xs text-gray-500">
         Logged by hand. Nothing here promises a compliance or approval outcome; the events exist so
         the timeline can answer &ldquo;where is this with the landlord&rdquo;. Permit stages are
@@ -670,7 +673,7 @@ function TimelinePanel({ request, act }: { request: RequestDetail; act: Act }) {
           <li key={event.id} className="text-xs">
             <span className="text-gray-800">{event.summary}</span>
             <span className="ml-1.5 text-gray-500">
-              — {event.actor} · {new Date(event.created_at).toLocaleString('en-US')}
+              — {event.actor} · {new Date(event.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
             </span>
           </li>
         ))}

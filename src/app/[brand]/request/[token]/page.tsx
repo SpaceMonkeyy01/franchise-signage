@@ -19,6 +19,7 @@ import {
   VendorChip,
 } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
+import { originLabel, plural } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import type { LineItemStatus, RequestStatus } from '@/lib/status/types';
@@ -34,13 +35,6 @@ const FILE_KIND_LABEL: Record<string, string> = {
   site_file: 'Site file',
   landlord_criteria: 'Lease sign exhibit',
   package_pdf: 'Package',
-};
-
-const ORIGIN_LABEL: Record<string, string> = {
-  standard: 'Standard package',
-  addon: 'Add-on',
-  exception: 'Exception',
-  replacement: 'Like-for-like replacement',
 };
 
 // The order items are grouped in on the status page: what needs the
@@ -113,7 +107,7 @@ export default async function RequestStatusPage({
         {request.change_request && (
           <section className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4">
             <h2 className="text-sm font-semibold text-rose-900">
-              Corporate asked for changes on {request.change_request.line_item_ids.length} item(s)
+              Corporate asked for changes on {plural(request.change_request.line_item_ids.length, 'item')}
             </h2>
             <p className="mt-1 text-sm leading-relaxed text-rose-800">
               {request.change_request.comment}
@@ -130,7 +124,7 @@ export default async function RequestStatusPage({
             request — readiness, documents sent, history — moves to a side
             column beside them. The rows are auto then 1fr, so the main column's
             height lands in the second row and readiness stays snug at the top. */}
-        <div className="grid gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
+        <div className="grid grid-cols-1 gap-x-6 xl:grid-cols-[minmax(0,1fr)_22rem] xl:grid-rows-[auto_1fr] 2xl:grid-cols-[minmax(0,1fr)_25rem]">
           <div className="xl:col-start-2 xl:row-start-1">
             {/* Until a quote carries the real number, add the estimates up so
                 the franchisee is not doing it card by card. */}
@@ -311,7 +305,7 @@ function ItemCard({
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">
             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
-              {ORIGIN_LABEL[item.origin] ?? item.origin}
+              {originLabel(item.origin)}
             </span>
             {item.sizing && <span>{item.sizing}</span>}
             <span className="font-medium text-gray-900">
@@ -412,8 +406,8 @@ function QuoteCard({
       </div>
 
       <p className="mt-2 text-xs text-indigo-900/80">
-        {quote.priced_count} priced item(s)
-        {quote.manual_count > 0 && ` · ${quote.manual_count} custom item(s) quoted separately`}
+        {plural(quote.priced_count, 'priced item')}
+        {quote.manual_count > 0 && ` · ${plural(quote.manual_count, 'custom item')} quoted separately`}
       </p>
 
       {acceptable && acceptAccess === 'signed_out' && (

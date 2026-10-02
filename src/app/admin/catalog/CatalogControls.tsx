@@ -54,7 +54,7 @@ export function ReviewForm({
 
   return (
     <div className="mt-3 space-y-2">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="text-xs text-gray-600">
           Name
           <input className={`${input} mt-1 w-full`} value={name} onChange={(e) => setName(e.target.value)} />
@@ -244,7 +244,7 @@ export function AddVariantForm({ categories }: { categories: string[] }) {
       }}
       className="space-y-3 rounded-xl border border-gray-200 bg-white p-4"
     >
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="text-xs text-gray-600">
           Placement
           <select
@@ -359,7 +359,7 @@ export function OptionsEditor({
       <p className="text-xs font-medium text-gray-800">
         Options brands can lock for {name}. One option per line; an empty list removes the attribute.
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {rows.map((row, index) => (
           <div key={index}>
             <input

@@ -15,6 +15,7 @@ import type { RegistrationWithBrand } from '@/lib/db/queries';
 import type { FranchiseeOwner, FranchiseePeople } from '@/lib/staff';
 
 import { StaffManager } from '../staff/StaffManager';
+import { plural } from '@/lib/format';
 import { setFranchiseeOwnerActiveAction } from './actions';
 import { Registrations } from './Registrations';
 
@@ -162,8 +163,4 @@ function Owner({ brandSlug, owner }: { brandSlug: string; owner: OwnerRow }) {
       </button>
     </div>
   );
-}
-
-function plural(count: number, one: string, many = `${one}s`): string {
-  return `${count} ${count === 1 ? one : many}`;
 }

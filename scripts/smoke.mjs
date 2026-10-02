@@ -235,6 +235,12 @@ async function rewindDemoQuote() {
     // which is exactly the protection working as intended.
     await client.query(`alter table request_events disable trigger request_events_append_only`);
     await client.query(`delete from request_events where request_id = $1 and kind = 'quote_accepted'`, [id]);
+    // The accept also rolls the request up to `accepted` ("Every package is
+    // accepted"); leaving that row added one more to the timeline per run.
+    await client.query(
+      `delete from request_events where request_id = $1 and kind = 'status_changed' and to_status = 'accepted'`,
+      [id],
+    );
     await client.query(`alter table request_events enable trigger request_events_append_only`);
   });
 }
@@ -885,7 +891,7 @@ record(
     ),
 );
 
-await expectVisible(page, 'text=/need manual pricing/', 'standin items raise the manual-pricing banner');
+await expectVisible(page, 'text=/needs? manual pricing/', 'standin items raise the manual-pricing banner');
 await page.locator('input[placeholder="e.g. 2400"]').first().fill('7400');
 await page.getByRole('button', { name: 'Set price' }).first().click();
 await expectVisible(page, 'text=/priced manually/', 'a standin item is priced by hand');

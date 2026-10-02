@@ -271,12 +271,12 @@ function StepBasics({
           placeholder={`${brand.name} — Riverside`}
         />
         <Field label="Street address" value={basics.line1} onChange={set('line1')} placeholder="123 Main St" />
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field label="City" value={basics.city} onChange={set('city')} placeholder="Austin" />
           <Field label="State" value={basics.state} onChange={set('state')} placeholder="TX" />
           <Field label="ZIP" value={basics.zip} onChange={set('zip')} placeholder="78701" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             label="Your name"
             value={basics.requesterName}
@@ -291,7 +291,7 @@ function StepBasics({
             type="email"
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             label="Your phone"
             value={basics.requesterPhone}
@@ -308,7 +308,7 @@ function StepBasics({
       </div>
 
       <p className="mb-2 mt-6 text-xs font-medium text-gray-700">Location format</p>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {packages.map((pkg) => {
           const active = pkg.format === format;
           return (
@@ -345,7 +345,7 @@ function StepBasics({
           Most franchisees fund signage with an SBA-style loan. Telling us now means the budgetary
           quote, invoice and receipt your lender asks for are ready when they ask.
         </p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {[
             { label: 'Yes — a lender is involved', value: true },
             { label: 'No', value: false },
@@ -388,7 +388,7 @@ function StepBasics({
           checks your package against it before anything is quoted. Don&rsquo;t have it yet? Submit
           anyway — this never holds up a request.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Field
             label="Property manager"
             value={landlord.name}
@@ -649,7 +649,7 @@ function StepAddons({
         before quoting.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
+      <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
         {catalog.map((item) => {
           const chosen = addons.find((addon) => addon.brandItemId === item.id);
           return (

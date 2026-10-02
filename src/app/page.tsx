@@ -83,7 +83,7 @@ export default async function Home() {
         </div>
       </header>
 
-      <main className="relative mx-auto grid w-full page-wide flex-1 items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:py-20">
+      <main className="relative mx-auto grid grid-cols-1 w-full page-wide flex-1 items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:py-20">
         <section>
           <p className="text-xs font-medium uppercase tracking-widest text-brand">
             Signage for franchise brands

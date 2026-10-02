@@ -19,6 +19,7 @@ import {
 
 import { Registrations } from './Registrations';
 import { isReviewOpen, type RequestStatus } from '@/lib/status/types';
+import { brandAndLocation, plural } from '@/lib/format';
 
 const INTENT_LABEL: Record<string, string> = {
   initial_setup: 'Initial setup',
@@ -123,7 +124,7 @@ export default async function AdminQueue({
     <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
       <h1 className="text-xl font-bold text-gray-900">Request queue</h1>
       <p className="mt-1 text-sm text-gray-500">
-        {waitingOnUs} waiting on us · {pendingItems} item(s) with corporate · {tbdItems} TBD field(s)
+        {waitingOnUs} waiting on us · {plural(pendingItems, 'item')} with corporate · {plural(tbdItems, 'TBD field')}{' '}
         to chase.
       </p>
 
@@ -261,7 +262,7 @@ function QueueLine({ row }: { row: QueueRow }) {
         )}
       </td>
       <td className="px-4 py-2.5 text-gray-600">
-        <span className="text-xs text-gray-500">{row.brand_name}</span> · {row.location_name}
+        {brandAndLocation(row.brand_name, row.location_name)}
       </td>
       <td className="px-4 py-2.5 text-xs text-gray-600">
         {row.item_count}
@@ -299,7 +300,7 @@ function QueueCard({ row }: { row: QueueRow }) {
           </Link>
           <span className="ml-2 text-xs text-gray-500">{INTENT_LABEL[row.intent] ?? row.intent}</span>
           <p className="truncate text-xs text-gray-500">
-            {row.brand_name} · {row.location_name}
+            {brandAndLocation(row.brand_name, row.location_name)}
           </p>
         </div>
         <RequestStatusChip status={row.status} />

@@ -14,6 +14,7 @@ import { createAndSubmitRequest } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
+import { plural } from '@/lib/format';
 
 export interface AddSignsInput {
   brandSlug: string;
@@ -53,8 +54,8 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
       })),
       summary: ({ total, pendingReview }) =>
         pendingReview > 0
-          ? `${total} new sign(s) requested for existing location — needs corporate approval`
-          : `${total} new sign(s) requested for existing location`,
+          ? `${plural(total, 'new sign')} requested for existing location — needs corporate approval`
+          : `${plural(total, 'new sign')} requested for existing location`,
     });
     token = created.accessToken;
     requestId = created.id;

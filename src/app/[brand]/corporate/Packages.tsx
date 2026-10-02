@@ -125,7 +125,7 @@ function AddStoreType({ brandSlug }: { brandSlug: string }) {
       }}
       className="mt-3 space-y-2 rounded-xl border border-gray-200 bg-white p-4"
     >
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <label className="text-xs text-gray-600">
           Store type
           <input
@@ -352,7 +352,7 @@ function PackageCard({
           )}
           {typeAction.error && <p className="text-xs text-rose-700">{typeAction.error}</p>}
           {editing ? (
-            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+            <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
               <input className={input} value={label} aria-label="Package name" onChange={(e) => setLabel(e.target.value)} />
               <input
                 className={input}

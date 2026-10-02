@@ -192,7 +192,7 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
       <BrandHeader brand={brand} />
       <main className="relative flex-1">
         <CursorGlow />
-        <section className="mx-auto grid w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
+        <section className="mx-auto grid grid-cols-1 w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
           <div>
             <p
               className="inline-block rounded-full border bg-white px-3 py-1 text-xs font-semibold"
@@ -249,7 +249,7 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
             <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
               One path from signed agreement to installed signs
             </h2>
-            <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {HOW_IT_WORKS(brand.name).map((step, index) => (
                 <li
                   key={step.title}
@@ -450,7 +450,7 @@ function LocationCard({
       )}
 
       {location.installed_signs.length > 0 ? (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {location.installed_signs.map((sign) => (
             <div key={sign.id} className="flex items-center gap-3 rounded-lg bg-gray-50 p-2">
               <SignThumbnail

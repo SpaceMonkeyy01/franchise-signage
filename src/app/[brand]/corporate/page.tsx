@@ -43,6 +43,7 @@ import { Franchisees } from './Franchisees';
 import { Packages } from './Packages';
 import { People, type InvitedRow, type PersonRow } from './People';
 import { Signs } from './Signs';
+import { plural } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -426,10 +427,8 @@ function LocationCard({
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-        <span>
-          {location.installed_count} installed
-          {location.package_size > 0 && ` of ${location.package_size} standard`}
-        </span>
+        <span>{plural(location.installed_count, 'sign')} installed</span>
+        {location.package_size > 0 && <span>{location.package_size}-sign standard package</span>}
         <span className="text-gray-500">{location.format_label}</span>
         {opening && (
           <span className={urgent ? 'font-medium text-amber-700' : ''}>
