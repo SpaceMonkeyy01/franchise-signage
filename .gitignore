@@ -73,3 +73,6 @@ shots/
 
 # Accounts made by scripts/prove-supabase.mjs (passwords, TOTP secrets)
 .prove-supabase.json
+
+# Signize frontend source from the owner: contains an API key, never commit
+frontend.signize.ai-main*/
