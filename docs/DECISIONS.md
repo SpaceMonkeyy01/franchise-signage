@@ -1606,6 +1606,27 @@ item 7's "CRUD UI only when onboarding brand #2".
      dashboard is now metrics, then locations, then reference. /admin keeps its
      own registration panel (#76).
 
+164. **The Design Studio flow, from the owner (2 Oct) — SPEC v2.6 §8.** The
+     brand admin designs each brand sign in the Studio (logo, background,
+     options, dimensions) and makes it standard by adding it to a package;
+     franchisee owners and staff open the Studio from any listed sign, adjust
+     it, and confirm before submitting. The owner's answers:
+     - **Price:** Signage.com's, fetched automatically from the Studio; neither
+       the brand nor the customer does anything about price. Built so the
+       server fetches it (a browser-posted price is display only), because a
+       price the portal trusts from the page is a price anyone can edit.
+     - **What a franchisee may change:** agreed — each setting locked, or
+       adjustable within limits; within limits keeps the sign's approval route,
+       outside them makes it an exception for corporate.
+     - **Quote confirmation:** the owner trusts the engine and expects to drop
+       team confirmation later, so it is a per-brand setting, not a rule. A
+       payment gateway for orders may follow (SPEC §12 Q11, out of MVP scope
+       until decided).
+     - **Studio unavailable:** "let's see". Until decided, §8's existing rule
+       stands: nothing blocks on the Studio.
+     Not yet built: waiting on the Studio code and API, which the owner is
+     providing, and on a margin policy (fulfillment cost → price, §12 Q12).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

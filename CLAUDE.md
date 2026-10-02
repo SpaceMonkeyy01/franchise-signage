@@ -12,7 +12,7 @@ A co-branded signage workflow portal Signage.com operates for franchise brands (
 anything else when resuming; it is kept current at the end of each session.
 
 ## Source-of-truth documents (read before writing any code)
-- `docs/SPEC.md` — the build contract (currently spec v2.5, awaiting the owner's review of what v2.5 wrote in): full data model, status machine, approval rules, vendor routing, Design Studio integration contract, DID module, two-level access, accounts and roles (§10), build order. Authoritative.
+- `docs/SPEC.md` — the build contract (currently spec v2.6, awaiting the owner's review of v2.5 and v2.6): full data model, status machine, approval rules, vendor routing, Design Studio integration contract, DID module, two-level access, accounts and roles (§10), build order. Authoritative.
 - `docs/flow-demo.jsx` — interactive reference implementation of the UX (all three personas, shared state). The real app's flows, screens, copy tone, and behavior should match this demo. Where SPEC.md and the demo disagree, STOP and flag it — do not guess. **Note: the file on disk is v12. Spec v2.1 and Session 8 reference a v13 demo that adds the DID generator screens; it has not landed in the repo yet.**
 - `docs/sign-taxonomy.tsv` — the master catalog seed data (Placement → Category → Sign Type → Variant + attribute matrix + pricing basis).
 - `docs/FLOW.md` — stakeholder-facing narrative of the whole system (five parties, the five points signage enters a franchisee's journey, outputs by stage). Context and language, NOT a build contract: where it disagrees with SPEC.md or the demo, they win.
@@ -54,7 +54,7 @@ Docker on this machine: `npm run dev` starts a PGlite-backed Postgres on port
 Modify/remove/rebrand intents (stub in UI like the demo) · franchisor self-serve onboarding (brand admins invite into an existing brand; creating one stays white-glove) · social sign-in · SSO · vendor portal · payment processing beyond the single Stripe exception for DID fees (the §8b lender PDFs ARE in scope — it is signage-order money movement that isn't) · in-app messaging · CRM/ERP integrations · compliance/permit validation · permit workflow stages (phase 2) · multi-language · decline-with-alternative · per-package quote acceptance · the signed/stamped DID tier (pending the stamp decision) · phase-2 lifecycle features (de-identification workflow, reimage forecasting, municipality variance knowledge base — events already cover them, build nothing).
 
 ## Known open items (build around, don't solve)
-- Design Studio integration path pending confirmation (spec §8 lists the 5 requirements). Until then: placeholder mockup slots + manual team upload.
+- Design Studio: the flow is decided (spec v2.6 §8 — brand admin designs, franchisees adjust within limits, the server fetches Signage.com's price from the engine). Waiting on the Signize code and API (owner providing) and a margin policy. Until connected: placeholder mockup slots + manual team upload.
 - Pilot brand's real vendor policy unknown — both routing tails must work; demo them with the Freshbites seed.
 - The stamp decision (unstamped-only vs signed tier) is with the team; the safe default is built into the rules above.
 - Business model (what corporate pays) undecided; nothing in the build depends on it.

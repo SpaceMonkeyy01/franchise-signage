@@ -1,9 +1,9 @@
-# Franchise Signage Studio — MVP Spec v2.5
+# Franchise Signage Studio — MVP Spec v2.6
 
-Version 2.5 · Supersedes v2.4 · Handoff document for implementation (Claude Code)
+Version 2.6 · Supersedes v2.5 · Handoff document for implementation (Claude Code)
 Stack: Next.js (App Router, TypeScript) + Supabase (Postgres, Storage, Auth for every account) + Resend + Vercel.
 Companion artifacts: `docs/flow-demo.jsx` (v13) — the interactive reference the real app should match. Where this doc and the demo disagree, flag it; don't guess. `docs/FLOW.md` — the stakeholder-facing narrative of the same system (five parties, five touchpoints, outputs by stage); prose, not a build contract.
-What changed in v2.5: the spec catches up with the build. Fields the schema has carried since the first sessions are written in (§3.1, §5.1, §5.3, §5.4, §5.6), and §6/§7 gain three rules: corporate's review opens when the team prepares the package, a resubmission goes straight back to review, and a request with every item declined ends at a terminal `declined`. See the changelog; each item cites the DECISIONS.md entry it came from, and the whole amendment is awaiting the owner's review. What changed in v2.4: §2.3 is new — the catalog is managed in the app. Signage.com keeps the master catalog and sets every price; a brand admin proposes new brand signs (Signage.com reviews and prices them before they go live) and edits the brand's packages, which go live at once. What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
+What changed in v2.6: §8 is rewritten around the owner's Design Studio flow — the brand admin designs each sign in the Studio and marks each setting locked or adjustable within limits; franchisees adjust the adjustable settings for their store; a change within limits keeps the sign's approval route and one outside them becomes an exception; the price is Signage.com's, fetched from the Studio's engine by the server, and entered by nobody. Awaiting the owner's review, and the Signize code and API. What changed in v2.5: the spec catches up with the build. Fields the schema has carried since the first sessions are written in (§3.1, §5.1, §5.3, §5.4, §5.6), and §6/§7 gain three rules: corporate's review opens when the team prepares the package, a resubmission goes straight back to review, and a request with every item declined ends at a terminal `declined`. See the changelog; each item cites the DECISIONS.md entry it came from, and the whole amendment is awaiting the owner's review. What changed in v2.4: §2.3 is new — the catalog is managed in the app. Signage.com keeps the master catalog and sets every price; a brand admin proposes new brand signs (Signage.com reviews and prices them before they go live) and edits the brand's packages, which go live at once. What changed in v2.3: §10 is rewritten — accounts with passwords for everyone but vendors, created by invitation, five roles scoped by brand and store, brand portals; build phases A–D added as §9b. What changed in v2.2: §6 moves fulfillment from the request to the quote package, so a §4 split request can run both tails at once; §8d separates the level-1 landing link from the §8c DID authorization. See the changelog. What changed in v2.1: see the changelog at the bottom. Short version: two-level access + welcome email (new MVP item), candidate-site framing for DIDs, the stamp legal design corrected, document timing clarified (Moment A vs Moment B), and new phase-2 backlog from lifecycle research.
 
 ---
 
@@ -44,8 +44,8 @@ A named brand item pins one master row's attributes. Franchisees only ever see b
 | brand_id | uuid FK | |
 | master_catalog_id | uuid FK | |
 | name | text | e.g. "Freshbites Storefront Letters" |
-| pinned_attributes | jsonb | corporate-locked choices, e.g. `{ trim: "trimless", return_color: "match_logo", finish: "gloss", mounting: "standard_raceway", ul: true }` |
-| site_variables | text[] | which attributes remain per-site (e.g. `["size", "mounting"]`) |
+| pinned_attributes | jsonb | (superseded by `design_rules` once the Studio is connected, §8 v2.6) corporate-locked choices, e.g. `{ trim: "trimless", return_color: "match_logo", finish: "gloss", mounting: "standard_raceway", ul: true }` |
+| site_variables | text[] | which attributes remain per-site (e.g. `["size", "mounting"]`); superseded by `design_rules` (§8 v2.6) |
 | spec_summary | text | human-readable pinned spec line for UI/emails |
 | est_price | numeric nullable | estimate for direct-priced items; null → "Custom quote", manual pricing by team |
 | thumbnail_url | text nullable | the sign's uploaded picture (a storage path, v2.4); falls back to the sign type's icon (`master_catalog.icon_path`), then the generic render by render_key |
@@ -62,8 +62,9 @@ Both layers are managed on screen, no longer only by the seed script.
   and sets how each renders and is priced.
 - **Signage.com sets every price.** `est_price` is what a franchisee sees and
   what the §8b documents carry to a lender, so no brand role ever enters one.
-  When the §8 Design Studio integration lands, its pricing engine's number is
-  Signage.com's price too; the team still confirms it.
+  When the §8 Design Studio integration lands, the price is fetched from its
+  pricing engine by the server (v2.6): nobody enters it, and the team prices by
+  hand only the sign types the engine cannot price.
 - **A brand admin proposes a new brand sign** from the active master catalog:
   a variant, the locked choices from that variant's `attribute_options`, a
   name, and a note. It arrives as `review_status = pending` and inactive, so no
@@ -239,7 +240,7 @@ A split request therefore reads:
 
 ## 7. Approval rules (the standard model)
 
-- `standard` items in a package, unmodified → auto_approved, corporate never sees them.
+- `standard` items in a package, unmodified or configured within their design limits (§8 v2.6) → auto_approved, corporate never sees them. A locked setting changed, or a limit exceeded, makes the item an `exception`.
 - `addon` → pending_review (unless brand_item.requires_review_override = false).
 - `exception` (flagged standard item) → always pending_review.
 - `replacement` (like-for-like of an active installed sign) → auto_approved, always.
@@ -247,19 +248,88 @@ A split request therefore reads:
 - Approval never requires signing in: the email buttons decide. A signed-in reviewer or brand admin can also decide from the dashboard (v2.3, §10); both paths write the same events.
 - Decisions are accepted only while the review is open, from package prep until the last decision (§6, v2.5). The review opens with the approval email, so neither path can decide ahead of it.
 
-## 8. Design Studio integration
+## 8. Design Studio integration (rewritten in v2.6)
 
-The existing retail Design Studio (placement → sign type → size slider → logo → generated 3D preview → spec sheet + price + TAT → deposit checkout) is reused via deep link / embed. Portal requirements — **confirm each with Usman before building**:
+The Signize Design Studio (sign type → logo → background and colours →
+materials and options → dimensions → live preview → price) is where signs are
+designed, at two moments: the brand admin designs each brand sign once, and a
+franchisee adjusts it for their store. The portal embeds the Studio; it never
+re-implements it.
 
-1. **Franchise/embed mode** that skips the retail lead-capture form (franchisee is already identified by token) — pass-through auth param.
-2. **Preview-only terminal state**: suppress the $100-deposit checkout; terminal action returns to the portal ("Attach to request"). Ordering happens portal-side after approval, and only when Signage.com is the vendor.
-3. **Deep-link params in:** master row / sign type (locked), pinned attributes, brand logo asset, size preset (from installed record for replacements), return_url with line-item token.
-4. **Structured data out:** mockup image URL, chosen size, spec sheet fields, price — JSON via redirect params or webhook, written to the line item.
-5. Sign-type picker locked to the brand item in franchise mode (or portal validates the returned type against the pinned spec at package prep).
+**1 · The brand admin designs the sign.** From a sign on the corporate Signs
+tab — a proposal or a live sign — the brand admin opens the Studio locked to
+that sign type, uploads the brand logo, chooses the background, colours,
+materials and options, and sets the dimensions. The Studio shows Signage.com's
+price as they go. Saving stores the design on the brand item (the Studio
+configuration, the mockup, and the price it produced). Making it part of the
+standard is the existing package edit (§2.3): the brand admin adds the sign to a
+store type's package.
 
-Call sites: (a) per standard-package item ("Instant mockup"), (b) catalog cards ("Design & add" — creates the line item with mockup attached), (c) standalone browse. Until integration lands, mockup_file_id stays nullable and the team curates mockups manually — everything else works.
+**2 · The brand admin says what a franchisee may change.** Each setting of the
+design is one of:
+- **Locked** — the franchisee sees it and cannot change it (logo, colours,
+  material: the brand control the program exists for);
+- **Adjustable within limits** — a range for a number (e.g. letter height
+  24–36"), or a list of allowed choices.
+This replaces the v2.4 split of `pinned_attributes` / `site_variables` with one
+rule per setting.
 
-DS prices are the quote source for direct-priced items; standin items always route to manual team pricing.
+**3 · The franchisee (owner or staff) adjusts it for their store.** Wherever a
+sign is listed for them — the setup package checklist, "Add a new sign", a
+replacement — it carries a Studio button. The Studio opens with the brand's
+design loaded and only the adjustable settings open, within their limits. The
+price updates as they change it. Confirming writes the configuration, the
+mockup and the price to the line item; they submit the request as today.
+
+**4 · Approval follows the design rules (§7).** A sign configured within its
+limits keeps its origin: a standard package sign stays standard and
+auto-approved; an add-on is still reviewed as an add-on. A locked setting
+changed, or an adjustable one taken outside its limits, makes the item an
+`exception` and it goes to corporate with the difference shown. The Studio
+enforces the limits; **the server re-checks the configuration against the
+brand item's rules at submission** and decides the origin itself — never from
+the browser (the same rule as #152 for packages).
+
+**5 · Price: Signage.com's, fetched from the Studio, entered by nobody.** No
+brand or franchisee role enters or edits a price, and neither does the team for
+a sign the engine can price. The Studio's pricing engine returns Signize's
+fulfillment cost; Signage.com's price is that cost under Signage.com's margin
+policy, which is the team's configuration and never shown to a brand. **The
+server fetches the price itself** (server-to-server, with the configuration)
+when a design is saved and again at submission, and snapshots it onto the line
+item (`est_price_snapshot`); a price posted back by the browser is display only.
+Sign types the engine cannot price (standin rows: pylons, monuments, awnings,
+wayfinding, digital menus, window vinyl) stay "Custom quote" and are priced by
+the team, as today. In the MVP the team still confirms the quote before it is
+delivered; the owner expects to drop that step once the engine's prices have a
+track record, so it is a per-brand setting, not a rule baked into the status
+machine.
+
+**6 · Nothing blocks on the Studio.** Until it is connected, or when it is
+unavailable, every flow works as it does today: listed `est_price`, the sign's
+picture or generic render, manual team mockups. (Owner to revisit whether an
+unavailable Studio should hold a franchisee's configuration step instead.)
+
+**Mechanics.** The interactive steps (1–3) embed the Studio in an iframe and
+receive the result by `postMessage` (configuration, mockup image, displayed
+price). Pricing and any mockup the portal needs without a person in the loop
+are server-side API calls with a server-held key. The portal stores every
+mockup in its own Storage and sets `mockup_file_id`; it never hot-links the
+engine. `docs/design-studio-findings.md` has the reconnaissance behind this.
+
+**Data (additive):** `brand_items.design` (jsonb: Studio configuration +
+mockup file + engine price at save) and `brand_items.design_rules` (jsonb:
+per setting, `locked` or the allowed range / choices); `line_items.design`
+(jsonb: the franchisee's configuration) beside the existing
+`mockup_file_id` and `est_price_snapshot`; a price source on each priced
+value (`engine` | `team`), so a document can say where a number came from.
+
+**Needed from Signize before building** (owner is providing the code and API):
+the embed mode hosted at a URL we may frame (`frame-ancestors`, CORS); a
+server-to-server API key for pricing and mockups (the dev service account is
+not shippable); a brand **logo image** as an input (today the Studio draws a
+text wordmark); the configuration as structured data in and out; and the
+margin policy that turns fulfillment cost into Signage.com's price.
 
 ## 8b. Financing, landlord approval, and permits (real-world sequence)
 
@@ -571,7 +641,7 @@ franchisee's stores, and a brand admin can't write a request.
 
 ## 11. Out of scope (MVP)
 
-Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (brand creation stays white-glove; brand admins invite users into an existing brand) · social sign-in · single sign-on with a franchisor's identity provider (not blocked: Supabase Auth supports SAML) · permissions finer than the five §10 roles · vendor portal · payments/deposits (single exception: the §8c Stripe checkout for DID fees) · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
+Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (brand creation stays white-glove; brand admins invite users into an existing brand) · social sign-in · single sign-on with a franchisor's identity provider (not blocked: Supabase Auth supports SAML) · permissions finer than the five §10 roles · vendor portal · payments/deposits (single exception: the §8c Stripe checkout for DID fees; a payment gateway for sign orders is under consideration, §12 Q11) · in-app messaging · CRM/ERP integrations · compliance/permit validation · multi-language · decline-with-alternative (v1.1) · rebrand diff view (v2) · request splitting UI polish beyond basic multi-recipient send.
 
 **Phase-2 backlog added in v2.1 (from lifecycle research; do not build, do not preclude in schema):**
 - De-identification workflow: on franchise exit, all branded signage must come down, sometimes within days, with trademark law behind it. installed_signs is the removal checklist; workflow adds removal tracking and proof photos for corporate legal.
@@ -581,7 +651,7 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (
 
 ## 12. Open questions
 
-1. Usman: the five DS integration requirements in §8 — which are feasible, and on what timeline? Until answered, mockups are manual and est_price comes from a static field.
+1. Signize: the items listed at the end of §8 (v2.6) — embed hosting, a server-to-server key, a logo image input, structured configuration in and out. The owner is providing the Studio code and API (Oct 2026). Until connected, mockups are manual and est_price comes from a static field.
 2. Which standin categories (esp. window vinyl/frosting if high-volume) should be promoted to direct pricing early?
 3. Pilot brand's real vendor policy — determines which tail gets exercised first.
 4. ~~Pilot franchisees single- or multi-unit?~~ Answered by v2.3: accounts give every franchisee a "My stores" home, single or multi-unit.
@@ -591,10 +661,23 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (
 8. Business model: what does corporate pay, if anything? Assumed free-to-corporate so far, never decided.
 9. Fast lane guardrails: does corporate want a dollar cap or annual limit on like-for-like auto-approval? Assumed unlimited.
 10. At-signing email registration: confirmed as a corporate SOP commitment and pilot success criterion (§8d)?
+11. Payment for sign orders: the owner raised adding a payment gateway (Oct 2026). Out of MVP scope today (§11); decide when, and whether it replaces the §8b invoice/receipt path or sits beside it.
+12. Margin policy (§8 v2.6): what turns the Studio's fulfillment cost into Signage.com's price — one global margin, per brand, or per sign type? No engine price can be shown until this is set.
+13. Quote confirmation (§8 v2.6): the owner expects to stop having the team confirm engine-priced quotes once the prices have a track record. When, and per brand?
 
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.
 
 ---
+
+## Changelog v2.5 → v2.6 (Oct 2026)
+
+From the owner's answers on 2 Oct (DECISIONS #164). **Awaiting the owner's review.** Nothing is built yet; the Studio code and API are to come.
+
+- **§8 rewritten:** the brand admin designs each sign in the Studio and sets each setting locked or adjustable within limits; franchisees (owner or staff) adjust within those limits from any list of signs; the result is stored on the brand item and line item.
+- **§7:** a sign configured within its limits keeps its approval route; outside them it is an `exception`. The server re-checks at submission.
+- **§2.3 / §8:** the price is Signage.com's, fetched by the server from the Studio's engine, and entered by no brand or franchisee role; a price from the browser is display only. Standin types stay team-priced. Team confirmation of quotes becomes a per-brand setting.
+- **§2.2:** `pinned_attributes` / `site_variables` superseded by `design_rules` once the Studio is connected.
+- **§11 / §12:** a payment gateway for sign orders noted as under consideration; new open questions on margin policy and dropping quote confirmation.
 
 ## Changelog v2.4 → v2.5 (Oct 2026)
 
