@@ -1,5 +1,24 @@
 # Where the build is
 
+## Pick up here (end of 2 Oct 2026)
+
+- **Freshbites is Studio-only for now** (#171): seven active signs, each designed
+  with the Freshbites logo, engine-priced, with a mockup drawn in its own style.
+  Window Frosting, Entrance Sign and Road Sign are inactive. Packages hold only
+  Storefront + Lobby Letters (Inline $1,033).
+- **Two questions left with the owner:** engine prices run far below the old
+  fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
+  margins per sign type on /admin/pricing? And which signs belong in the
+  standard packages now?
+- **Next build, in order:** the Studio in "request changes" (resubmit a design);
+  the per-brand switch to skip the team's quote confirmation (v2.6); mockups
+  for custom-quote types (they render — pylon, frosting — just not priced).
+- **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
+  from the owner's team (the session token expires; renewing needs their 2FA
+  code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
+- **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
+  Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
 ## 2 Oct 2026 (late): a store set up and installed, start to finish, by hand
 
 - **Local data reset** (owner's ask): every request, line, installed sign and
