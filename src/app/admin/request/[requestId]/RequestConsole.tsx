@@ -491,7 +491,7 @@ function ItemsPanel({ request, act }: { request: RequestDetail; act: Act }) {
           number on them.
         </p>
       )}
-      <div className="space-y-3">
+      <div className="divide-y divide-gray-100 overflow-hidden rounded-lg border border-gray-200">
         {request.items.map((item) => (
           <ItemRow key={item.id} request={request} item={item} act={act} />
         ))}
@@ -506,7 +506,7 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
   const mockup = item.files.find((file) => file.kind === 'mockup');
 
   return (
-    <div className="rounded-lg border border-gray-200 p-3">
+    <div className="p-3">
       <div className="flex gap-3">
         <SignThumbnail
           renderKey={item.render_key} imagePath={item.image_path}
@@ -571,7 +571,7 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
           )}
 
           {/* Manual mockup upload — the whole mockup story until Session 7. */}
-          <div className="mt-2 max-w-sm">
+          <div className="mt-1.5">
             {mockup ? (
               <p className="text-[11px] text-gray-600">
                 Mockup attached:{' '}
@@ -586,7 +586,8 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
               </p>
             ) : (
               <PhotoUpload
-                label="Attach a mockup for this item"
+                label="Attach a mockup"
+                compact
                 prefix={request.brand.slug}
                 value={null}
                 onChange={(file) => {

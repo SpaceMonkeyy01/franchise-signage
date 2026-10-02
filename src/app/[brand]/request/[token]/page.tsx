@@ -170,7 +170,7 @@ export default async function RequestStatusPage({
                     </h2>
                     <p className="text-xs text-gray-500">{group.hint}</p>
                   </div>
-                  <div className="mt-2 space-y-3">
+                  <div className="mt-2 divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                     {items.map((item) => (
                       <ItemCard
                         key={item.id}
@@ -284,11 +284,7 @@ function ItemCard({
   const policy = item.vendor_policy_override ?? brand.vendor_policy;
 
   return (
-    <article
-      className={`rounded-xl border bg-white p-4 shadow-sm ${
-        flagged ? 'border-rose-300 ring-1 ring-rose-200' : 'border-gray-200'
-      }`}
-    >
+    <article className={`p-4 ${flagged ? 'border-l-4 border-l-rose-400 bg-rose-50/60' : ''}`}>
       <div className="flex gap-3">
         <SignThumbnail
           renderKey={item.render_key}
@@ -297,7 +293,12 @@ function ItemCard({
           className="h-12 w-16 shrink-0 rounded"
         />
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
+          <div className="flex items-baseline justify-between gap-3">
+            <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
+            <span className="shrink-0 text-sm font-medium text-gray-900">
+              {formatPrice(item.est_price_snapshot)}
+            </span>
+          </div>
 
           {item.spec_summary && (
             <p className="mt-1 text-xs leading-relaxed text-gray-500">{item.spec_summary}</p>
@@ -308,9 +309,6 @@ function ItemCard({
               {originLabel(item.origin)}
             </span>
             {item.sizing && <span>{item.sizing}</span>}
-            <span className="font-medium text-gray-900">
-              {formatPrice(item.est_price_snapshot)}
-            </span>
             <VendorChip
               policy={policy}
               vendorName={brand.vendor_name}

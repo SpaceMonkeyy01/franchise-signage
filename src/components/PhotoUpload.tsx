@@ -18,6 +18,7 @@ export function PhotoUpload({
   value,
   onChange,
   accept = 'image/jpeg,image/png,image/webp,image/heic,application/pdf',
+  compact = false,
 }: {
   label: string;
   /** Storage folder — the brand slug, so dev uploads are legible on disk. */
@@ -25,6 +26,8 @@ export function PhotoUpload({
   value: StoredObject | null;
   onChange: (file: StoredObject | null) => void;
   accept?: string;
+  /** A small text button rather than the full-width drop target, for dense lists. */
+  compact?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +76,11 @@ export function PhotoUpload({
           type="button"
           disabled={pending}
           onClick={() => input.current?.click()}
-          className="w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-xs text-gray-500 transition-colors hover:border-gray-400 disabled:opacity-50"
+          className={
+            compact
+              ? 'text-[11px] font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline disabled:opacity-50'
+              : 'w-full rounded-lg border-2 border-dashed border-gray-300 py-3 text-xs text-gray-500 transition-colors hover:border-gray-400 disabled:opacity-50'
+          }
         >
           {pending ? 'Uploading…' : `↑ ${label}`}
         </button>
