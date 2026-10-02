@@ -10,6 +10,7 @@
 // vendor package is `notifyQuotePackages`, called after this commits — a mail
 // failure must not unroute a request.
 
+import { plural } from '../format';
 import { createPgStatusStore } from './pg-status-store';
 import { transaction } from './pool';
 import { resolveVendorPolicy } from '../status/machine';
@@ -176,7 +177,7 @@ export async function routeRequestForQuote(requestId: string): Promise<RoutingRe
           (pkg) =>
             `Quote package emailed to ${pkg.recipientName} <${pkg.recipientEmail}>${
               pkg.ccEmail ? ` · cc ${pkg.ccEmail}` : ''
-            } — ${pkg.pricedCount} priced item(s) $${pkg.pricedTotal.toLocaleString('en-US')}${
+            } — ${plural(pkg.pricedCount, 'priced item')} $${pkg.pricedTotal.toLocaleString('en-US')}${
               pkg.manualCount ? ` + ${pkg.manualCount} manual-priced` : ''
             }`,
         )

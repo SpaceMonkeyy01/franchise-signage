@@ -1,5 +1,25 @@
 # Where the build is
 
+## 2 Oct 2026 (late): a store set up and installed, start to finish, by hand
+
+- **Local data reset** (owner's ask): every request, line, installed sign and
+  order email removed; Oak Plaza and Cedar Park kept, empty. The brand admin
+  designed Storefront Letters (24", 18–36 adjustable) and Lobby Letters (18",
+  12–24) in the Studio with the Freshbites logo.
+- **Dana set up Freshbites — Riverside** (Inline, lender, opens Jan 15 2027)
+  through the normal screens: photos and notes per sign, Storefront Letters
+  customised to 30" (00), Neon Leaf as an add-on. REQ-0912 then went
+  through prep, corporate approval, routing, manual pricing, quote (,983),
+  acceptance, invoice INV-0727, payment, production, shipping, installation.
+  Screenshots: shots/flow-* (setup) and shots/life-* (after).
+- **Bugs found and fixed** (#169, #170): uploads open to anyone; a phone
+  photo over 1 MB crashed setup; opening dates a day early east of UTC; an
+  as-designed sign carried no design or quote sheet; a designed line showed
+  the brand's spec; the last "(s)" plurals; installed signs showed the
+  brand's mockup, not the one ordered.
+- **Local smoke runs need the demo orders back:** `npm run dev:db:reset`
+  (which also removes Riverside). The live project was not touched.
+
 ## 2 Oct 2026 (night): the Design Studio, both sides (SPEC v2.6 §8)
 
 - **Brand admins design a sign** (#166): "Design" on each sign in the Signs tab

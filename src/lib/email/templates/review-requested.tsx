@@ -8,6 +8,7 @@
 // One decision per item, never one for the request: approving four signs and
 // declining a fifth is the normal case (SPEC §7).
 
+import { plural } from '../../format';
 import { EmailButton, EmailLayout, money, brandColors, type EmailBrand } from '../layout';
 
 export interface ReviewItem {
@@ -51,7 +52,7 @@ export function ReviewRequestedEmail(props: ReviewRequestedProps) {
   return (
     <EmailLayout
       brand={props.brand}
-      preview={`${props.items.length} sign(s) need your approval — ${props.locationName}`}
+      preview={`${plural(props.items.length, 'sign')} ${props.items.length === 1 ? 'needs' : 'need'} your approval — ${props.locationName}`}
       footer={
         <p style={{ margin: 0 }}>
           These buttons expire on {new Date(props.expiresAt).toLocaleDateString('en-US')}, and are
@@ -81,7 +82,9 @@ export function ReviewRequestedEmail(props: ReviewRequestedProps) {
             fontSize: 13,
           }}
         >
-          <strong>{props.autoApprovedCount} item(s) are already proceeding</strong> — they are
+          <strong>
+            {plural(props.autoApprovedCount, 'item')} {props.autoApprovedCount === 1 ? 'is' : 'are'} already proceeding
+          </strong> — they are
           standard package signs or like-for-like replacements against specs you have already
           approved. Nothing below is one of those.
         </p>

@@ -1738,6 +1738,25 @@ item 7's "CRUD UI only when onboarding brand #2".
        and picture — not the brand's default; the franchisee's site note is
        kept beside the Studio size rather than replaced by it.
 
+170. **REQ-0912 driven from submission to installed, by hand** (2 Oct). Team
+     prepared it; corporate's reviewer approved the add-on from the dashboard
+     with a note; the team routed it (one package, Signage.com), priced the two
+     custom signs ($1,200, $950) and delivered $4,983; Dana downloaded the
+     budgetary quote (both Studio mockups under "Sign designs") and accepted;
+     the team invoiced INV-0727, recorded the loan disbursement, and moved it
+     through production, shipping and installation. Riverside's record holds
+     five installed signs; corporate's dashboard reads $4,983 program spend.
+     Every email went where it should, the vendor package carried both quote
+     sheets and the 30" Studio size, and no page threw. Fixed on the way:
+     - the remaining "(s)" plurals, in email subjects and previews ("1 sign(s)
+       need approval"), the routing timeline entry, the console's waiting
+       line and the SLA events;
+     - an installed sign shows the mockup of the line it came from (Dana's
+       30" letters), not the brand's 24" default.
+     Noted, not changed: approving a request's last pending sign removes its
+     card from the Approvals tab at once, taking the "approved." confirmation
+     with it; the tab then reads "Nothing is waiting on you", which says it.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

@@ -6,6 +6,7 @@
 // the franchisee's resubmission) fire this after the transition succeeds, and a
 // failed send never rolls one back.
 
+import { plural } from '../format';
 import { getRequestById } from '../db/queries';
 import { query, queryOne } from '../db/pool';
 import { mintReviewLinks } from '../review/links';
@@ -154,8 +155,8 @@ export async function notifyReviewNeeded(requestId: string): Promise<NotifyOutco
       to: recipient.to,
       cc: recipient.cc,
       subject: resubmission
-        ? `Updated: ${pending.length} sign(s) back for approval — ${request.location.name}`
-        : `${pending.length} sign(s) need approval — ${request.location.name}`,
+        ? `Updated: ${plural(pending.length, 'sign')} back for approval — ${request.location.name}`
+        : `${plural(pending.length, 'sign')} ${pending.length === 1 ? 'needs' : 'need'} approval — ${request.location.name}`,
       html,
       // Sent AS the brand (SPEC §8d): the reviewer works for the franchisor, and
       // this is their own program writing to them.

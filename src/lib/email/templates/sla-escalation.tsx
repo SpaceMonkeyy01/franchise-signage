@@ -5,6 +5,7 @@
 // approver and should not be nudged into deciding on someone else's behalf. It
 // says what is waiting, for how long, and where the actual approval lives.
 
+import { plural } from '../../format';
 import { EmailButton, EmailLayout, brandColors, type EmailBrand } from '../layout';
 
 export interface SlaEscalationProps {
@@ -24,7 +25,7 @@ export function SlaEscalationEmail(props: SlaEscalationProps) {
   return (
     <EmailLayout
       brand={props.brand}
-      preview={`${props.pendingCount} sign(s) have been awaiting approval for ${props.daysWaiting} days`}
+      preview={`${plural(props.pendingCount, 'sign')} ${props.pendingCount === 1 ? 'has' : 'have'} been awaiting approval for ${props.daysWaiting} days`}
     >
       <p style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700, color: '#111827' }}>
         Signage approval is overdue
@@ -34,7 +35,7 @@ export function SlaEscalationEmail(props: SlaEscalationProps) {
       </p>
 
       <p style={{ margin: '0 0 12px', fontSize: 14, color: '#374151' }}>
-        {props.pendingCount} sign(s) have been waiting on {props.reviewerEmail} for{' '}
+        {plural(props.pendingCount, 'sign')} {props.pendingCount === 1 ? 'has' : 'have'} been waiting on {props.reviewerEmail} for{' '}
         <strong>{props.daysWaiting} days</strong>, past the {props.slaDays}-day review window
         configured for {props.brand.name}.
       </p>

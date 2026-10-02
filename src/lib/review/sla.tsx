@@ -16,6 +16,7 @@
 // a lapse is only acted on once per package version, which is recorded as an
 // event and checked before acting.
 
+import { plural } from '../format';
 import { query, queryOne } from '../db/pool';
 import { render } from '../email/layout';
 import { notifyReviewNeeded } from '../email/notify';
@@ -128,13 +129,13 @@ export async function runReviewSla(now = new Date()): Promise<SlaRunResult> {
 }
 
 const SUMMARY: Record<SlaLapse['action'], (days: number) => string> = {
-  remind: (days) => `Review SLA lapsed after ${days} day(s) — reminder sent to the reviewer`,
+  remind: (days) => `Review SLA lapsed after ${plural(days, 'day')} — reminder sent to the reviewer`,
   escalate: (days) =>
-    `Review SLA lapsed after ${days} day(s) — escalated per brand policy. No item was decided.`,
+    `Review SLA lapsed after ${plural(days, 'day')} — escalated per brand policy. No item was decided.`,
   // Deliberate wording: the policy is to proceed, and proceeding is a decision
   // for a human. Nothing auto-approves (SPEC §7).
   auto_forward: (days) =>
-    `Review SLA lapsed after ${days} day(s) — brand policy is to proceed without corporate. ` +
+    `Review SLA lapsed after ${plural(days, 'day')} — brand policy is to proceed without corporate. ` +
     `The Signage.com team must confirm before anything is routed; no item was approved.`,
 };
 

@@ -203,10 +203,14 @@ export async function getLocationsForBrand(
   const signs = await rows<InstalledSignRow & { location_id: string }>(
     `select s.id, s.location_id, s.brand_item_id, bi.name as brand_item_name,
             bi.spec_summary, bi.est_price, bi.vendor_policy_override,
-            mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, s.sizing, s.installed_at
+            mc.render_key,
+            -- The sign as it was ordered: its own Studio mockup first.
+            coalesce(li.design->>'mockupPath', bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,
+            s.sizing, s.installed_at
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id
+       left join line_items li on li.id = s.source_line_item_id
       where s.location_id = any($1) and s.status = 'active'
       order by bi.sort_order`,
     [ids],
@@ -658,11 +662,14 @@ export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]
 export function getInstalledSignsForLocation(locationId: string): Promise<InstalledSignRow[]> {
   return rows<InstalledSignRow>(
     `select s.id, s.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
-            bi.est_price, bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, s.sizing, s.installed_at,
+            bi.est_price, bi.vendor_policy_override, mc.render_key,
+            coalesce(li.design->>'mockupPath', bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,
+            s.sizing, s.installed_at,
             not bi.active as retired
        from installed_signs s
        join brand_items bi on bi.id = s.brand_item_id
        join master_catalog mc on mc.id = bi.master_catalog_id
+       left join line_items li on li.id = s.source_line_item_id
       where s.location_id = $1 and s.status = 'active'
       order by bi.sort_order`,
     [locationId],
