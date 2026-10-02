@@ -2564,6 +2564,34 @@ await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on 
 await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
 await expectVisible(page, 'iframe[src$="/freshbites/corporate"]', 'and its corporate tab opens the dashboard');
 
+// ------------------------------------------------ margins (DECISIONS #165)
+// The team sets a margin per brand and sign type; the example price follows
+// it, the change is logged with no brand, and clearing it falls back.
+console.log('\nPricing: margins per brand and sign type (SPEC v2.6 §8)');
+await page.goto(`${BASE}/admin/pricing`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'h1:text-is("Pricing")', 'the team has a Pricing page');
+await expectVisible(page, 'text=$1,000 cost → $1,667','the standard margin is 40%: $1,000 cost → $1,667');
+const channelMargin = page.getByLabel('Illuminated Channel Letters margin').first();
+await channelMargin.fill('30');
+await channelMargin.press('Enter');
+await expectVisible(page, 'text=$1,000 cost → $1,429','a margin per brand and sign type: 30% → $1,429');
+const marginLog = await withDb(async (client) =>
+  (
+    await client.query(
+      `select brand_id, summary from catalog_events where kind = 'margin_set' order by created_at desc limit 1`,
+    )
+  ).rows[0],
+);
+record(
+  'logged, with no brand, so no brand role can read it',
+  marginLog?.brand_id === null && /Illuminated Channel Letters from the default to 30%/.test(marginLog?.summary ?? ''),
+  marginLog?.summary,
+);
+await channelMargin.fill('');
+await channelMargin.press('Enter');
+await expectCount(page, 'text=$1,000 cost → $1,429', 0,'emptied, it falls back to the brand and standard margin');
+await withDb((client) => client.query(`delete from catalog_events where kind = 'margin_set'`));
+
 // --------------------------------------------------------- show password
 {
   const eyeContext = await browser.newContext();

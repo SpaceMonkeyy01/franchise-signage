@@ -1627,6 +1627,25 @@ item 7's "CRUD UI only when onboarding brand #2".
      Not yet built: waiting on the Studio code and API, which the owner is
      providing, and on a margin policy (fulfillment cost → price, §12 Q12).
 
+165. **Margins: per brand and per sign type, set by the team** (owner, 2 Oct;
+     answers SPEC §12 Q12). `pricing_margins` holds a standard margin (40% to
+     start, "a standard value for now"), an optional default per brand, and an
+     optional margin per brand and sign type; the most specific applies. Set on
+     `/admin/pricing`, team only.
+     - **A margin, not a markup:** price = cost ÷ (1 − margin), the way
+       Signize's own estimates compute it. The old Studio copy's placeholder
+       treated 45% as a markup on cost; a 40% margin is a 67% markup.
+     - **"Sign type" is `master_catalog.sign_type`** (e.g. Illuminated
+       Channel Letters), the level the engine prices; its variants share a
+       margin. Custom-quote (standin) types are not listed: they are priced by
+       hand.
+     - **No brand role sees a margin.** The table has a team-only policy, and
+       a change is logged to `catalog_events` with no brand_id, which brand
+       roles cannot read. `scripts/rls-behaviour.ts` checks both.
+     - Not applied to any price yet: nothing calls the engine until the
+       Signize integration is built. The engine call is proven by hand (2 Oct,
+       session login: 24" Halo Lit letters, $310 cost, 14 days, ~14 s).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

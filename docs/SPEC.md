@@ -662,7 +662,7 @@ Modify/remove/rebrand intents (stub in UI) · franchisor self-serve onboarding (
 9. Fast lane guardrails: does corporate want a dollar cap or annual limit on like-for-like auto-approval? Assumed unlimited.
 10. At-signing email registration: confirmed as a corporate SOP commitment and pilot success criterion (§8d)?
 11. Payment for sign orders: the owner raised adding a payment gateway (Oct 2026). Out of MVP scope today (§11); decide when, and whether it replaces the §8b invoice/receipt path or sits beside it.
-12. Margin policy (§8 v2.6): what turns the Studio's fulfillment cost into Signage.com's price — one global margin, per brand, or per sign type? No engine price can be shown until this is set.
+12. ~~Margin policy (§8 v2.6).~~ **Answered (2 Oct, #165):** per brand and per sign type, set by the team on `/admin/pricing`, over a brand default and a standard margin (40% to start). Price = cost ÷ (1 − margin).
 13. Quote confirmation (§8 v2.6): the owner expects to stop having the team confirm engine-priced quotes once the prices have a track record. When, and per brand?
 
 Note: a fuller decision list with owners lives in the team workbook (franchise-studio-stakeholders.xlsx, Open Questions sheet). The items above are the ones that touch the build.

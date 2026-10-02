@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     // (CLAUDE.md): we never modify it and never import from it, so its lint
     // findings are noise that would drown our own.
     "reference/**",
+    // The owner's copy of the signize.ai frontend (docs/signize-integration.md):
+    // read, never imported, gitignored.
+    "frontend.signize.ai-main*/**",
     // docs/flow-demo.jsx is the canonical UX reference, not app source — it is
     // read and matched against, never compiled or shipped.
     "docs/**",

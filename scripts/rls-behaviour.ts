@@ -1010,6 +1010,39 @@ const checks: NamedCheck[] = [
       );
     },
   },
+  // ------------------------------------------------ margins (DECISIONS #165)
+  {
+    label: "margins are the team's alone: no brand role reads one, sets one, or sees one change",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into pricing_margins (brand_id, sign_type, margin_percent)
+        values ('${alphaBrandId}', null, 33);
+        insert into catalog_events (brand_id, kind, actor_label, summary)
+        values (null, 'margin_set', 'someone', 'Margin changed')`);
+      const margins = () => count(db, `select count(*) as n from pricing_margins`);
+      const logged = () => count(db, `select count(*) as n from catalog_events where kind = 'margin_set'`);
+      const set = `insert into pricing_margins (brand_id, sign_type, margin_percent)
+                   values ('${alphaBrandId}', 'Pylon Signs', 1)`;
+      await asAuthenticated(db, PERSON.team);
+      const team = await margins();
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const admin = await margins();
+      const adminLog = await logged();
+      const adminSet = await refusal(db, set);
+      await asAuthenticated(db, PERSON.alphaReviewer);
+      const reviewer = await margins();
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await margins();
+      await asOwner(db);
+      await db.exec(`delete from pricing_margins where brand_id is not null;
+                     delete from catalog_events where kind = 'margin_set'`);
+      return expect(
+        team >= 2 && admin === 0 && adminLog === 0 && !!adminSet && reviewer === 0 && owner === 0,
+        `team ${team}, admin ${admin} (log ${adminLog}, set refused ${!!adminSet}), reviewer ${reviewer}, owner ${owner} (want ≥2, 0, 0, true, 0, 0)`,
+      );
+    },
+  },
   // ------------------------------------------- store types (DECISIONS #156)
   {
     label: 'a brand admin adds and renames store types in their brand only; a reviewer cannot',

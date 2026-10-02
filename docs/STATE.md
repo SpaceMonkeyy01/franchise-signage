@@ -1,5 +1,19 @@
 # Where the build is
 
+## 2 Oct 2026 (evening): margins, and the Signize engine reached
+
+- **Margins per brand and sign type** (#165): `/admin/pricing` (team only) sets
+  a standard margin (40% to start), a default per brand, and a margin per brand
+  and sign type; the most specific applies. Price = cost ÷ (1 − margin).
+  Migration `20261002090000_pricing_margins.sql`; no brand role can read a
+  margin or its log entry (new RLS check). Not applied to a price yet.
+- **Signize engine reached:** the owner's signize.ai login (2FA verified) gives a
+  session token, kept in `.env.local` as `SIGNIZE_SESSION_TOKEN`. The keyed v1
+  API refuses it (needs an `sz_live_` key, which the owner's team is arranging);
+  the session endpoint `/api/sign-pricing` priced 24" Halo Lit letters at 10
+  cost, 14 days, in ~14 s. Findings: docs/signize-integration.md.
+- Checks: **318 smoke**, **197 unit**, **65 schema** (44 behavioural), typecheck, lint.
+
 ## 2 Oct 2026 (later): accounts proven on the live Supabase project
 
 - **docs/SUPABASE.md §7, steps 7.1.2–7.4, all pass against the live project**
