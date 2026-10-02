@@ -5,11 +5,20 @@
 // SERVER ONLY. Signize's cost goes into engine_quotes (team only) and nowhere
 // else; what returns to a page is our price.
 
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import type { CatalogActor } from '../catalog/manage';
 import { query, queryOne, transaction } from '../db/pool';
 import { priceFromCost, resolveMargin } from '../pricing/margin';
 import { listMarginRows } from '../pricing/margins';
-import { EngineRejectedError, EngineUnavailableError, priceDesign, type AllowedOptions } from '../signize/client';
+import {
+  EngineRejectedError,
+  EngineUnavailableError,
+  priceDesign,
+  renderMockup,
+  type AllowedOptions,
+} from '../signize/client';
 import { getUpload, putUpload } from '../storage';
 import { defaultRules, designSummary, validRules, type DesignRules, type SignDesign } from './design';
 
@@ -22,6 +31,10 @@ export interface DesignableSign {
   name: string;
   review_status: string;
   sign_type: string;
+  placement: 'indoor' | 'outdoor';
+  /** The mockup engine's style for this type (master_catalog.render_key). */
+  render_key: string | null;
+  fabricated_finish: string | null;
   pricing_type: string | null;
   pricing_basis: 'direct' | 'standin';
   attribute_options: AllowedOptions;
@@ -34,7 +47,8 @@ export interface DesignableSign {
 export async function getDesignableSign(itemId: string, brandId: string): Promise<DesignableSign | null> {
   return queryOne<DesignableSign>(
     `select bi.id, bi.brand_id, b.slug as brand_slug, bi.name, bi.review_status,
-            mc.sign_type, mc.pricing_type, mc.pricing_basis, mc.attribute_options,
+            mc.sign_type, mc.placement, mc.render_key, mc.fabricated_finish,
+            mc.pricing_type, mc.pricing_basis, mc.attribute_options,
             bi.design, bi.design_rules, bi.pinned_attributes, bi.est_price
        from brand_items bi
        join brands b on b.id = bi.brand_id
@@ -70,6 +84,24 @@ export async function quoteDesign(
   const logo = await getUpload(input.logo.path);
   if (!logo) throw new StudioError('Upload the logo again — the stored copy could not be read.');
 
+  const logoFile = { bytes: logo.body, contentType: logo.contentType, fileName: input.logo.fileName };
+  // Price and picture together: the pricing call's own picture is a generic
+  // "letters on a wall", so the sign is drawn in its own style by the mockup
+  // engine, side by side with the pricing call (no extra wait). A failed
+  // drawing falls back to the pricing call's picture rather than to none.
+  const styled = sign.render_key
+    ? renderMockup({
+        style: sign.render_key,
+        logo: logoFile,
+        scene: await sceneFor(sign.placement),
+        fabricatedFinish: sign.fabricated_finish,
+        trimless: /trimless/i.test(input.options.trim_type ?? ''),
+      }).catch((error) => {
+        console.error('styled mockup failed', error instanceof Error ? error.message : error);
+        return null;
+      })
+    : Promise.resolve(null);
+
   let quote;
   try {
     quote = await priceDesign(
@@ -78,7 +110,7 @@ export async function quoteDesign(
         options: input.options,
         dimension: input.dimension,
         depthInches: input.depthInches,
-        logo: { bytes: logo.body, contentType: logo.contentType, fileName: input.logo.fileName },
+        logo: logoFile,
       },
       offeredOptions(sign),
     );
@@ -95,10 +127,11 @@ export async function quoteDesign(
   const price = priceFromCost(quote.cost, margin.percent);
   if (price === null) throw new StudioError('The Studio returned no usable price.');
 
-  const mockupPath = quote.mockup
+  const picture = (await styled) ?? quote.mockup;
+  const mockupPath = picture
     ? (
         await putUpload(
-          new File([new Uint8Array(quote.mockup.bytes)], 'mockup.jpg', { type: quote.mockup.contentType }),
+          new File([new Uint8Array(picture.bytes)], 'mockup.jpg', { type: picture.contentType }),
           `${sign.brand_slug}/mockups`,
         )
       ).storagePath
@@ -196,6 +229,25 @@ async function storeSideView(url: string | null, brandSlug: string): Promise<str
   } catch {
     return null;
   }
+}
+
+/**
+ * The default background a sign is drawn onto, by where it goes: Signize's
+ * own two scenes (src/lib/signize/scenes). A franchisee's storefront photo can
+ * replace it later.
+ */
+const scenes = new Map<string, { bytes: Buffer; contentType: string; fileName: string }>();
+async function sceneFor(placement: 'indoor' | 'outdoor') {
+  const known = scenes.get(placement);
+  if (known) return known;
+  const fileName = placement === 'indoor' ? 'indoor.png' : 'outdoor.jpg';
+  const scene = {
+    bytes: await readFile(join(process.cwd(), 'src', 'lib', 'signize', 'scenes', fileName)),
+    contentType: placement === 'indoor' ? 'image/png' : 'image/jpeg',
+    fileName,
+  };
+  scenes.set(placement, scene);
+  return scene;
 }
 
 /** A brand admin's logo for the Studio: PNG, JPG or WEBP, small enough for the engine. */

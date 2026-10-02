@@ -12,11 +12,13 @@
 import {
   EngineRejectedError,
   designKey,
+  mockupFields,
   pricingFields,
   readPricing,
   type AllowedOptions,
   type EngineDesign,
   type EngineQuote,
+  type MockupDesign,
 } from './engine';
 
 export { EngineRejectedError };
@@ -103,4 +105,51 @@ export async function priceDesign(design: EngineDesign, allowed: AllowedOptions)
   } finally {
     inFlight.delete(key);
   }
+}
+
+const mockups = new Map<string, { at: number; image: { bytes: Buffer; contentType: string } }>();
+
+/**
+ * Draw a sign in its own style onto a scene (POST /api/generate-mockup).
+ * Cached like quotes: the same style, logo and scene draw the same picture,
+ * and every call is billed.
+ */
+export async function renderMockup(design: MockupDesign): Promise<{ bytes: Buffer; contentType: string }> {
+  const token = process.env.SIGNIZE_SESSION_TOKEN;
+  if (!token) throw new EngineUnavailableError('The design engine is not connected.');
+  const fields = mockupFields(design);
+  const key = designKey([...fields, ['scene', design.scene.fileName]], {
+    ...design.logo,
+    bytes: Buffer.concat([design.logo.bytes, design.scene.bytes.subarray(0, 4096)]),
+  });
+  const cached = mockups.get(key);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.image;
+
+  const form = new FormData();
+  form.append('LogoImage', new Blob([new Uint8Array(design.logo.bytes)], { type: design.logo.contentType }), design.logo.fileName);
+  form.append('sceneImage', new Blob([new Uint8Array(design.scene.bytes)], { type: design.scene.contentType }), design.scene.fileName);
+  for (const [name, value] of fields) form.append(name, value);
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}/generate-mockup`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch {
+    throw new EngineUnavailableError('The mockup engine could not be reached.');
+  }
+  if (response.status === 401 || response.status === 403) {
+    throw new EngineUnavailableError('The design engine refused our credentials; the Signize session needs renewing.');
+  }
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!response.ok || !contentType.startsWith('image/')) {
+    throw new EngineUnavailableError(`The mockup engine returned no image (${response.status}).`);
+  }
+  const image = { bytes: Buffer.from(await response.arrayBuffer()), contentType: contentType.split(';')[0] };
+  mockups.set(key, { at: Date.now(), image });
+  while (mockups.size > CACHE_LIMIT) mockups.delete(mockups.keys().next().value!);
+  return image;
 }

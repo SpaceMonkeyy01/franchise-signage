@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EngineRejectedError, designKey, pricingFields, readPricing, type EngineDesign } from '../engine';
+import { EngineRejectedError, designKey, mockupFields, pricingFields, readPricing, type EngineDesign } from '../engine';
 
 const ALLOWED = {
   mounting_type: [{ value: 'Flush/Stud mounted' }, { value: 'Standard Raceway' }],
@@ -96,5 +96,25 @@ describe('the Signize engine response', () => {
     expect(() => readPricing({ success: false, message: 'Sign type not found' })).toThrow('Sign type not found');
     expect(() => readPricing({ success: true, calculation: { data: { totalCost: 0 } } })).toThrow(EngineRejectedError);
     expect(() => readPricing(null)).toThrow(EngineRejectedError);
+  });
+});
+
+describe('the Signize mockup request', () => {
+  const scene = { bytes: Buffer.from('scene'), contentType: 'image/jpeg', fileName: 'outdoor.jpg' };
+  it('draws the sign in its own style, centred, lit', () => {
+    expect(Object.fromEntries(mockupFields({ style: 'a-frame-sign', logo: LOGO, scene }))).toEqual({
+      signType: 'a-frame-sign',
+      mountingType: 'flush',
+      xPercent: '50',
+      yPercent: '50',
+      signSize: '100',
+      isLightingOn: 'true',
+    });
+  });
+  it('passes the trim and finish where the style uses them', () => {
+    const faceLit = Object.fromEntries(mockupFields({ style: 'face-lit-channel', logo: LOGO, scene, trimless: true }));
+    expect(faceLit).toMatchObject({ faceLitTrimStyle: 'trimless', faceLitReturnColor: 'logo-match' });
+    const fabricated = Object.fromEntries(mockupFields({ style: 'fabricated-non-lit', logo: LOGO, scene, fabricatedFinish: 'goldenMirror' }));
+    expect(fabricated.fabricatedFinish).toBe('goldenMirror');
   });
 });

@@ -1757,6 +1757,30 @@ item 7's "CRUD UI only when onboarding brand #2".
      card from the Approvals tab at once, taking the "approved." confirmation
      with it; the tab then reads "Nothing is waiting on you", which says it.
 
+171. **Mockups are drawn in the sign's own style; Freshbites keeps only the
+     signs the Studio can price** (owner, 2 Oct: "pricing name is of no
+     concern … I just want to be able to generate the mockups"; "we will only
+     have those signs set up for Freshbites for now"; the Freshbites logo).
+     - **The pricing call's picture is generic** — halo-lit letters on a wall
+       for an A-frame and a lightbox alike. The Studio now draws each sign with
+       the mockup engine (`POST /api/generate-mockup`) in its
+       `master_catalog.render_key` style onto Signize's indoor or outdoor
+       scene by placement, alongside the pricing call; the pricing picture is
+       only the fallback when that drawing fails.
+     - **An unknown style is not an error there:** it quietly draws letters.
+       Opening Banner had no render_key; it gets `vinyl-graphics-wall-wraps-full`
+       (the old Studio's choice; Signize has no banner style), by migration
+       `20261002120000` and in the seed TSV.
+     - **Mockups work for the custom-quote types too** — a pylon and window
+       frosting render properly — so they can be designed for pictures later
+       even though their price stays manual. Not built yet: those types are
+       deactivated for Freshbites.
+     - Freshbites now: seven active signs, every one designed with its logo
+       and engine-priced (Storefront $700, Lobby $333, Menu Board $667, Blade
+       $467, A-Frame $133, Neon Leaf $167, Banner $467); Window Frosting,
+       Entrance Sign and Road Sign inactive (Riverside keeps its installed
+       ones). Packages hold Storefront and Lobby letters only.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

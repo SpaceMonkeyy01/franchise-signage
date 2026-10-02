@@ -127,3 +127,41 @@ export function designKey(fields: readonly [string, string][], logo: EngineFile)
   hash.update(logo.bytes);
   return hash.digest('hex');
 }
+
+// ------------------------------------------------------------------ mockups
+//
+// The pricing call returns a picture too, but it is the same generic "letters
+// on a wall" whatever the sign type (2 Oct 2026: an A-frame and a lightbox
+// both came back as halo-lit letters). The mockup engine draws the real thing
+// — an A-frame, a lightbox, a pylon — from a style key, master_catalog's
+// render_key. An unknown key is not an error there; it quietly draws letters,
+// so a sign with no render_key gets no styled mockup at all.
+
+export interface MockupDesign {
+  /** master_catalog.render_key, e.g. "a-frame-sign". */
+  style: string;
+  logo: EngineFile;
+  /** The background the sign is drawn onto. */
+  scene: EngineFile;
+  /** Engine finish token for fabricated letters (master_catalog.fabricated_finish). */
+  fabricatedFinish?: string | null;
+  /** Face-lit letters: trimless or with trim, from the design's options. */
+  trimless?: boolean;
+}
+
+/** The form fields for POST /api/generate-mockup, as the Signize Studio sends them. */
+export function mockupFields(design: MockupDesign): [string, string][] {
+  const fields: [string, string][] = [
+    ['signType', design.style],
+    ['mountingType', 'flush'],
+    ['xPercent', '50'],
+    ['yPercent', '50'],
+    ['signSize', '100'],
+    ['isLightingOn', 'true'],
+  ];
+  if (design.style === 'face-lit-channel') {
+    fields.push(['faceLitTrimStyle', design.trimless ? 'trimless' : 'trim'], ['faceLitReturnColor', 'logo-match']);
+  }
+  if (design.fabricatedFinish) fields.push(['fabricatedFinish', design.fabricatedFinish]);
+  return fields;
+}
