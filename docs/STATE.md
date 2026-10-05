@@ -14,14 +14,27 @@
   order (no quote to accept); after walking the current flow they said "this
   is good for now". If it returns: corporate approval of add-ons, custom-quote
   signs, owner-only ordering, and retiring the confirmation switch need answers.
-- **Next build:** mockups for custom-quote types (they render — pylon,
-  frosting — just not priced). The quote-confirmation switch is built (on for
-  Freshbites); when to turn it off is the owner's call.
+- **Next:** the plan's Sessions 7–8 remain (Session 8 is gated on the v13
+  demo, corporate template sign-off and Stripe). Custom-quote mockups are
+  built (#173): Window Frosting is designed locally but still inactive, and
+  the Road Sign (pylon) is not designed yet — activating either is the
+  owner's call. The quote-confirmation switch is on for Freshbites.
 - **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
+## 5 Oct 2026 (evening): the Studio draws custom-quote signs
+
+- **Brand admins design a custom-quote sign for its picture** (DECISIONS
+  #173): logo and size, drawn in the type's own style; no options, no
+  price. The sign stays "Custom quote" for the team to price; its quote
+  sheet says so. Types with no drawing style say so on the Design page.
+- Driven in the browser: Window Frosting designed and saved (est_price still
+  empty, spec line kept, "— custom quote" logged), the Signs tab and its quote
+  sheet, Entrance Sign's no-style page. Checks: typecheck, lint, 220 unit.
+  Smoke not rerun (it needs `dev:db:reset`) and has no case for this yet.
 
 ## 5 Oct 2026 (later): team confirmation of quotes, per brand
 

@@ -23,7 +23,8 @@ export interface DesignedItemOut {
   origin: LineItemOrigin;
   design: SignDesign | null;
   estPrice: number | null;
-  priceSource: 'engine' | null;
+  /** 'team' for a custom-quote sign the Studio only draws (SPEC §2.1). */
+  priceSource: 'engine' | 'team' | null;
   siteNotes: string | null;
   exceptionIssue: string | null;
   mockup: { storagePath: string; fileName: string; contentType: string } | null;
@@ -63,7 +64,7 @@ export async function prepareDesignedItems(
         ...unchanged,
         design: sign.design,
         estPrice: sign.design.price ?? null,
-        priceSource: 'engine',
+        priceSource: sign.design.price == null ? 'team' : 'engine',
         mockup: sign.design.mockupPath
           ? { storagePath: sign.design.mockupPath, fileName: `${sign.name} mockup.jpg`, contentType: 'image/jpeg' }
           : null,
@@ -79,7 +80,7 @@ export async function prepareDesignedItems(
       origin: reason && item.origin === 'standard' ? 'exception' : item.origin,
       design: priced,
       estPrice: priced.price ?? null,
-      priceSource: 'engine',
+      priceSource: priced.price == null ? 'team' : 'engine',
       siteNotes:
         reason && item.origin === 'addon'
           ? [item.siteNotes, reason].filter(Boolean).join('\n')

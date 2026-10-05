@@ -56,7 +56,7 @@ export interface NewRequestItem {
    */
   design?: SignDesign | null;
   estPrice?: number | null;
-  priceSource?: 'engine' | null;
+  priceSource?: 'engine' | 'team' | null;
 }
 
 export interface NewRequestFile {

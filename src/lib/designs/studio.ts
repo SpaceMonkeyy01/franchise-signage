@@ -58,8 +58,26 @@ export async function getDesignableSign(itemId: string, brandId: string): Promis
   );
 }
 
-/** The options a sign type offers, without the engine's bookkeeping fields. */
-export function offeredOptions(sign: Pick<DesignableSign, 'attribute_options'>): AllowedOptions {
+/** Whether the engine prices this sign; a custom-quote type is priced by the team. */
+export function studioPrices(sign: Pick<DesignableSign, 'pricing_basis' | 'pricing_type'>): boolean {
+  return sign.pricing_basis === 'direct' && !!sign.pricing_type;
+}
+
+/**
+ * Whether the Studio can design this sign at all: one it prices, or a
+ * custom-quote type it can at least draw (a mockup style is known).
+ */
+export function studioDesigns(sign: Pick<DesignableSign, 'pricing_basis' | 'pricing_type' | 'render_key'>): boolean {
+  return studioPrices(sign) || !!sign.render_key;
+}
+
+/**
+ * The options a sign type offers, without the engine's bookkeeping fields.
+ * None for a custom-quote type: its options are a stand-in pricing model's
+ * (channel letters' raceways on a pylon), not choices about the sign.
+ */
+export function offeredOptions(sign: Pick<DesignableSign, 'attribute_options' | 'pricing_basis'>): AllowedOptions {
+  if (sign.pricing_basis === 'standin') return {};
   const skip = new Set(['basic_fields', 'avg_char_height', 'depth_range', 'ul_required', 'char_height_band']);
   return Object.fromEntries(
     Object.entries(sign.attribute_options ?? {}).filter(
@@ -78,13 +96,14 @@ export async function quoteDesign(
   input: SignDesign,
   link: { lineItemId?: string | null } = {},
 ): Promise<SignDesign> {
-  if (sign.pricing_basis !== 'direct' || !sign.pricing_type) {
-    throw new StudioError('This sign type is priced by hand, so the Studio cannot price it. It stays a custom quote.');
+  if (!studioDesigns(sign)) {
+    throw new StudioError('The Studio has no drawing style for this sign type yet. It stays a custom quote.');
   }
   const logo = await getUpload(input.logo.path);
   if (!logo) throw new StudioError('Upload the logo again — the stored copy could not be read.');
 
   const logoFile = { bytes: logo.body, contentType: logo.contentType, fileName: input.logo.fileName };
+  if (!studioPrices(sign)) return drawDesign(sign, input, logoFile);
   // Price and picture together: the pricing call's own picture is a generic
   // "letters on a wall", so the sign is drawn in its own style by the mockup
   // engine, side by side with the pricing call (no extra wait). A failed
@@ -106,7 +125,7 @@ export async function quoteDesign(
   try {
     quote = await priceDesign(
       {
-        pricingType: sign.pricing_type,
+        pricingType: sign.pricing_type!,
         options: input.options,
         dimension: input.dimension,
         depthInches: input.depthInches,
@@ -172,6 +191,47 @@ export async function quoteDesign(
 }
 
 /**
+ * A custom-quote sign (SPEC §2.1): the Studio draws it in its own style so
+ * franchisees, corporate and the team see the sign, but nothing prices it —
+ * the team quotes it per order, as before. Size is kept for the spec and the
+ * team's quote; there are no options to choose.
+ */
+async function drawDesign(
+  sign: DesignableSign,
+  input: SignDesign,
+  logo: { bytes: Buffer; contentType: string; fileName: string },
+): Promise<SignDesign> {
+  let picture;
+  try {
+    picture = await renderMockup({
+      style: sign.render_key!,
+      logo,
+      scene: await sceneFor(sign.placement),
+      fabricatedFinish: sign.fabricated_finish,
+      trimless: false,
+    });
+  } catch (error) {
+    if (error instanceof EngineUnavailableError || error instanceof EngineRejectedError) {
+      console.error('design engine unavailable', error.message);
+      throw new StudioError('The Design Studio is unavailable right now. Try again in a few minutes.');
+    }
+    throw error;
+  }
+  const stored = await putUpload(
+    new File([new Uint8Array(picture.bytes)], 'mockup.jpg', { type: picture.contentType }),
+    `${sign.brand_slug}/mockups`,
+  );
+  return {
+    logo: input.logo,
+    options: {},
+    dimension: input.dimension,
+    depthInches: input.depthInches,
+    mockupPath: stored.storagePath,
+    price: null,
+  };
+}
+
+/**
  * A brand admin saves a sign's design and its rules. The design is priced
  * here, on the server, whatever the page showed; the price becomes the sign's
  * est_price (engine-sourced), and the options become its locked choices.
@@ -184,6 +244,7 @@ export async function saveBrandDesign(
 ): Promise<SignDesign> {
   const priced = await quoteDesign(sign, input);
   const rules = rawRules === undefined ? defaultRules(priced) : validRules(rawRules, priced);
+  if (priced.price == null) return saveDrawnDesign(sign, actor, priced, rules);
   await transaction(async (exec) => {
     await exec.query(
       `update brand_items
@@ -206,6 +267,39 @@ export async function saveBrandDesign(
     );
   });
   return priced;
+}
+
+/**
+ * A custom-quote sign's design: the picture and the size, and nothing about
+ * price — est_price stays empty, price_source stays the team's, and the spec
+ * line and locked choices the brand set by hand are left as they are.
+ */
+async function saveDrawnDesign(
+  sign: DesignableSign,
+  actor: CatalogActor,
+  drawn: SignDesign,
+  rules: DesignRules,
+): Promise<SignDesign> {
+  await transaction(async (exec) => {
+    await exec.query(`update brand_items set design = $2, design_rules = $3 where id = $1`, [
+      sign.id,
+      JSON.stringify(drawn),
+      JSON.stringify(rules),
+    ]);
+    await exec.query(
+      `insert into catalog_events (brand_id, brand_item_id, kind, actor_membership_id, actor_label, summary, detail)
+       values ($1, $2, 'sign_designed', $3, $4, $5, $6)`,
+      [
+        sign.brand_id,
+        sign.id,
+        actor.membershipId,
+        actor.label,
+        `${actor.label} designed ${sign.name} in the Studio — custom quote`,
+        JSON.stringify({ price: null, dimension: drawn.dimension, rules }),
+      ],
+    );
+  });
+  return drawn;
 }
 
 /**

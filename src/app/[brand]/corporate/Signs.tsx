@@ -214,9 +214,9 @@ function SignRow({
               href={`/${brandSlug}/corporate/design/${sign.id}`}
               className="font-medium text-gray-900 underline-offset-2 hover:underline"
             >
-              {sign.price_source === 'engine' ? 'Edit design' : 'Design'}
+              {sign.designed ? 'Edit design' : 'Design'}
             </Link>
-            {sign.price_source === 'engine' && (
+            {sign.designed && (
               <a
                 href={`/api/studio/sheet/${sign.id}?brand=${brandSlug}`}
                 className="text-gray-700 underline-offset-2 hover:underline"

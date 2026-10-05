@@ -99,13 +99,25 @@ export function SignQuoteSheet(props: SignQuoteSheetProps) {
         <View style={{ width: 170 }}>
           <View style={{ borderWidth: 1, borderColor: '#111827', padding: 10 }}>
             <Text style={styles.purposeLabel}>ESTIMATED PRICE</Text>
-            <Text style={styles.totalValue}>{pdfMoneyRound(design.price ?? null)}</Text>
-            {design.turnaroundDays ? (
-              <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 3 }}>
-                About {design.turnaroundDays} days to make
-              </Text>
-            ) : null}
-            <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 2 }}>Shipping included</Text>
+            {design.price == null ? (
+              // A custom-quote type (SPEC §2.1): the Studio drew it, the team prices it.
+              <>
+                <Text style={styles.totalValue}>Custom quote</Text>
+                <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 3 }}>
+                  Signage.com prices this sign for each order
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.totalValue}>{pdfMoneyRound(design.price)}</Text>
+                {design.turnaroundDays ? (
+                  <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 3 }}>
+                    About {design.turnaroundDays} days to make
+                  </Text>
+                ) : null}
+                <Text style={{ fontSize: 8, color: '#6b7280', marginTop: 2 }}>Shipping included</Text>
+              </>
+            )}
           </View>
           {props.sideView && (
             <View style={{ marginTop: 10 }}>

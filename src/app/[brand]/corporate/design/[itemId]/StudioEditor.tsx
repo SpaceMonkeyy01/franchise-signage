@@ -23,6 +23,7 @@ export function StudioEditor({
   brandSlug,
   itemId,
   hasBrandLogo,
+  priced,
   options,
   saved,
   savedRules,
@@ -31,6 +32,8 @@ export function StudioEditor({
   brandSlug: string;
   itemId: string;
   hasBrandLogo: boolean;
+  /** False for a custom-quote type: the Studio draws it but the team prices it. */
+  priced: boolean;
   options: Options;
   saved: SignDesign | null;
   savedRules: DesignRules;
@@ -124,7 +127,12 @@ export function StudioEditor({
       if ('error' in result) setMessage({ tone: 'error', text: result.error });
       else {
         setPreview(result.design);
-        setMessage({ tone: 'ok', text: 'Saved. Franchisees see this design and price from now on.' });
+        setMessage({
+          tone: 'ok',
+          text: priced
+            ? 'Saved. Franchisees see this design and price from now on.'
+            : 'Saved. Franchisees see this design from now on; Signage.com quotes it per order.',
+        });
       }
     });
   }
@@ -216,88 +224,97 @@ export function StudioEditor({
         </section>
 
         {/* Options */}
-        <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Options</h2>
-          <p className="text-xs text-gray-500">
-            Locked unless you tick other choices a franchisee may pick instead.
-          </p>
-          <ul className="mt-2 divide-y divide-gray-100">
-            {Object.entries(options).map(([name, values]) => {
-              const rule = rules[name];
-              const allowed = rule?.mode === 'choices' ? rule.values : [chosen[name]];
-              return (
-                <li key={name} className="py-3" data-option={name}>
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-sm text-gray-900">
-                      {label(name)}
-                      <select
-                        value={chosen[name]}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setChosen((all) => ({ ...all, [name]: value }));
-                          if (rule?.mode === 'choices' && !rule.values.includes(value)) {
-                            setRule(name, { mode: 'choices', values: [value, ...rule.values] });
-                          }
-                        }}
-                        className={`${input} ml-2`}
-                      >
-                        {values.map((v) => (
-                          <option key={v.value} value={v.value}>
-                            {v.name ?? v.value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <span className="text-xs text-gray-500">
-                      {rule?.mode === 'choices' ? `Franchisee picks from ${rule.values.length}` : 'Locked'}
-                    </span>
-                  </div>
-                  {values.length > 1 && (
-                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
-                      {values.map((v) => (
-                        <label key={v.value} className="flex items-center gap-1 text-xs text-gray-600">
-                          <input
-                            type="checkbox"
-                            checked={allowed.includes(v.value)}
-                            disabled={v.value === chosen[name]}
-                            onChange={(e) => {
-                              const set = new Set(allowed);
-                              if (e.target.checked) set.add(v.value);
-                              else set.delete(v.value);
-                              set.add(chosen[name]);
-                              setRule(name, set.size > 1 ? { mode: 'choices', values: [...set] } : null);
-                            }}
-                          />
-                          {v.name ?? v.value}
-                        </label>
-                      ))}
+        {Object.keys(options).length > 0 && (
+          <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-900">Options</h2>
+            <p className="text-xs text-gray-500">
+              Locked unless you tick other choices a franchisee may pick instead.
+            </p>
+            <ul className="mt-2 divide-y divide-gray-100">
+              {Object.entries(options).map(([name, values]) => {
+                const rule = rules[name];
+                const allowed = rule?.mode === 'choices' ? rule.values : [chosen[name]];
+                return (
+                  <li key={name} className="py-3" data-option={name}>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <label className="text-sm text-gray-900">
+                        {label(name)}
+                        <select
+                          value={chosen[name]}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setChosen((all) => ({ ...all, [name]: value }));
+                            if (rule?.mode === 'choices' && !rule.values.includes(value)) {
+                              setRule(name, { mode: 'choices', values: [value, ...rule.values] });
+                            }
+                          }}
+                          className={`${input} ml-2`}
+                        >
+                          {values.map((v) => (
+                            <option key={v.value} value={v.value}>
+                              {v.name ?? v.value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <span className="text-xs text-gray-500">
+                        {rule?.mode === 'choices' ? `Franchisee picks from ${rule.values.length}` : 'Locked'}
+                      </span>
                     </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+                    {values.length > 1 && (
+                      <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">
+                        {values.map((v) => (
+                          <label key={v.value} className="flex items-center gap-1 text-xs text-gray-600">
+                            <input
+                              type="checkbox"
+                              checked={allowed.includes(v.value)}
+                              disabled={v.value === chosen[name]}
+                              onChange={(e) => {
+                                const set = new Set(allowed);
+                                if (e.target.checked) set.add(v.value);
+                                else set.delete(v.value);
+                                set.add(chosen[name]);
+                                setRule(name, set.size > 1 ? { mode: 'choices', values: [...set] } : null);
+                              }}
+                            />
+                            {v.name ?? v.value}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
       </div>
 
       {/* Preview */}
       <aside className="lg:sticky lg:top-24 lg:self-start">
         <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-gray-900">Preview and price</h2>
+          <h2 className="text-sm font-semibold text-gray-900">{priced ? 'Preview and price' : 'Preview'}</h2>
           <div className="mt-3 aspect-square w-full overflow-hidden rounded-lg bg-gray-100">
             {busy === 'preview' || busy === 'save' ? (
               <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
-                Rendering and pricing… this takes about 15 seconds.
+                {priced ? 'Rendering and pricing… this takes about 15 seconds.' : 'Drawing the sign… this takes a few seconds.'}
               </div>
             ) : preview?.mockupPath ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={fileUrl(preview.mockupPath)} alt="Mockup" className={`h-full w-full object-cover ${current ? '' : 'opacity-40'}`} />
             ) : (
               <div className="flex h-full items-center justify-center p-6 text-center text-sm text-gray-500">
-                Preview to see the sign and its price.
+                {priced ? 'Preview to see the sign and its price.' : 'Preview to see the sign.'}
               </div>
             )}
           </div>
+          {!priced && preview?.mockupPath && (
+            <div className={current ? '' : 'opacity-50'} data-studio-price>
+              <p className="mt-3 text-sm font-semibold text-gray-900">Custom quote</p>
+              <p className="text-xs text-gray-500">Signage.com prices this sign for each order.</p>
+              {!current && <p className="mt-1 text-xs text-amber-700">You changed the design — preview again.</p>}
+            </div>
+          )}
           {preview?.price && (
             <div className={current ? '' : 'opacity-50'}>
               <p className="mt-3 text-2xl font-semibold text-gray-900" data-studio-price>

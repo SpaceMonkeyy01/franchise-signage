@@ -1798,6 +1798,29 @@ item 7's "CRUD UI only when onboarding brand #2".
      set it: both are Signage.com's prices (#165, SPEC v2.4 §2.3). When to turn
      it off for Freshbites is the owner's call (SPEC §12 Q13).
 
+173. **The Studio draws custom-quote signs; it never prices them** (built
+     5 Oct; the open item in #171). A standin type with a mockup style
+     (`master_catalog.render_key`: pylon, monument, frosting, decals, wall
+     wraps, plaques, post-and-panel, yard sign) can be designed by the brand
+     admin: logo and size only, drawn by the mockup engine, no pricing call.
+     - **No options:** a standin row's options are its stand-in pricing
+       model's (channel letters' raceways on a pylon), not choices about the
+       sign, so the Studio offers none.
+     - **Price untouched:** saving stores the design and rules only —
+       est_price stays empty, price_source stays `team`, and the spec line
+       and locked choices the brand set by hand are kept. Lines ordered with
+       it carry `price_source = 'team'` and no snapshot: a custom quote the
+       team prices, as before (§2.1). Nothing goes into engine_quotes.
+     - **Everywhere else it is a design:** franchisees see the drawing and
+       may change the size within the brand's range ("Customize in Studio"),
+       the Signs tab offers Edit design and its quote sheet, and the sheet
+       reads "Custom quote" instead of a price.
+     - **No style, no Studio:** awnings, wayfinding, digital displays,
+       vehicle wraps and the rest without a render_key keep their standard
+       picture; the Design page says so. Freshbites' Entrance Sign is one.
+     Locally Window Frosting now has a design (still inactive); whether to
+     activate it and the Road Sign is the owner's call.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

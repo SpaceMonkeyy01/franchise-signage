@@ -8,7 +8,7 @@ import { notFound } from 'next/navigation';
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { requireCorporate } from '@/lib/auth/corporate';
-import { getDesignableSign, offeredOptions } from '@/lib/designs/studio';
+import { getDesignableSign, offeredOptions, studioDesigns, studioPrices } from '@/lib/designs/studio';
 import { engineConfigured } from '@/lib/signize/client';
 
 import { StudioEditor } from './StudioEditor';
@@ -27,7 +27,7 @@ export default async function DesignPage({
   if (!sign) notFound();
 
   const back = `/${slug}/corporate?tab=signs`;
-  const priceable = sign.pricing_basis === 'direct' && !!sign.pricing_type;
+  const priceable = studioPrices(sign);
 
   return (
     <>
@@ -42,14 +42,17 @@ export default async function DesignPage({
         </Link>
         <h1 className="mt-2 text-lg font-semibold text-gray-900">Design {sign.name}</h1>
         <p className="text-sm text-gray-500">
-          {sign.sign_type} · Set the logo, options and size; Signage.com prices it as you go. Then choose
-          what a franchisee may adjust for their store — anything else stays exactly as you set it.
+          {!studioDesigns(sign)
+            ? sign.sign_type
+            : priceable
+            ? `${sign.sign_type} · Set the logo, options and size; Signage.com prices it as you go. Then choose what a franchisee may adjust for their store — anything else stays exactly as you set it.`
+            : `${sign.sign_type} · Signage.com quotes this sign per order, so it stays a custom quote. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`}
         </p>
 
-        {!priceable ? (
+        {!studioDesigns(sign) ? (
           <p className="mt-6 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600">
-            {sign.sign_type} is priced by Signage.com by hand, so it has no Studio design. It stays a custom
-            quote.
+            The Studio has no drawing style for {sign.sign_type} yet. It stays a custom quote, shown with its
+            standard picture.
           </p>
         ) : !engineConfigured() ? (
           <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -60,6 +63,7 @@ export default async function DesignPage({
             brandSlug={slug}
             itemId={sign.id}
             hasBrandLogo={!!access.brand.logo_url}
+            priced={priceable}
             options={offeredOptions(sign)}
             saved={sign.design}
             savedRules={sign.design_rules}

@@ -143,7 +143,9 @@ export function StudioAdjust({
 
       {preview && (
         <div className="mt-2 text-xs">
-          <span className="text-sm font-semibold text-gray-900">${preview.design.price?.toLocaleString('en-US')}</span>
+          <span className="text-sm font-semibold text-gray-900">
+            {preview.design.price == null ? 'Custom quote' : `$${preview.design.price.toLocaleString('en-US')}`}
+          </span>
           {preview.design.widthInches && preview.design.heightInches && (
             <span className="text-gray-500">
               {' '}
@@ -175,7 +177,7 @@ export function StudioAdjust({
           }}
           className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 font-medium text-gray-800 disabled:opacity-50"
         >
-          {pending ? 'Pricing… (about 15 s)' : 'Preview'}
+          {pending ? (base.price == null ? 'Drawing…' : 'Pricing… (about 15 s)') : 'Preview'}
         </button>
         <button
           type="button"

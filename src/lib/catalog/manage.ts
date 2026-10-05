@@ -78,6 +78,8 @@ export interface ManagedSign {
   thumbnail_url: string | null;
   /** Where est_price came from: the team, or the Design Studio engine (v2.6). */
   price_source: 'team' | 'engine';
+  /** Has a Studio design: engine-priced, or a custom-quote sign the Studio draws. */
+  designed: boolean;
   /** Installed at stores: a reason to think twice before retiring. */
   installed: number;
 }
@@ -140,6 +142,7 @@ const SIGN_SQL = `
          coalesce(sp.name, sp.email) as submitted_by,
          mc.id as master_id, mc.placement, mc.category, mc.sign_type, mc.variant,
          mc.pricing_basis, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.thumbnail_url, bi.price_source,
+         bi.design is not null as designed,
          (select count(*)::int from installed_signs s
            where s.brand_item_id = bi.id and s.status = 'active') as installed
     from brand_items bi
