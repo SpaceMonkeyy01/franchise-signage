@@ -1861,6 +1861,20 @@ item 7's "CRUD UI only when onboarding brand #2".
      corporate reviews (§7). A per-sign "approve automatically" option was
      offered to the owner and not yet chosen.
 
+177. **Stores can be edited, with a history** (owner, 5 Oct: "once we set the
+     store we are not able to edit or change that info"; agreed design).
+     "Edit store" on each store card, for the owner of the store's company
+     and Signage.com (`/{brand}/location/{id}/edit`): name, address, opening
+     date at any time; **store type only before the store's first order**,
+     because it decides which signs are standard and auto-approve (§7) and an
+     owner switching it mid-order could turn an add-on into a standard sign.
+     Signage.com may change it at any time; orders already placed keep their
+     approvals. Each change is a `location_events` row (who, what), shown as
+     the store's change history. Migration `20261005100000_location_events.sql`
+     (RLS: team all; read by whoever can see the store; behavioural check
+     added). Saving merges into the stored address, so a line2 the form does
+     not show is kept. Staff cannot edit (they order, they do not own).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

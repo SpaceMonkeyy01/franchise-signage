@@ -27,6 +27,16 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (late night): stores can be edited
+
+- **"Edit store"** on each card (owner and Signage.com): name, address,
+  opening date; store type only until the first order (Signage.com any time).
+  Every change logged in `location_events` and shown as the store's history
+  (DECISIONS #177). Migration `20261005100000_location_events.sql`, applied
+  locally and on live. Driven as Dana: Oak Plaza edited and restored;
+  Riverside's type shown locked. 4 new unit tests, 1 new RLS check. No smoke
+  case yet.
+
 ## 5 Oct 2026 (late night): "Choose your signs" loads the standard package
 
 - A store with no order yet shows only "Choose your signs", which opens the

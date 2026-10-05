@@ -989,6 +989,29 @@ const checks: NamedCheck[] = [
     },
   },
   {
+    label: "a store's change history is read by those who can see the store, and no one else",
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`
+        insert into location_events (location_id, actor_label, summary)
+        select id, 'someone', 'Store renamed' from locations`);
+      const ownA1 = await count(db, `select count(*) as n from locations where franchisee_id = '${A1}'`);
+      const n = () => count(db, `select count(*) as n from location_events`);
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await n();
+      await asAuthenticated(db, PERSON.stranger);
+      const stranger = await n();
+      await asAnon(db, ALPHA_TOKEN);
+      const anon = (await refusal(db, `select count(*) from location_events`)) ? 0 : await n();
+      await asOwner(db);
+      await db.exec(`delete from location_events`);
+      return expect(
+        ownA1 > 0 && owner === ownA1 && stranger === 0 && anon === 0,
+        `owner ${owner} of ${ownA1}, stranger ${stranger}, anon ${anon}`,
+      );
+    },
+  },
+  {
     label: "catalog history is read by the brand's corporate, and by no one else",
     run: async (db) => {
       await asOwner(db);

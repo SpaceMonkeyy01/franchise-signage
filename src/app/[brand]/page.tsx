@@ -144,6 +144,7 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
               brandSlug={slug}
               location={location}
               canOrder={scope.canOrder}
+              canEdit={scope.canCreateStore}
             />
           ))}
         </div>
@@ -922,10 +923,13 @@ function LocationCard({
   brandSlug,
   location,
   canOrder,
+  canEdit,
 }: {
   brandSlug: string;
   location: LocationRow;
   canOrder: boolean;
+  /** The owner and Signage.com may change the store's details (DECISIONS #177). */
+  canEdit: boolean;
 }) {
   const address = [location.address.line1, location.address.city, location.address.state]
     .filter(Boolean)
@@ -952,8 +956,19 @@ function LocationCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">{location.name}</h2>
-          <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-500">
             <PinIcon /> {address}
+            {canEdit && (
+              <>
+                <span aria-hidden> · </span>
+                <Link
+                  href={`/${brandSlug}/location/${location.id}/edit`}
+                  className="font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
+                >
+                  Edit store
+                </Link>
+              </>
+            )}
           </p>
         </div>
         {canOrder && started && (
