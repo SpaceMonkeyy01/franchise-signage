@@ -14,9 +14,10 @@
   order (no quote to accept); after walking the current flow they said "this
   is good for now". If it returns: corporate approval of add-ons, custom-quote
   signs, owner-only ordering, and retiring the confirmation switch need answers.
-- **Next:** the plan's Sessions 7–8 remain (Session 8 is gated on the v13
-  demo, corporate template sign-off and Stripe). Custom-quote mockups are
-  built (#173): Window Frosting is designed locally but still inactive, and
+- **Next:** the planned build is done. Session 7 (Design Studio) landed as
+  #166–#173; **Session 8 (the DID generator) is skipped for now** (owner,
+  5 Oct; DECISIONS #174). What remains is the owner's calls and the items
+  waiting on others below. Custom-quote mockups are built (#173): Window Frosting is designed locally but still inactive, and
   the Road Sign (pylon) is not designed yet — activating either is the
   owner's call. The quote-confirmation switch is on for Freshbites.
 - **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key

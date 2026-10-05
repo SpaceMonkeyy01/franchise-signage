@@ -1821,6 +1821,14 @@ item 7's "CRUD UI only when onboarding brand #2".
      Locally Window Frosting now has a design (still inactive); whether to
      activate it and the Road Sign is the owner's call.
 
+174. **The DID generator is skipped for now** (owner, 5 Oct). Session 8
+     (SPEC §8c) is not built; nothing in the build depends on it. The rules
+     in CLAUDE.md and SPEC §8c stand for when it returns — the stamp rule
+     above all — and the welcome email keeps saying nothing about a DID it
+     cannot deliver. Session 7 is counted done: the Design Studio landed
+     through the Signize engine (#166–#173) rather than the iframe the
+     session plan describes.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

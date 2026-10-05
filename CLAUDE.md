@@ -59,10 +59,10 @@ Modify/remove/rebrand intents (stub in UI like the demo) · franchisor self-serv
 - The stamp decision (unstamped-only vs signed tier) is with the team; the safe default is built into the rules above.
 - Business model (what corporate pays) undecided; nothing in the build depends on it.
 - DID fee amount is a placeholder ($499); make it config, not a constant.
-- The v13 flow demo (DID screens) is not in the repo yet — Session 8 is blocked on it, and any DID UX built before it arrives is a guess.
+- The DID generator (Session 8, spec §8c) is skipped for now (owner, 5 Oct 2026; DECISIONS #174). Do not build it. The v13 flow demo with its screens is not in the repo either.
 
 ## Working style
-- Follow SPEC.md §9 build order strictly; each interface should be demoable before starting the next. Accounts (§9b, phases A–D) are built as of 28 Sep 2026 and proven against the live Supabase project on 2 Oct (`npm run prove:supabase`, docs/SUPABASE.md §7). Sessions 7 and 8 remain. The DID module is Session 8, gated on corporate template sign-off and a Stripe account.
+- Follow SPEC.md §9 build order strictly; each interface should be demoable before starting the next. Accounts (§9b, phases A–D) are built as of 28 Sep 2026 and proven against the live Supabase project on 2 Oct (`npm run prove:supabase`, docs/SUPABASE.md §7). Session 7 (Design Studio) is done through the Signize engine (DECISIONS #166–#173); Session 8 (DID) is skipped for now (#174), so the planned build is complete.
 - Small commits per feature. Migrations are additive.
 - When the spec is silent, match the demo. When both are silent, ask — one-line question, don't build speculatively.
 
