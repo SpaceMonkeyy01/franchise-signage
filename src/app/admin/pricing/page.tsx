@@ -10,6 +10,7 @@ import { priceFromCost } from '@/lib/pricing/margin';
 import { marginOverview } from '@/lib/pricing/margins';
 
 import { MarginInput } from './MarginInput';
+import { QuoteConfirmationToggle } from './QuoteConfirmationToggle';
 
 export const metadata = { title: 'Pricing · Signage.com' };
 
@@ -32,7 +33,8 @@ export default async function PricingPage() {
         Signage.com&rsquo;s margin: <strong>price = cost ÷ (1 − margin)</strong>, so a 40% margin on a
         $600 cost is a $1,000 price. The most specific margin set applies — the brand and sign type,
         then the brand, then the standard. Brands never see these numbers. Custom-quote sign types
-        are priced by hand and are not listed.
+        are priced by hand and are not listed. Each brand also says whether the team confirms its
+        quotes before the franchisee sees them.
       </p>
 
       <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -89,6 +91,11 @@ export default async function PricingPage() {
                 </ul>
               </details>
             )}
+            <QuoteConfirmationToggle
+              brandId={brand.id}
+              brandName={brand.name}
+              teamConfirms={brand.teamConfirmsQuotes}
+            />
           </section>
         );
       })}

@@ -19,10 +19,11 @@ import { query, queryOne } from '@/lib/db/pool';
 import { routeRequestForQuote } from '@/lib/db/routing';
 import { notifyFranchisee, type FranchiseeNotification } from '@/lib/email/franchisee';
 import { notifyQuotePackages, notifyReviewNeeded } from '@/lib/email/notify';
+import { packagesToAutoDeliver } from '@/lib/pricing/confirmation';
 import { sendWelcomeEmail } from '@/lib/email/welcome';
 import type { SubmitFailure } from '@/lib/forms';
 import { registerFranchisee } from '@/lib/registrations';
-import { prepPackage, transitionPackage, type PackageStatus } from '@/lib/status';
+import { prepPackage, transitionPackage, type EventActor, type PackageStatus } from '@/lib/status';
 import { toRequestFile } from '@/lib/db/create-request';
 import type { StoredObject } from '@/lib/storage';
 import { plural } from '@/lib/format';
@@ -72,6 +73,18 @@ export async function routeAction(requestId: string): Promise<Result> {
     // Outside the routing transaction on purpose: a mail failure must not
     // unroute the request. The packages exist; the send is recorded per package.
     await notifyQuotePackages(requestId, packages);
+
+    // A brand whose quotes the team no longer confirms (DECISIONS #172): its
+    // fully priced Signage.com package goes to the franchisee now. A package
+    // with a custom-quote item still waits here for the team to price it.
+    const brand = await queryOne<{ team_confirms_quotes: boolean }>(
+      `select b.team_confirms_quotes from requests r join brands b on b.id = r.brand_id
+        where r.id = $1`,
+      [requestId],
+    );
+    for (const pkg of packagesToAutoDeliver(brand?.team_confirms_quotes ?? true, packages)) {
+      await deliverQuote(requestId, await packageOf(requestId, pkg.quoteId), 'system');
+    }
   });
 }
 
@@ -285,27 +298,39 @@ export async function deliverQuoteAction(requestId: string, quoteId: string): Pr
     if (quote.external) {
       throw new Error('An external package is quoted by the vendor — log their number instead.');
     }
-
-    const total = Number(quote.priced_total ?? 0);
-    await withStatusStore((store) =>
-      transitionPackage(store, {
-        requestId,
-        quoteId,
-        to: 'quote_ready',
-        actor: 'team',
-        kind: 'quote_delivered',
-        summary:
-          `Quote delivered to franchisee — $${total.toLocaleString('en-US')}` +
-          (quote.manual_count > 0 ? ` + ${plural(quote.manual_count, 'custom item')}` : ''),
-        detail: { total, manual: quote.manual_count },
-      }),
-    );
-
-    // The quote is the moment the franchisee has something to decide, so this is
-    // the one team action that must reach them. Sent after the transition, and a
-    // failure is recorded rather than raised (src/lib/email/franchisee.tsx).
-    await notifyFranchisee(requestId, 'quote_ready', { quoteId });
+    await deliverQuote(requestId, quote, 'team');
   });
+}
+
+/**
+ * Deliver one Signage.com package's quote: confirmed by the team by hand, or by
+ * the system at routing for a brand that skips that step (DECISIONS #172).
+ */
+async function deliverQuote(
+  requestId: string,
+  quote: Awaited<ReturnType<typeof packageOf>>,
+  actor: Extract<EventActor, 'team' | 'system'>,
+): Promise<void> {
+  const total = Number(quote.priced_total ?? 0);
+  await withStatusStore((store) =>
+    transitionPackage(store, {
+      requestId,
+      quoteId: quote.id,
+      to: 'quote_ready',
+      actor,
+      kind: 'quote_delivered',
+      summary:
+        `Quote delivered to franchisee — $${total.toLocaleString('en-US')}` +
+        (quote.manual_count > 0 ? ` + ${plural(quote.manual_count, 'custom item')}` : '') +
+        (actor === 'system' ? ' (priced by the engine; no team confirmation for this brand)' : ''),
+      detail: { total, manual: quote.manual_count, ...(actor === 'system' && { auto: true }) },
+    }),
+  );
+
+  // The quote is the moment the franchisee has something to decide, so this is
+  // the one team action that must reach them. Sent after the transition, and a
+  // failure is recorded rather than raised (src/lib/email/franchisee.tsx).
+  await notifyFranchisee(requestId, 'quote_ready', { quoteId: quote.id });
 }
 
 const MILESTONES: Record<

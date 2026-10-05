@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { assertTeamMember } from '@/lib/auth/team';
 import type { SubmitFailure } from '@/lib/forms';
 import { parseMarginInput } from '@/lib/pricing/margin';
-import { MarginError, setMargin } from '@/lib/pricing/margins';
+import { MarginError, setMargin, setQuoteConfirmation } from '@/lib/pricing/margins';
 
 export async function setMarginAction(
   brandId: string | null,
@@ -24,6 +24,25 @@ export async function setMarginAction(
     );
   } catch (error) {
     if (error instanceof MarginError || error instanceof RangeError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath('/admin/pricing');
+  return undefined;
+}
+
+export async function setQuoteConfirmationAction(
+  brandId: string,
+  teamConfirms: boolean,
+): Promise<SubmitFailure | undefined> {
+  const member = await assertTeamMember();
+  try {
+    await setQuoteConfirmation(
+      { membershipId: member.membershipId, label: member.name ?? member.email },
+      brandId,
+      teamConfirms,
+    );
+  } catch (error) {
+    if (error instanceof MarginError) return { error: error.message };
     throw error;
   }
   revalidatePath('/admin/pricing');

@@ -1186,14 +1186,26 @@ record(
   Boolean(await franchiseeMail(internalId, 'franchisee_review_decided')),
 );
 
-await page.goto(internalAdmin, { waitUntil: 'networkidle' });
-await page.getByRole('button', { name: 'Route for quote' }).click();
-// The button is the routing having finished, so it gates the SQL read below.
-await expectVisible(
-  page,
-  'button:has-text("Deliver quote to franchisee")',
-  'the internal tail offers the quote in-portal, not a vendor log',
+// Freshbites with team confirmation off (DECISIONS #172): the fully priced
+// package goes to the franchisee as it is routed. The split request above
+// covers the team's own "Deliver quote to franchisee".
+await withDb((client) =>
+  client.query(`update brands set team_confirms_quotes = false where slug = 'freshbites'`),
 );
+try {
+  await page.goto(internalAdmin, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Route for quote' }).click();
+  // The waiting line is the routing (and delivery) having finished, so it gates the SQL reads below.
+  await expectVisible(
+    page,
+    'text=/With the franchisee/',
+    'with team confirmation off, a fully priced quote is delivered as it is routed',
+  );
+} finally {
+  await withDb((client) =>
+    client.query(`update brands set team_confirms_quotes = true where slug = 'freshbites'`),
+  );
+}
 const internalPackages = await withDb(async (client) =>
   (await client.query('select external from quotes where request_id = $1', [internalId])).rows,
 );
@@ -1201,9 +1213,19 @@ record(
   'a request with no vendor override routes to one internal package',
   internalPackages.length === 1 && internalPackages[0].external === false,
 );
-
-await page.getByRole('button', { name: 'Deliver quote to franchisee' }).click();
-await expectVisible(page, 'text=/With the franchisee/', 'the delivered quote waits on the franchisee');
+const autoDelivered = await withDb(async (client) =>
+  (
+    await client.query(
+      `select actor from request_events where request_id = $1 and kind = 'quote_delivered'`,
+      [internalId],
+    )
+  ).rows,
+);
+record(
+  'the delivery is recorded as the system’s, not a team member’s',
+  autoDelivered.length === 1 && autoDelivered[0].actor === 'system',
+  JSON.stringify(autoDelivered),
+);
 const quoteReadyMail = await franchiseeMail(internalId, 'franchisee_quote_ready');
 record('delivering the quote emails the franchisee', Boolean(quoteReadyMail));
 record(
@@ -2633,6 +2655,27 @@ await channelMargin.fill('');
 await channelMargin.press('Enter');
 await expectCount(page, 'text=$1,000 cost → $1,429', 0,'emptied, it falls back to the brand and standard margin');
 await withDb((client) => client.query(`delete from catalog_events where kind = 'margin_set'`));
+
+// Team confirmation of quotes, per brand (DECISIONS #172).
+const confirmQuotes = page.getByLabel('Team confirms Freshbites quotes');
+record('team confirmation of quotes is on by default', await confirmQuotes.isChecked());
+await confirmQuotes.uncheck();
+await expectVisible(page, 'text=/goes to the franchisee as soon as the request is routed/', 'it can be turned off for a brand');
+const confirmLog = await withDb(async (client) =>
+  (
+    await client.query(
+      `select brand_id, summary from catalog_events where kind = 'quote_confirmation_set' order by created_at desc limit 1`,
+    )
+  ).rows[0],
+);
+record(
+  'and the change is logged beside the margins',
+  confirmLog?.brand_id === null && /turned off team confirmation of quotes for Freshbites/.test(confirmLog?.summary ?? ''),
+  confirmLog?.summary,
+);
+await confirmQuotes.check();
+await expectVisible(page, 'text=/waits for "Deliver quote to franchisee"/', 'and back on');
+await withDb((client) => client.query(`delete from catalog_events where kind = 'quote_confirmation_set'`));
 
 // --------------------------------------------------------- show password
 {

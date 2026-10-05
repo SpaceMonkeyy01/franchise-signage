@@ -11,6 +11,8 @@ export class MarginError extends Error {}
 export interface BrandMargins {
   id: string;
   name: string;
+  /** Whether the team confirms each Signage.com quote before it is delivered (DECISIONS #172). */
+  teamConfirmsQuotes: boolean;
   /** The brand's own default, or null when it uses the platform's. */
   brandPercent: number | null;
   /** Every sign type the master catalog prices, with the brand's margin for it if set. */
@@ -35,7 +37,9 @@ export async function listMarginRows(): Promise<MarginRow[]> {
 export async function marginOverview(): Promise<MarginOverview> {
   const [rows, brands, types, usage] = await Promise.all([
     listMarginRows(),
-    query<{ id: string; name: string }>(`select id, name from brands order by name`),
+    query<{ id: string; name: string; team_confirms_quotes: boolean }>(
+      `select id, name, team_confirms_quotes from brands order by name`,
+    ),
     query<{ sign_type: string }>(
       `select distinct sign_type from master_catalog
         where active and pricing_basis = 'direct' order by sign_type`,
@@ -55,6 +59,7 @@ export async function marginOverview(): Promise<MarginOverview> {
     brands: brands.map((brand) => ({
       id: brand.id,
       name: brand.name,
+      teamConfirmsQuotes: brand.team_confirms_quotes,
       brandPercent: value(brand.id, null),
       signTypes: types
         .map(({ sign_type }) => ({
@@ -128,6 +133,40 @@ export async function setMargin(
         actor.label,
         `${actor.label} changed ${what} from ${show(from)} to ${show(percent)}`,
         JSON.stringify({ brandId: scope.brandId, signType: scope.signType, from, to: percent }),
+      ],
+    );
+  });
+}
+
+/**
+ * Turn the team's confirmation of a brand's quotes on or off (SPEC v2.6 §8
+ * point 5, DECISIONS #172). Logged beside the margins, without a brand_id: it
+ * is Signage.com's call about its own pricing, not the brand's.
+ */
+export async function setQuoteConfirmation(
+  actor: CatalogActor,
+  brandId: string,
+  teamConfirms: boolean,
+): Promise<void> {
+  await transaction(async (exec) => {
+    const [brand] = await exec.query<{ name: string; team_confirms_quotes: boolean }>(
+      `select name, team_confirms_quotes from brands where id = $1`,
+      [brandId],
+    );
+    if (!brand) throw new MarginError('That brand no longer exists.');
+    if (brand.team_confirms_quotes === teamConfirms) return;
+
+    await exec.query(`update brands set team_confirms_quotes = $2 where id = $1`, [brandId, teamConfirms]);
+    await exec.query(
+      `insert into catalog_events (brand_id, kind, actor_membership_id, actor_label, summary, detail)
+       values (null, 'quote_confirmation_set', $1, $2, $3, $4)`,
+      [
+        actor.membershipId,
+        actor.label,
+        teamConfirms
+          ? `${actor.label} turned team confirmation of quotes back on for ${brand.name}`
+          : `${actor.label} turned off team confirmation of quotes for ${brand.name}`,
+        JSON.stringify({ brandId, teamConfirms }),
       ],
     );
   });

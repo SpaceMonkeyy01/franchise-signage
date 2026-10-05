@@ -1781,6 +1781,23 @@ item 7's "CRUD UI only when onboarding brand #2".
        Entrance Sign and Road Sign inactive (Riverside keeps its installed
        ones). Packages hold Storefront and Lobby letters only.
 
+172. **Team confirmation of quotes is a per-brand switch** (SPEC v2.6 §8
+     point 5; built 5 Oct). `brands.team_confirms_quotes`, default on, so no
+     brand changes until the team turns it off on `/admin/pricing` (team only,
+     logged to catalog_events with no brand, beside the margins: it is
+     Signage.com's call about its own prices). Off: when the team routes a
+     request, each Signage.com package whose every item is priced goes
+     straight to quote_ready and the franchisee gets the quote email; the
+     event is the system's ("priced by the engine; no team confirmation for
+     this brand"). Still the team's, either way:
+     - **prep and routing** — the switch removes one step, not the console;
+     - **a package with a custom-quote item** — those prices are always manual
+       (§2.1), so it waits for the team to price it and press Deliver;
+     - **an external package** — the vendor quotes off-platform.
+     A direct-priced item counts as priced whether the engine or the catalog
+     set it: both are Signage.com's prices (#165, SPEC v2.4 §2.3). When to turn
+     it off for Freshbites is the owner's call (SPEC §12 Q13).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

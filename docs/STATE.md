@@ -10,14 +10,28 @@
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
   margins per sign type on /admin/pricing? And which signs belong in the
   standard packages now?
-- **Next build, in order:** the per-brand switch to skip the team's quote
-  confirmation (v2.6); mockups for custom-quote types (they render — pylon,
-  frosting — just not priced).
+- **Next build:** mockups for custom-quote types (they render — pylon,
+  frosting — just not priced). The quote-confirmation switch is built (on for
+  Freshbites); when to turn it off is the owner's call.
 - **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
+## 5 Oct 2026 (later): team confirmation of quotes, per brand
+
+- **A switch per brand on `/admin/pricing`** (DECISIONS #172): "Team confirms
+  quotes before they are sent", on by default. Off, a fully priced
+  Signage.com package goes to the franchisee as the team routes the request
+  (the system's event, the usual quote email); custom-quote items and
+  external packages still wait as before. Migration
+  `20261005090000_quote_confirmation.sql` (applied locally; **not yet on live**).
+- Driven in the browser on 5 Oct (toggle off, route, delivered as the system,
+  toggle back on; the test request removed). Smoke: the single add-on request
+  now routes with confirmation off; the split
+  request still covers "Deliver quote to franchisee"; the toggle is checked in
+  the margins section.
 
 ## 5 Oct 2026: the Studio in "request changes"
 
