@@ -550,7 +550,7 @@ function ExampleStore({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSig
             {shown.map((sign) => {
               const status = sign.in_package
                 ? { text: 'Approved', className: 'bg-emerald-50 text-emerald-800' }
-                : { text: `With ${brand.name}`, className: 'bg-sky-50 text-sky-800' };
+                : { text: 'In review', className: 'bg-sky-50 text-sky-800' };
               return (
                 <li key={sign.id} className="min-w-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
