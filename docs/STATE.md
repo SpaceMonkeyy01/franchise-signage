@@ -27,6 +27,14 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (late night): every store card shows its stage
+
+- **The setup tracker is on every store card** (owner: "which stage are they
+  at?"): an open setup request's stage as before; all six done once its signs
+  are installed; else "Store set up" with "Choose your signs". `storeProgress`
+  in `src/lib/setup-progress.ts` (4 new unit tests). Smoke now expects a
+  tracker per store (2 in the seed), not rerun.
+
 ## 5 Oct 2026 (night): a new landing page
 
 - **The signed-out brand page** (`/freshbites`, `freshbites.localhost:3000/`)

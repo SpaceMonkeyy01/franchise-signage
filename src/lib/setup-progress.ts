@@ -52,6 +52,29 @@ export function setupProgress(status: RequestStatus): SetupProgress | null {
   return STATUS_PROGRESS[status];
 }
 
+/**
+ * Where a store is, for its card: every store shows a stage. Its setup
+ * request's stage while one is open; once its signs are installed, every
+ * stage done (`current` past the last); and with neither, the first stage,
+ * waiting on the franchisee to choose its signs.
+ */
+export function storeProgress(
+  setupStatus: RequestStatus | null,
+  installedSigns: number,
+): SetupProgress & { complete: boolean } {
+  const open = setupStatus ? setupProgress(setupStatus) : null;
+  if (open) return { ...open, complete: false };
+  if (installedSigns > 0) {
+    return { current: SETUP_STAGES.length, now: 'Your signs are installed.', action: null, complete: true };
+  }
+  return {
+    current: 0,
+    now: 'Your store is set up. Choose its signs to start your order.',
+    action: 'Choose your signs',
+    complete: false,
+  };
+}
+
 /** "Opens Oct 1 · in 2 days", "Opened Sep 15", or null with no date. */
 export function openingLine(
   openingDate: string | Date | null,

@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { openingLine, SETUP_STAGES, setupProgress } from '../setup-progress';
+import { openingLine, SETUP_STAGES, setupProgress, storeProgress } from '../setup-progress';
 import type { RequestStatus } from '../status/types';
 
 describe('setupProgress', () => {
@@ -55,5 +55,23 @@ describe('openingLine', () => {
   it('says when a store already opened, and nothing with no date', () => {
     expect(openingLine('2026-09-15', today)).toBe('Opened Sep 15');
     expect(openingLine(null, today)).toBeNull();
+  });
+});
+
+describe('storeProgress', () => {
+  it('follows an open setup request', () => {
+    expect(storeProgress('needs_review', 0)).toMatchObject({ current: 1, complete: false });
+  });
+
+  it('is complete once the signs are installed', () => {
+    expect(storeProgress(null, 4)).toMatchObject({ current: SETUP_STAGES.length, complete: true, action: null });
+  });
+
+  it('starts at the first stage before any order, asking for the signs', () => {
+    expect(storeProgress(null, 0)).toMatchObject({ current: 0, complete: false, action: 'Choose your signs' });
+  });
+
+  it('treats a declined setup with nothing installed as not started', () => {
+    expect(storeProgress('declined', 0)).toMatchObject({ current: 0, action: 'Choose your signs' });
   });
 });

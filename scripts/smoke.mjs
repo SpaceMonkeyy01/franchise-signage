@@ -436,8 +436,11 @@ await page.getByRole('button', { name: 'Sign in' }).click();
 await page.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
 await expectVisible(page, 'h1:has-text("Dana, your")', 'the franchisee owner signs in to their own stores');
 await expectCount(page, 'text=/installed (Sep|Oct) 2025/', 5, 'Oak Plaza shows its five installed signs');
-await expectCount(page, '[data-testid="setup-tracker"]', 1, 'Cedar Park, mid-setup, shows its setup stages');
-await expectCount(page, '[data-testid="setup-tracker"] li[aria-current="step"]', 1, 'with exactly one stage under way');
+// Every store shows its stage: Oak Plaza installed (all done), Cedar Park
+// mid-setup (one stage under way).
+await expectCount(page, '[data-testid="setup-tracker"]', 2, 'every store shows its setup stages');
+await expectCount(page, '[data-testid="setup-tracker"] li[aria-current="step"]', 1, 'with exactly one stage under way, at Cedar Park');
+await expectVisible(page, '[data-testid="setup-tracker"] >> text=Your signs are installed.', 'and Oak Plaza reads as done');
 await expectVisible(page, '[data-testid="setup-tracker"] >> text=/Opens|Opened/', 'and its opening date');
 // Visible matches only: each request row also holds its sign list and an
 // "Open REQ-…" link, folded away until the row is opened.

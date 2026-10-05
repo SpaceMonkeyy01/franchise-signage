@@ -39,7 +39,7 @@ import {
   type ShowcaseSign,
 } from '@/lib/db/queries';
 import type { Readiness, ReadinessState } from '@/lib/readiness';
-import { openingLine, SETUP_STAGES, setupProgress, type SetupProgress } from '@/lib/setup-progress';
+import { openingLine, SETUP_STAGES, storeProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
 
@@ -930,11 +930,16 @@ function LocationCard({
   const address = [location.address.line1, location.address.city, location.address.state]
     .filter(Boolean)
     .join(', ');
-  // A new store's setup, while it is under way: the tracker takes the place of
-  // "setup in progress", and steps aside once the signs are installed.
+  // Every store shows where its signage stands: its setup request's stage
+  // while one is open, all done once installed, else the first stage.
   const setupRequest = location.open_requests.find((request) => request.intent === 'initial_setup');
-  const progress = setupRequest ? setupProgress(setupRequest.status) : null;
+  const progress = storeProgress(setupRequest?.status ?? null, location.installed_signs.length);
   const opening = openingLine(location.opening_date);
+  const trackerHref = setupRequest
+    ? `/${brandSlug}/request/${setupRequest.access_token}`
+    : !progress.complete && canOrder
+      ? `/${brandSlug}/location/${location.id}/request`
+      : null;
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -956,13 +961,7 @@ function LocationCard({
         )}
       </div>
 
-      {progress && setupRequest && (
-        <SetupTracker
-          progress={progress}
-          opening={opening}
-          href={`/${brandSlug}/request/${setupRequest.access_token}`}
-        />
-      )}
+      <SetupTracker progress={progress} opening={opening} href={trackerHref} />
 
       {location.installed_signs.length > 0 ? (
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -986,11 +985,7 @@ function LocationCard({
             </div>
           ))}
         </div>
-      ) : progress ? null : (
-        <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2.5 text-sm text-gray-500">
-          Setup in progress — signs will appear here once installed.
-        </p>
-      )}
+      ) : null}
 
       {location.open_requests.length > 0 && (
         <div className="mt-4 space-y-1 border-t border-gray-100 pt-3">
@@ -1046,9 +1041,10 @@ function SetupTracker({
   opening,
   href,
 }: {
-  progress: SetupProgress;
+  progress: SetupProgress & { complete: boolean };
   opening: string | null;
-  href: string;
+  /** The setup request, or where to start one; none once installed. */
+  href: string | null;
 }) {
   return (
     <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50/70 p-4" data-testid="setup-tracker">
@@ -1059,8 +1055,14 @@ function SetupTracker({
 
       {/* Six labels do not fit a phone: there, one line names the stage. */}
       <p className="mt-2 text-xs text-gray-600 sm:hidden" aria-hidden="true">
-        Step {progress.current + 1} of {SETUP_STAGES.length} ·{' '}
-        <span className="font-semibold text-gray-900">{SETUP_STAGES[progress.current]}</span>
+        {progress.complete ? (
+          <span className="font-semibold text-gray-900">All {SETUP_STAGES.length} stages complete</span>
+        ) : (
+          <>
+            Step {progress.current + 1} of {SETUP_STAGES.length} ·{' '}
+            <span className="font-semibold text-gray-900">{SETUP_STAGES[progress.current]}</span>
+          </>
+        )}
       </p>
 
       <ol className="mt-3 grid grid-cols-6 gap-1" aria-label="Setup stages">
@@ -1092,7 +1094,7 @@ function SetupTracker({
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-gray-700">{progress.now}</p>
-        {progress.action ? (
+        {!href ? null : progress.action ? (
           <Link
             href={href}
             className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
