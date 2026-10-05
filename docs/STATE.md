@@ -27,6 +27,17 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (late night): "Choose your signs" loads the standard package
+
+- A store with no order yet shows only "Choose your signs", which opens the
+  setup checklist for that store (`/location/{id}/setup`); standard signs
+  auto-approve (DECISIONS #176). "+ Request signage" appears after the first
+  order. Driven as Dana on Oak Plaza: 2 standard signs auto-approved, card
+  moved to Approvals; the test order (REQ-0981) was removed. No smoke case
+  yet.
+- Open with the owner: a per-sign "approve automatically" option, or more
+  signs in the standard packages, to cut add-on reviews.
+
 ## 5 Oct 2026 (late night): every store card shows its stage
 
 - **The setup tracker is on every store card** (owner: "which stage are they

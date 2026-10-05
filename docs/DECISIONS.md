@@ -1846,6 +1846,21 @@ item 7's "CRUD UI only when onboarding brand #2".
      with an icon each (pin, camera, ruler, badge, document), a state badge,
      value pills and a progress bar. The points beside it got their own icons.
 
+176. **A store with no order yet gets its standard package** (owner, 5 Oct:
+     "difference between Request signage and Choose your signs?" — both
+     opened the intent picker, where every sign is an add-on). A store on
+     record with no setup order and nothing installed now shows only "Choose
+     your signs", which opens `/{brand}/location/{id}/setup`: the initial-setup
+     checklist against that store (its format from the record, never the
+     browser), so standard-package signs auto-approve exactly as in new-store
+     setup (§7). `submitFirstOrder` shares setup's item and origin logic and
+     refuses a store that has started. "+ Request signage" appears once the
+     first order exists. Arose because the local reset left Oak Plaza and Cedar
+     Park with no orders; also covers any store created without one.
+     Not changed: catalog signs outside the package are still add-ons that
+     corporate reviews (§7). A per-sign "approve automatically" option was
+     offered to the owner and not yet chosen.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

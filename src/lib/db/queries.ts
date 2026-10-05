@@ -1009,3 +1009,27 @@ export async function getShowcaseSigns(brandId: string): Promise<ShowcaseSign[]>
     [brandId],
   );
 }
+
+/**
+ * A store for its first order: what it is, and whether it has started — an
+ * initial setup that was not declined, or signs already installed. A started
+ * store orders through "Request signage" instead.
+ */
+export function getStoreForFirstOrder(locationId: string): Promise<{
+  id: string;
+  name: string;
+  address: LocationAddress;
+  format: LocationFormat;
+  brand_id: string;
+  started: boolean;
+} | null> {
+  return maybeOne(
+    `select l.id, l.name, l.address, l.format, l.brand_id,
+            exists (select 1 from requests r
+                     where r.location_id = l.id and r.intent = 'initial_setup'
+                       and r.status <> 'declined')
+            or exists (select 1 from installed_signs s where s.location_id = l.id) as started
+       from locations l where l.id = $1`,
+    [locationId],
+  );
+}

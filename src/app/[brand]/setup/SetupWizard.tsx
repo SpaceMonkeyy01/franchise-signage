@@ -14,7 +14,7 @@ import type { StoredObject } from '@/lib/storage';
 import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import type { SignDesign } from '@/lib/designs/design';
 
-import { submitInitialSetup } from './actions';
+import { submitFirstOrder, submitInitialSetup } from './actions';
 
 interface ItemState {
   /** Stable per instance: an endcap loads two storefront sets (SPEC §3.2). */
@@ -37,38 +37,66 @@ function itemPrice(item: ItemState, brandItem: BrandItemRow | undefined): number
 
 const STEP_COUNT = 4;
 
+/** A store already on record that has no order yet: its first order, not a new store. */
+export interface ExistingStore {
+  id: string;
+  name: string;
+  address: { line1?: string; city?: string; state?: string; zip?: string };
+  format: LocationFormat;
+}
+
+/** A format's standard package as the checklist's starting items. */
+function standardItems(packages: PackageRow[], format: LocationFormat): ItemState[] {
+  const pkg = packages.find((entry) => entry.format === format);
+  return (pkg?.items ?? []).map((item, index) => ({
+    key: `${item.id}#${index}`,
+    brandItemId: item.id,
+    fromPackage: true,
+    sizing: '',
+    tbd: false,
+    exceptionIssue: null,
+    photo: null,
+    design: null,
+  }));
+}
+
 export function SetupWizard({
   brand,
   packages,
   catalog,
   requester,
+  existing,
 }: {
   brand: BrandPublic;
   packages: PackageRow[];
   catalog: BrandItemRow[];
   /** The signed-in account's contact details, as the starting point (SPEC v2.3). */
   requester: { name: string; email: string; phone: string };
+  /** Ordering for a store on record instead of setting up a new one. */
+  existing?: ExistingStore;
 }) {
   const [step, setStep] = useState(1);
   const [basics, setBasics] = useState({
-    name: '',
-    line1: '',
-    city: '',
-    state: '',
-    zip: '',
+    name: existing?.name ?? '',
+    line1: existing?.address.line1 ?? '',
+    city: existing?.address.city ?? '',
+    state: existing?.address.state ?? '',
+    zip: existing?.address.zip ?? '',
     openingDate: '',
     requesterName: requester.name,
     requesterEmail: requester.email,
     requesterPhone: requester.phone,
   });
-  const [format, setFormat] = useState<LocationFormat | null>(null);
+  const [format, setFormat] = useState<LocationFormat | null>(existing?.format ?? null);
   // undefined = not answered, null = "not sure yet". Both store as null (§8b:
   // "not asked" and "answered no" are different states), but only the second is
   // a choice the franchisee made, and only it should look selected.
   const [financing, setFinancing] = useState<boolean | null | undefined>(undefined);
   const [landlord, setLandlord] = useState({ name: '', email: '', phone: '' });
   const [leaseExhibit, setLeaseExhibit] = useState<StoredObject | null>(null);
-  const [items, setItems] = useState<ItemState[]>([]);
+  const [items, setItems] = useState<ItemState[]>(() =>
+    existing ? standardItems(packages, existing.format) : [],
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -80,19 +108,7 @@ export function SetupWizard({
   /** Switching format reloads the checklist — a different site needs different signs. */
   function chooseFormat(next: LocationFormat) {
     setFormat(next);
-    const pkg = packages.find((entry) => entry.format === next);
-    setItems(
-      (pkg?.items ?? []).map((item, index) => ({
-        key: `${item.id}#${index}`,
-        brandItemId: item.id,
-        fromPackage: true,
-        sizing: '',
-        tbd: false,
-        exceptionIssue: null,
-        photo: null,
-        design: null,
-      })),
-    );
+    setItems(standardItems(packages, next));
   }
 
   function patch(key: string, change: Partial<ItemState>) {
@@ -124,9 +140,34 @@ export function SetupWizard({
   function submit() {
     if (!format) return;
     setError(null);
+    const order = {
+      brandSlug: brand.slug,
+      requester: {
+        name: basics.requesterName,
+        email: basics.requesterEmail,
+        phone: basics.requesterPhone,
+      },
+      financingInvolved: financing ?? null,
+      landlordContact: landlord.name || landlord.email || landlord.phone ? landlord : null,
+      leaseExhibit,
+      items: items.map((item) => ({
+        brandItemId: item.brandItemId,
+        fromPackage: item.fromPackage,
+        sizing: item.sizing.trim() || null,
+        tbd: item.tbd,
+        exceptionIssue: item.exceptionIssue,
+        photo: item.photo,
+        design: item.design,
+      })),
+    };
     startTransition(async () => {
+      if (existing) {
+        const failure = await submitFirstOrder({ ...order, locationId: existing.id });
+        if (failure) setError(failure.error);
+        return;
+      }
       const failure = await submitInitialSetup({
-        brandSlug: brand.slug,
+        ...order,
         location: {
           name: basics.name,
           line1: basics.line1,
@@ -136,23 +177,6 @@ export function SetupWizard({
           format,
           openingDate: basics.openingDate,
         },
-        requester: {
-          name: basics.requesterName,
-          email: basics.requesterEmail,
-          phone: basics.requesterPhone,
-        },
-        financingInvolved: financing ?? null,
-        landlordContact: landlord.name || landlord.email || landlord.phone ? landlord : null,
-        leaseExhibit,
-        items: items.map((item) => ({
-          brandItemId: item.brandItemId,
-          fromPackage: item.fromPackage,
-          sizing: item.sizing.trim() || null,
-          tbd: item.tbd,
-          exceptionIssue: item.exceptionIssue,
-          photo: item.photo,
-          design: item.design,
-        })),
       });
       if (failure) setError(failure.error);
     });
@@ -161,12 +185,13 @@ export function SetupWizard({
   return (
     <div>
       <p className="text-xs font-medium tracking-wide" style={{ color: 'var(--color-brand)' }}>
-        NEW LOCATION · STEP {step} OF {STEP_COUNT}
+        {existing ? 'FIRST ORDER' : 'NEW LOCATION'} · STEP {step} OF {STEP_COUNT}
       </p>
 
       {step === 1 && (
         <StepBasics
           brand={brand}
+          existing={existing ? { ...existing, formatLabel: chosenFormat?.label ?? '' } : undefined}
           basics={basics}
           setBasics={setBasics}
           packages={packages}
@@ -241,6 +266,7 @@ type Basics = {
 
 function StepBasics({
   brand,
+  existing,
   basics,
   setBasics,
   packages,
@@ -255,6 +281,7 @@ function StepBasics({
   onNext,
 }: {
   brand: BrandPublic;
+  existing?: ExistingStore & { formatLabel: string };
   basics: Basics;
   setBasics: (next: Basics) => void;
   packages: PackageRow[];
@@ -272,24 +299,46 @@ function StepBasics({
 
   return (
     <>
-      <h1 className="mt-1 text-xl font-semibold text-gray-900">Tell us about your location</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        Your location format determines which standard sign package loads.
-      </p>
+      {existing ? (
+        <>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Choose signs for {existing.name}</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            The standard package for this store type loads next. Confirm your contact details first.
+          </p>
+          <div className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+            <p className="text-sm font-medium text-gray-900">{existing.name}</p>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {[existing.address.line1, existing.address.city, existing.address.state].filter(Boolean).join(', ')}
+              {existing.formatLabel && ` · ${existing.formatLabel}`}
+            </p>
+          </div>
+        </>
+      ) : (
+        <>
+          <h1 className="mt-1 text-xl font-semibold text-gray-900">Tell us about your location</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Your location format determines which standard sign package loads.
+          </p>
+        </>
+      )}
 
       <div className="mt-6 space-y-4">
-        <Field
-          label="Location name"
-          value={basics.name}
-          onChange={set('name')}
-          placeholder={`${brand.name} — Riverside`}
-        />
-        <Field label="Street address" value={basics.line1} onChange={set('line1')} placeholder="123 Main St" />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Field label="City" value={basics.city} onChange={set('city')} placeholder="Austin" />
-          <Field label="State" value={basics.state} onChange={set('state')} placeholder="TX" />
-          <Field label="ZIP" value={basics.zip} onChange={set('zip')} placeholder="78701" />
-        </div>
+        {!existing && (
+          <>
+            <Field
+              label="Location name"
+              value={basics.name}
+              onChange={set('name')}
+              placeholder={`${brand.name} — Riverside`}
+            />
+            <Field label="Street address" value={basics.line1} onChange={set('line1')} placeholder="123 Main St" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field label="City" value={basics.city} onChange={set('city')} placeholder="Austin" />
+              <Field label="State" value={basics.state} onChange={set('state')} placeholder="TX" />
+              <Field label="ZIP" value={basics.zip} onChange={set('zip')} placeholder="78701" />
+            </div>
+          </>
+        )}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field
             label="Your name"
@@ -312,17 +361,19 @@ function StepBasics({
             onChange={set('requesterPhone')}
             placeholder="Optional"
           />
-          <Field
-            label="Target opening date"
-            value={basics.openingDate}
-            onChange={set('openingDate')}
-            placeholder="e.g. Oct 1, 2026"
-          />
+          {!existing && (
+            <Field
+              label="Target opening date"
+              value={basics.openingDate}
+              onChange={set('openingDate')}
+              placeholder="e.g. Oct 1, 2026"
+            />
+          )}
         </div>
       </div>
 
-      <p className="mb-2 mt-6 text-xs font-medium text-gray-700">Location format</p>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      {!existing && <p className="mb-2 mt-6 text-xs font-medium text-gray-700">Location format</p>}
+      <div className={existing ? 'hidden' : 'grid grid-cols-1 gap-3 sm:grid-cols-3'}>
         {packages.map((pkg) => {
           const active = pkg.format === format;
           return (

@@ -935,11 +935,17 @@ function LocationCard({
   const setupRequest = location.open_requests.find((request) => request.intent === 'initial_setup');
   const progress = storeProgress(setupRequest?.status ?? null, location.installed_signs.length);
   const opening = openingLine(location.opening_date);
-  const trackerHref = setupRequest
-    ? `/${brandSlug}/request/${setupRequest.access_token}`
-    : !progress.complete && canOrder
-      ? `/${brandSlug}/location/${location.id}/request`
-      : null;
+  // No order yet: the first one loads the store type's standard package, so
+  // "Choose your signs" is the only way in until then (not "Request signage",
+  // where every sign would be an add-on).
+  const started =
+    location.installed_signs.length > 0 || (!!setupRequest && setupRequest.status !== 'declined');
+  const trackerHref =
+    setupRequest && setupRequest.status !== 'declined'
+      ? `/${brandSlug}/request/${setupRequest.access_token}`
+      : !started && canOrder
+        ? `/${brandSlug}/location/${location.id}/setup`
+        : null;
 
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -950,7 +956,7 @@ function LocationCard({
             <PinIcon /> {address}
           </p>
         </div>
-        {canOrder && (
+        {canOrder && started && (
           <Link
             href={`/${brandSlug}/location/${location.id}/request`}
             className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"

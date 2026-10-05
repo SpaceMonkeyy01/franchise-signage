@@ -10,14 +10,15 @@
 
 import { redirect } from 'next/navigation';
 
-import { checkStoreCreation } from '@/lib/auth/stores';
-import { createLocationWithRequest, toRequestFile } from '@/lib/db/create-request';
+import { checkStoreCreation, checkStoreOrdering } from '@/lib/auth/stores';
+import { createAndSubmitRequest, createLocationWithRequest, toRequestFile, type NewRequestItem } from '@/lib/db/create-request';
 import type { SignDesign } from '@/lib/designs/design';
 import { attachQuoteSheets } from '@/lib/designs/sheets';
 import { prepareDesignedItems } from '@/lib/designs/submit';
 import { StudioError } from '@/lib/designs/studio';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
+import { getStoreForFirstOrder } from '@/lib/db/queries';
 import type { SubmitFailure } from '@/lib/forms';
 import type { LineItemOrigin, LocationFormat } from '@/lib/status/types';
 import type { StoredObject } from '@/lib/storage';
@@ -136,30 +137,7 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
               'Lease sign exhibit not provided at submission — the Signage.com team will ' +
                 'follow up before the package is prepared.',
             ],
-        items: input.items.map((item, index) => {
-          const studio = designed[index];
-          return {
-            brandItemId: item.brandItemId,
-            origin: studio.origin,
-            // A Studio design carries its own size; the franchisee's site note follows it.
-            sizing: studio.design
-              ? [`${studio.design.dimension.inches}" ${studio.design.dimension.axis}`, item.sizing?.trim()]
-                  .filter(Boolean)
-                  .join(' · ')
-              : item.tbd
-                ? null
-                : item.sizing,
-            tbdFields: item.tbd && !studio.design ? ['sizing'] : [],
-            exceptionIssue: studio.exceptionIssue,
-            design: studio.design,
-            estPrice: studio.estPrice,
-            priceSource: studio.priceSource,
-            files: [
-              ...(item.photo ? [toRequestFile('placement_photo', item.photo)] : []),
-              ...(studio.mockup ? [{ kind: 'mockup' as const, ...studio.mockup }] : []),
-            ],
-          };
-        }),
+        items: requestItems(input.items, designed),
         summary: ({ total, pendingReview }) =>
           `Initial setup submitted (${total - pendingReview} standard + ${pendingReview} needing review)`,
       },
@@ -177,6 +155,118 @@ export async function submitInitialSetup(input: SetupInput): Promise<SubmitFailu
   await notifyFranchisee(requestId, 'submitted');
 
   redirect(`/${input.brandSlug}/request/${token}`);
+}
+
+export interface FirstOrderInput extends Omit<SetupInput, 'location'> {
+  locationId: string;
+}
+
+/**
+ * The first order for a store that already exists but has none: the same
+ * checklist as initial setup, against the store on record. Its format comes
+ * from the record, never the browser, and it loads that format's package, so
+ * standard signs auto-approve exactly as they do in setup (SPEC §7).
+ */
+export async function submitFirstOrder(input: FirstOrderInput): Promise<SubmitFailure | undefined> {
+  if (input.items.length === 0) return { error: 'The package is empty. Add at least one sign.' };
+
+  const access = await checkStoreOrdering(input.brandSlug, input.locationId);
+  if ('error' in access) return { error: access.error };
+
+  const brand = await queryOne<{ id: string }>(`select id from brands where slug = $1`, [input.brandSlug]);
+  const location = await getStoreForFirstOrder(input.locationId);
+  if (!brand || !location || location.brand_id !== brand.id) return { error: 'That store is not on this brand.' };
+  if (location.started) {
+    return { error: 'This store already has its signs ordered. Use Request signage to add or replace one.' };
+  }
+
+  const pkg = await queryOne<{ items: string[] }>(
+    `select items from brand_packages where brand_id = $1 and format = $2`,
+    [location.brand_id, location.format],
+  );
+  const inPackage = new Map<string, number>();
+  for (const id of pkg?.items ?? []) inPackage.set(id, (inPackage.get(id) ?? 0) + 1);
+
+  let designed;
+  try {
+    designed = await prepareDesignedItems(
+      location.brand_id,
+      input.items.map((item) => ({
+        brandItemId: item.brandItemId,
+        origin: originOf(item, inPackage),
+        design: item.design,
+        exceptionIssue: item.exceptionIssue,
+      })),
+    );
+  } catch (error) {
+    if (error instanceof StudioError) return { error: error.message };
+    throw error;
+  }
+
+  let token: string;
+  let requestId: string;
+  try {
+    const created = await createAndSubmitRequest({
+      brandId: location.brand_id,
+      locationId: input.locationId,
+      intent: 'initial_setup',
+      createdBy: access.viewer.profile.id,
+      requester: input.requester,
+      financingInvolved: input.financingInvolved,
+      landlordContact: input.landlordContact ?? null,
+      files: input.leaseExhibit ? [toRequestFile('landlord_criteria', input.leaseExhibit)] : [],
+      notes: input.leaseExhibit
+        ? []
+        : [
+            'Lease sign exhibit not provided at submission — the Signage.com team will ' +
+              'follow up before the package is prepared.',
+          ],
+      items: requestItems(input.items, designed),
+      summary: ({ total, pendingReview }) =>
+        `Initial setup submitted (${total - pendingReview} standard + ${pendingReview} needing review)`,
+    });
+    token = created.accessToken;
+    requestId = created.id;
+  } catch (error) {
+    console.error('first order submission failed', error);
+    return { error: 'That submission failed. Nothing was saved — try again.' };
+  }
+
+  await attachQuoteSheets(requestId).catch((error) => console.error('quote sheets failed', error));
+  await notifyFranchisee(requestId, 'submitted');
+
+  redirect(`/${input.brandSlug}/request/${token}`);
+}
+
+/** The checklist's signs as request lines, with any Studio design and its price. */
+function requestItems(
+  items: SetupItemInput[],
+  designed: Awaited<ReturnType<typeof prepareDesignedItems>>,
+): NewRequestItem[] {
+  return items.map((item, index) => {
+    const studio = designed[index];
+    return {
+      brandItemId: item.brandItemId,
+      origin: studio.origin,
+      // A Studio design carries its own size; the franchisee's site note follows it.
+      sizing: studio.design
+        ? [`${studio.design.dimension.inches}" ${studio.design.dimension.axis}`, item.sizing?.trim()]
+            .filter(Boolean)
+            .join(' · ')
+        : item.tbd
+          ? null
+          : item.sizing,
+      tbdFields: item.tbd && !studio.design ? ['sizing'] : [],
+      exceptionIssue: studio.exceptionIssue,
+      design: studio.design,
+      estPrice: studio.estPrice,
+      priceSource: studio.priceSource,
+      files: [
+        ...(item.photo ? [toRequestFile('placement_photo', item.photo)] : []),
+        ...(studio.mockup ? [{ kind: 'mockup' as const, ...studio.mockup }] : []),
+      ],
+    };
+  });
 }
 
 /**
