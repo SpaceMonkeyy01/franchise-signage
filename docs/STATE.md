@@ -26,7 +26,7 @@
   Signage.com package goes to the franchisee as the team routes the request
   (the system's event, the usual quote email); custom-quote items and
   external packages still wait as before. Migration
-  `20261005090000_quote_confirmation.sql` (applied locally; **not yet on live**).
+  `20261005090000_quote_confirmation.sql`, applied locally and on live.
 - Driven in the browser on 5 Oct (toggle off, route, delivered as the system,
   toggle back on; the test request removed). Smoke: the single add-on request
   now routes with confirmation off; the split
