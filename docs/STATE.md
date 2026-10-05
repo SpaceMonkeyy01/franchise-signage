@@ -2,10 +2,10 @@
 
 ## Pick up here (end of 2 Oct 2026)
 
-- **Freshbites is Studio-only for now** (#171): seven active signs, each designed
-  with the Freshbites logo, engine-priced, with a mockup drawn in its own style.
-  Window Frosting, Entrance Sign and Road Sign are inactive. Packages hold only
-  Storefront + Lobby Letters (Inline $1,033).
+- **Freshbites** (#171, #178): seven engine-priced signs plus the Road Sign
+  (custom quote, Studio-drawn); Window Frosting (designed) and Entrance Sign
+  inactive. Packages: Inline $1,033, Endcap $1,733, Freestanding $1,733 + the
+  road sign. Local data; live not changed.
 - **Two questions left with the owner:** engine prices run far below the old
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
   margins per sign type on /admin/pricing? And which signs belong in the
@@ -26,6 +26,13 @@
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
+## 5 Oct 2026 (late night): Freshbites packages tidied
+
+- Packages renamed Inline / Endcap / Freestanding; Freestanding now 2×
+  Storefront, Lobby and the Road Sign (reinstated, designed in the Studio,
+  custom quote): $1,733 + 1 custom. Local data only (DECISIONS #178).
+- Fixed: a first Studio design's size limits now follow the size typed.
 
 ## 5 Oct 2026 (late night): store cards redesigned
 

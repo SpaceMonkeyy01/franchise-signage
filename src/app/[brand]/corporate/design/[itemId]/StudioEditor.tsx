@@ -57,6 +57,20 @@ export function StudioEditor({
   const [rules, setRules] = useState<DesignRules>(
     saved ? savedRules : { [SIZE]: { mode: 'range', min: 18, max: 30 } },
   );
+  // Until the admin sets the size limits themselves, a first design's limits
+  // follow the size it is given; otherwise a 96" sign kept 18–30" and the
+  // server refused to save it ("limits must include the design's own value").
+  const [sizeRuleAuto, setSizeRuleAuto] = useState(!saved);
+  function changeInches(value: string) {
+    setInches(value);
+    const size = Number(value);
+    if (sizeRuleAuto && Number.isFinite(size) && size > 0) {
+      setRules((all) => ({
+        ...all,
+        [SIZE]: { mode: 'range', min: Math.round(size * 0.75 * 4) / 4, max: Math.round(size * 1.25 * 4) / 4 },
+      }));
+    }
+  }
   const [preview, setPreview] = useState<SignDesign | null>(saved);
   const [message, setMessage] = useState<{ tone: 'error' | 'ok'; text: string } | null>(null);
   const [busy, setBusy] = useState<null | 'logo' | 'preview' | 'save'>(null);
@@ -200,7 +214,7 @@ export function StudioEditor({
             </label>
             <label className="text-xs text-gray-600">
               {axis === 'height' ? 'Height' : 'Width'} (inches)
-              <input value={inches} onChange={(e) => setInches(e.target.value)} inputMode="decimal" className={`${input} mt-1 block w-28`} />
+              <input value={inches} onChange={(e) => changeInches(e.target.value)} inputMode="decimal" className={`${input} mt-1 block w-28`} />
             </label>
             <label className="text-xs text-gray-600">
               Depth (inches, optional)
@@ -211,7 +225,10 @@ export function StudioEditor({
             title={`Franchisees may change the ${axis}`}
             rule={rules[SIZE]}
             current={Number(inches)}
-            onChange={(rule) => setRule(SIZE, rule)}
+            onChange={(rule) => {
+              setSizeRuleAuto(false);
+              setRule(SIZE, rule);
+            }}
           />
           {depth.trim() && (
             <RangeRule

@@ -1875,6 +1875,22 @@ item 7's "CRUD UI only when onboarding brand #2".
      added). Saving merges into the stored address, so a line2 the form does
      not show is kept. Staff cannot edit (they order, they do not own).
 
+178. **Freshbites' store types and packages tidied** (owner, 5 Oct, after a
+     review of the names: Inline / Endcap / Freestanding kept as the standard
+     terms). Done as the brand admin through the catalog functions, so each
+     change is in the catalog history: packages renamed to their store types
+     (Inline, Endcap, Freestanding) with plain descriptions; the Freestanding
+     package, which said "with road sign" but held the Inline signs, now has
+     2× Storefront Letters, Lobby Letters and the Road Sign — reinstated and
+     designed in the Studio (96" pylon, custom quote). **Local data only**;
+     the live project's Freshbites rows were not changed. Drive-thru and
+     non-traditional types were suggested and not added (only if Freshbites
+     has such sites).
+     Found doing it: a first Studio design kept its default size limits at
+     18–30" whatever size was typed, so a 96" sign could not be saved ("limits
+     must include the design's own value"). The limits now follow the size
+     until the admin sets them.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
