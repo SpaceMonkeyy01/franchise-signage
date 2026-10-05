@@ -10,14 +10,24 @@
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
   margins per sign type on /admin/pricing? And which signs belong in the
   standard packages now?
-- **Next build, in order:** the Studio in "request changes" (resubmit a design);
-  the per-brand switch to skip the team's quote confirmation (v2.6); mockups
-  for custom-quote types (they render — pylon, frosting — just not priced).
+- **Next build, in order:** the per-brand switch to skip the team's quote
+  confirmation (v2.6); mockups for custom-quote types (they render — pylon,
+  frosting — just not priced).
 - **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
+## 5 Oct 2026: the Studio in "request changes"
+
+- **A sent-back design is adjusted and re-priced on resubmit:** the resubmit
+  panel shows "Customize in Studio" for a sign with a brand design, authorized
+  by the request link and the sign corporate sent back. The server checks and
+  prices the new design as submission does, replaces the line's mockup and
+  quote sheet, and logs the old and new price (`src/lib/designs/resubmit.ts`).
+- Checks: **218 unit**, typecheck, lint. Smoke not rerun (it needs
+  `dev:db:reset`, which would wipe Riverside).
 
 ## 2 Oct 2026 (late): a store set up and installed, start to finish, by hand
 

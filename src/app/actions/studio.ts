@@ -7,6 +7,7 @@
 import { getBrandBySlug } from '@/lib/db/queries';
 import { checkStoreCreation, checkStoreOrdering } from '@/lib/auth/stores';
 import { breaches, type SignDesign } from '@/lib/designs/design';
+import { flaggedDesignLine } from '@/lib/designs/resubmit';
 import { StudioError, getDesignableSign, quoteDesign } from '@/lib/designs/studio';
 
 export async function previewFranchiseeDesignAction(
@@ -28,6 +29,29 @@ export async function previewFranchiseeDesignAction(
   } catch (error) {
     if (error instanceof StudioError) return { error: error.message };
     console.error('franchisee preview failed', error);
+    return { error: 'The preview did not work. Try again.' };
+  }
+}
+
+/**
+ * The same preview while answering a change request: the request's link and a
+ * sign corporate sent back authorize it, as they authorize the resubmission.
+ */
+export async function previewResubmitDesignAction(
+  token: string,
+  lineItemId: string,
+  design: SignDesign,
+): Promise<{ design: SignDesign; outside: string[] } | { error: string }> {
+  const line = await flaggedDesignLine(token, lineItemId);
+  if (!line) return { error: 'This sign is not waiting on changes.' };
+  const sign = await getDesignableSign(line.brandItemId, line.brandId);
+  if (!sign?.design) return { error: 'This sign has no Studio design to adjust.' };
+  try {
+    const priced = await quoteDesign(sign, design);
+    return { design: priced, outside: breaches(sign.design, sign.design_rules, design) };
+  } catch (error) {
+    if (error instanceof StudioError) return { error: error.message };
+    console.error('resubmission preview failed', error);
     return { error: 'The preview did not work. Try again.' };
   }
 }

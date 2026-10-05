@@ -246,6 +246,9 @@ export interface LineItemRow {
   spec_summary: string | null;
   /** The design this line was ordered with (SPEC v2.6 §8), or null. */
   design?: SignDesign | null;
+  /** The brand admin's Studio design for this sign and its limits — what a resubmission adjusts within. */
+  brand_design?: SignDesign | null;
+  design_rules?: DesignRules;
   /** Which attributes stay per-site — what the resubmission form asks for. */
   site_variables: string[];
   /** The brand's locked-down spec (SPEC §2.2) — what a vendor actually builds to. */
@@ -403,6 +406,7 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   const items = await rows<Omit<LineItemRow, 'files'>>(
     `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
             bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override, li.design,
+            bi.design as brand_design, bi.design_rules,
             mc.render_key,
             -- The line's own mockup first: it is the sign as ordered.
             coalesce(li.design->>'mockupPath', bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,

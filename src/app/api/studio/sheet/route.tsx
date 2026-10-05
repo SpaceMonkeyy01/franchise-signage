@@ -7,6 +7,7 @@
 import { checkCorporate } from '@/lib/auth/corporate';
 import { checkStoreCreation, checkStoreOrdering } from '@/lib/auth/stores';
 import { getBrandBySlug } from '@/lib/db/queries';
+import { flaggedDesignLine } from '@/lib/designs/resubmit';
 import type { SignDesign } from '@/lib/designs/design';
 import { fileSlug, renderSignSheet } from '@/lib/designs/sheets';
 import { StudioError, getDesignableSign, quoteDesign } from '@/lib/designs/studio';
@@ -17,6 +18,8 @@ interface SheetRequest {
   as: 'brand' | 'franchisee';
   /** A franchisee's store; null while setting up a new one. */
   locationId?: string | null;
+  /** Answering a change request: the request's link and the sign sent back. */
+  resubmit?: { token: string; lineItemId: string } | null;
   brandItemId: string;
   design: SignDesign;
 }
@@ -25,8 +28,16 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => null)) as SheetRequest | null;
   if (!body?.brandSlug || !body.brandItemId || !body.design) return new Response('Bad request', { status: 400 });
 
-  const access =
-    body.as === 'brand'
+  // Answering a change request: the request's link and the sign sent back
+  // authorize it, as they authorize the resubmission itself.
+  const resubmitting = body.resubmit ? await flaggedDesignLine(body.resubmit.token, body.resubmit.lineItemId) : null;
+  const mismatch = resubmitting?.brandItemId !== body.brandItemId || resubmitting?.brandSlug !== body.brandSlug;
+  if (body.resubmit && (!resubmitting || mismatch)) {
+    return new Response('This sign is not waiting on changes.', { status: 403 });
+  }
+  const access = resubmitting
+    ? { ok: true as const }
+    : body.as === 'brand'
       ? await checkCorporate(body.brandSlug, { manage: true })
       : body.locationId
         ? await checkStoreOrdering(body.brandSlug, body.locationId)

@@ -8,7 +8,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { previewFranchiseeDesignAction } from '@/app/actions/studio';
+import { previewFranchiseeDesignAction, previewResubmitDesignAction } from '@/app/actions/studio';
 import { downloadPreviewSheet } from '@/components/downloadSheet';
 import { DEPTH, SIZE, label, ruleFor, type DesignRules, type SignDesign } from '@/lib/designs/design';
 import { fileUrl } from '@/lib/storage/url';
@@ -25,10 +25,13 @@ export function StudioAdjust({
   rules,
   value,
   onChange,
+  resubmit,
 }: {
   brandSlug: string;
   locationId: string | null;
   brandItemId: string;
+  /** Answering a change request from the request's link, not an account. */
+  resubmit?: { token: string; lineItemId: string };
   base: SignDesign;
   rules: DesignRules;
   /** The adjusted design in use, or null for the brand's own. */
@@ -163,7 +166,9 @@ export function StudioAdjust({
           onClick={() => {
             setError(null);
             startTransition(async () => {
-              const result = await previewFranchiseeDesignAction(brandSlug, locationId, brandItemId, draft());
+              const result = resubmit
+                ? await previewResubmitDesignAction(resubmit.token, resubmit.lineItemId, draft())
+                : await previewFranchiseeDesignAction(brandSlug, locationId, brandItemId, draft());
               if ('error' in result) setError(result.error);
               else setPreview(result);
             });
@@ -194,6 +199,7 @@ export function StudioAdjust({
                   brandSlug,
                   as: 'franchisee',
                   locationId,
+                  resubmit,
                   brandItemId,
                   design: draft(),
                 });

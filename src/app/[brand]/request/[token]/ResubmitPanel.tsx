@@ -11,7 +11,9 @@ import { useState, useTransition } from 'react';
 
 import { PhotoUpload } from '@/components/PhotoUpload';
 import { SizingField } from '@/components/SizingField';
+import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import type { LineItemRow } from '@/lib/db/queries';
+import type { SignDesign } from '@/lib/designs/design';
 import type { StoredObject } from '@/lib/storage';
 
 import { resubmitChanges } from './actions';
@@ -21,6 +23,20 @@ interface EditState {
   tbd: boolean;
   siteNotes: string;
   photo: StoredObject | null;
+  /** A new Studio design; null returns to the brand's own; undefined leaves it. */
+  design?: SignDesign | null;
+}
+
+/** The brand's design, when this sign can be adjusted in the Studio. */
+function studioBase(item: LineItemRow): SignDesign | null {
+  if (item.origin === 'replacement' || !item.brand_design) return null;
+  return hasAdjustableDesign(item.brand_design, item.design_rules ?? {}) ? item.brand_design : null;
+}
+
+/** The line's design as StudioAdjust shows it: null when it is the brand's own. */
+function customized(item: LineItemRow): SignDesign | null {
+  if (!item.design || !item.brand_design) return null;
+  return JSON.stringify(item.design) === JSON.stringify(item.brand_design) ? null : item.design;
 }
 
 export function ResubmitPanel({
@@ -66,6 +82,7 @@ export function ResubmitPanel({
           tbd: edits[item.id].tbd,
           siteNotes: edits[item.id].siteNotes,
           photo: edits[item.id].photo,
+          design: edits[item.id].design,
         })),
       });
       if (failure) setError(failure.error);
@@ -91,15 +108,30 @@ export function ResubmitPanel({
               </p>
             )}
 
-            <div className="mt-3">
-              <SizingField
-                siteVariables={item.site_variables}
-                value={edits[item.id].sizing}
-                tbd={edits[item.id].tbd}
-                onValueChange={(sizing) => patch(item.id, { sizing })}
-                onTbdChange={(tbd) => patch(item.id, { tbd })}
+            {studioBase(item) ? (
+              // A Studio design carries its own size; adjust it here, within the
+              // brand's limits, and it is checked and priced again on resubmission.
+              <StudioAdjust
+                brandSlug={brandSlug}
+                locationId={null}
+                brandItemId={item.brand_item_id}
+                base={studioBase(item)!}
+                rules={item.design_rules ?? {}}
+                value={edits[item.id].design === undefined ? customized(item) : (edits[item.id].design ?? null)}
+                onChange={(design) => patch(item.id, { design })}
+                resubmit={{ token, lineItemId: item.id }}
               />
-            </div>
+            ) : (
+              <div className="mt-3">
+                <SizingField
+                  siteVariables={item.site_variables}
+                  value={edits[item.id].sizing}
+                  tbd={edits[item.id].tbd}
+                  onValueChange={(sizing) => patch(item.id, { sizing })}
+                  onTbdChange={(tbd) => patch(item.id, { tbd })}
+                />
+              </div>
+            )}
 
             <textarea
               value={edits[item.id].siteNotes}

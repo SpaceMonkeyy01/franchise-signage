@@ -12,6 +12,11 @@ import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { toRequestFile } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { createPgStatusStore, withStatusStore } from '@/lib/db/pg-status-store';
+import type { SignDesign } from '@/lib/designs/design';
+import { flaggedDesignLine, prepareResubmittedDesign } from '@/lib/designs/resubmit';
+import { attachQuoteSheets } from '@/lib/designs/sheets';
+import { StudioError } from '@/lib/designs/studio';
+import type { DesignedItemOut } from '@/lib/designs/submit';
 import { notifyReviewNeeded } from '@/lib/email/notify';
 import { query, queryOne, transaction } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
@@ -94,6 +99,11 @@ export interface ResubmitEdit {
   siteNotes: string | null;
   /** A replacement photo for this item, already in storage. */
   photo: StoredObject | null;
+  /**
+   * A Studio design adjusted again (SPEC v2.6 §8): null returns to the brand's
+   * own, undefined leaves the line's design as it was.
+   */
+  design?: SignDesign | null;
 }
 
 /**
@@ -127,21 +137,43 @@ export async function resubmitChanges(input: {
     return { error: 'That item is not one of the flagged items.' };
   }
 
+  // Changed designs are checked against the brand's limits and priced on the
+  // server, before the transaction — pricing is a ~15 s call (designs/submit.ts).
+  const redesigned = new Map<string, { out: DesignedItemOut; previous: SignDesign | null }>();
+  for (const edit of input.edits) {
+    if (edit.design === undefined) continue;
+    const line = await flaggedDesignLine(input.token, edit.lineItemId);
+    if (!line) return { error: 'That sign cannot be redesigned here.' };
+    try {
+      redesigned.set(edit.lineItemId, {
+        out: await prepareResubmittedDesign(line, edit.design, trimmed(edit.siteNotes)),
+        previous: line.design,
+      });
+    } catch (error) {
+      if (error instanceof StudioError) return { error: error.message };
+      throw error;
+    }
+  }
+
   try {
     await transaction(async (exec) => {
       for (const edit of input.edits) {
-        await exec.query(
-          `update line_items
+        const studio = redesigned.get(edit.lineItemId);
+        if (studio) {
+          await applyRedesign(exec, request.id, edit.lineItemId, studio.out, studio.previous);
+        } else
+          await exec.query(
+            `update line_items
               set sizing = $2, tbd_fields = $3, site_notes = $4
             where id = $1 and request_id = $5 and item_status = 'changes_requested'`,
-          [
-            edit.lineItemId,
-            edit.tbd ? null : trimmed(edit.sizing),
-            edit.tbd ? ['sizing'] : [],
-            trimmed(edit.siteNotes),
-            request.id,
-          ],
-        );
+            [
+              edit.lineItemId,
+              edit.tbd ? null : trimmed(edit.sizing),
+              edit.tbd ? ['sizing'] : [],
+              trimmed(edit.siteNotes),
+              request.id,
+            ],
+          );
 
         if (edit.photo) {
           const file = toRequestFile('placement_photo', edit.photo);
@@ -169,12 +201,86 @@ export async function resubmitChanges(input: {
     return { error: 'That resubmission failed. Nothing was saved — try again.' };
   }
 
+  // A changed design gets a fresh quote sheet; the old one was removed with it.
+  // Never fatal: the resubmission is committed (as at submission, #168).
+  if (redesigned.size > 0) {
+    await attachQuoteSheets(request.id).catch((error) =>
+      console.error('quote sheets failed', error),
+    );
+  }
+
   // The re-review email (SPEC §9 interface 3). Outside the transaction: the
   // resubmission is committed and must not be undone by a mail failure, and
   // minting the new link revokes the one the reviewer was sent for v1.
   await notifyReviewNeeded(request.id);
 
   revalidatePath(`/[brand]/request/[token]`, 'page');
+}
+
+type Exec = Parameters<Parameters<typeof transaction>[0]>[0];
+
+/**
+ * Write a re-priced design onto its line. The design carries the size, so the
+ * sizing follows it; the old mockup and quote sheet are what corporate would
+ * otherwise review, so they go (the files stay in storage, and the timeline
+ * keeps the old price).
+ */
+async function applyRedesign(
+  exec: Exec,
+  requestId: string,
+  lineItemId: string,
+  out: DesignedItemOut,
+  previous: SignDesign | null,
+): Promise<void> {
+  const design = out.design!;
+  await exec.query(
+    `update line_items
+        set design = $2, est_price_snapshot = $3, price_source = $4, origin = $5,
+            exception_issue = $6, site_notes = $7, sizing = $8, tbd_fields = '{}'
+      where id = $1 and request_id = $9 and item_status = 'changes_requested'`,
+    [
+      lineItemId,
+      JSON.stringify(design),
+      out.estPrice,
+      out.priceSource,
+      out.origin,
+      out.exceptionIssue,
+      out.siteNotes,
+      `${design.dimension.inches}" ${design.dimension.axis}`,
+      requestId,
+    ],
+  );
+
+  let mockupId: string | null = null;
+  if (out.mockup) {
+    const [row] = await exec.query<{ id: string }>(
+      `insert into request_files (request_id, line_item_id, kind, storage_path, file_name, content_type)
+       values ($1, $2, 'mockup', $3, $4, $5) returning id`,
+      [requestId, lineItemId, out.mockup.storagePath, out.mockup.fileName, out.mockup.contentType],
+    );
+    mockupId = row.id;
+  }
+  await exec.query(`update line_items set mockup_file_id = $2 where id = $1`, [
+    lineItemId,
+    mockupId,
+  ]);
+  await exec.query(
+    `delete from request_files
+      where line_item_id = $1 and id is distinct from $2
+        and (kind = 'quote_sheet' or (kind = 'mockup' and storage_path = $3))`,
+    [lineItemId, mockupId, previous?.mockupPath ?? null],
+  );
+
+  const money = (value: number | null | undefined) =>
+    value == null ? 'custom quote' : `$${value.toLocaleString('en-US')}`;
+  await createPgStatusStore(exec).insertEvent({
+    requestId,
+    lineItemId,
+    kind: 'design_changed',
+    actor: 'franchisee',
+    summary: `Design changed: ${design.dimension.inches}" ${design.dimension.axis} · ${money(out.estPrice)} (was ${money(previous?.price)})`,
+    detail: { from: previous?.price ?? null, to: out.estPrice },
+  });
 }
 
 function trimmed(value: string | null): string | null {

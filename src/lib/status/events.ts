@@ -12,6 +12,8 @@ export const EVENT_KINDS = [
   'request_created',
   'request_submitted',
   'request_resubmitted',
+  // A Studio design changed while answering a change request (SPEC v2.6 §8).
+  'design_changed',
   'file_uploaded',
   'quote_accepted',
   // Team

@@ -7,6 +7,7 @@ export async function downloadPreviewSheet(body: {
   brandSlug: string;
   as: 'brand' | 'franchisee';
   locationId?: string | null;
+  resubmit?: { token: string; lineItemId: string } | null;
   brandItemId: string;
   design: SignDesign;
 }): Promise<string | null> {
