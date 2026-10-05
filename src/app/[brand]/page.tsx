@@ -335,8 +335,9 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
         </section>
 
         {featured && (
-          <section className="mx-auto grid w-full page-wide grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-2">
-            <div>
+          <section className="mx-auto grid w-full page-wide grid-cols-1 items-start gap-10 px-4 py-14 sm:px-6 md:grid-cols-2">
+            {/* Top-aligned and sticky: the card beside it is much taller than this. */}
+            <div className="md:sticky md:top-28 md:pt-2">
               <Eyebrow align="left">Always know what&rsquo;s next</Eyebrow>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 Nothing slips, and nothing blocks
