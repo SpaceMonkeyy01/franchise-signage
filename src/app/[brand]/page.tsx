@@ -24,7 +24,7 @@ import { notFound, redirect } from 'next/navigation';
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { CursorGlow } from '@/components/CursorGlow';
-import { ReadinessCard } from '@/components/ReadinessCard';
+
 import { SignThumbnail, signImageUrl } from '@/components/SignThumbnail';
 import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
 import { RequestStatusChip } from '@/components/StatusChip';
@@ -38,7 +38,7 @@ import {
   type LocationRow,
   type ShowcaseSign,
 } from '@/lib/db/queries';
-import type { Readiness } from '@/lib/readiness';
+import type { Readiness, ReadinessState } from '@/lib/readiness';
 import { openingLine, SETUP_STAGES, setupProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
@@ -239,7 +239,7 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
           {featured ? (
             <HeroSigns brand={brand} featured={featured} others={others.slice(0, 3)} />
           ) : (
-            <ExampleReadiness />
+            <ExampleStore brand={brand} signs={signs} />
           )}
         </section>
 
@@ -341,19 +341,22 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                 Nothing slips, and nothing blocks
               </h2>
-              <ul className="mt-5 space-y-3 text-sm leading-relaxed text-gray-600">
-                <Check>
+              <ul className="mt-6 space-y-5">
+                <Point icon={GLYPH.clock} title="Unknowns never hold you up">
                   Anything you don&rsquo;t know yet can stay TBD. Signage.com follows up instead of
                   holding your order.
-                </Check>
-                <Check>Each store shows what is done and what is still needed, on your side and Signage.com&rsquo;s.</Check>
-                <Check>
-                  Every approval, quote and milestone lands on one timeline, with an email when it is
-                  your turn.
-                </Check>
+                </Point>
+                <Point icon={GLYPH.list} title="One checklist, both sides">
+                  Each store shows what is done and what is still needed, the same for you and for
+                  Signage.com.
+                </Point>
+                <Point icon={GLYPH.bell} title="Told when it is your turn">
+                  Every approval, quote and milestone lands on one timeline, with an email when you
+                  need to act.
+                </Point>
               </ul>
             </div>
-            <ExampleReadiness />
+            <ExampleStore brand={brand} signs={signs} />
           </section>
         )}
 
@@ -457,14 +460,158 @@ function HeroSigns({
   );
 }
 
-function ExampleReadiness() {
+/**
+ * A made-up store mid-setup, drawn the way a franchisee's store card and
+ * readiness checklist look once signed in (and labelled as an example). The
+ * signs are the brand's real ones; the store, its status and its numbers are
+ * not. Landing page only: the shared ReadinessCard stays as the request page
+ * and the team console use it.
+ */
+function ExampleStore({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[] }) {
+  const current = 1; // SETUP_STAGES: "Approvals"
+  const rows = EXAMPLE_READINESS.rows;
+  const done = rows.filter((row) => row.state === 'done').length;
+  const shown = signs.slice(0, 3);
   return (
-    <div className="rounded-2xl border border-gray-200/80 bg-white/60 p-3 shadow-sm">
-      <ReadinessCard readiness={EXAMPLE_READINESS} audience="franchisee" className="" />
-      <p className="px-1 pb-1 pt-2 text-[11px] text-gray-500">
-        An example of a new store&rsquo;s package, as you and Signage.com see it.
-      </p>
-    </div>
+    <figure className="m-0">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+          <span
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white"
+            style={{ background: 'var(--color-brand)' }}
+            aria-hidden
+          >
+            {GLYPH.store}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-gray-900">Example Plaza</p>
+            <p className="mt-0.5 text-xs text-gray-500">{brand.name} · Inline store · opens in 6 weeks</p>
+          </div>
+          <span className="rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            Example
+          </span>
+        </div>
+
+        <div className="px-5 pt-5">
+          <ol className="relative grid grid-cols-6" aria-label="Setup stages">
+            {/* The rail behind the dots: filled up to the stage under way. */}
+            <span className="absolute left-[8.33%] right-[8.33%] top-[9px] h-0.5 bg-gray-200" aria-hidden />
+            <span
+              className="absolute left-[8.33%] top-[9px] h-0.5"
+              style={{ width: `${(current / (SETUP_STAGES.length - 1)) * 83.33}%`, background: 'var(--color-brand)' }}
+              aria-hidden
+            />
+            {SETUP_STAGES.map((stage, index) => (
+              <li key={stage} className="relative flex min-w-0 flex-col items-center text-center">
+                {index < current ? (
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full text-white"
+                    style={{ background: 'var(--color-brand)' }}
+                  >
+                    <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M5 10.5l3 3 7-7" />
+                    </svg>
+                  </span>
+                ) : index === current ? (
+                  <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 bg-white"
+                    style={{ borderColor: 'var(--color-brand)' }}
+                  >
+                    <span className="h-2 w-2 rounded-full" style={{ background: 'var(--color-brand)' }} />
+                  </span>
+                ) : (
+                  <span className="h-5 w-5 rounded-full border-2 border-gray-200 bg-white" />
+                )}
+                <span
+                  // A phone has room for one label: the stage under way.
+                  className={`mt-1.5 w-full truncate text-[10px] ${
+                    index === current
+                      ? 'font-semibold text-gray-900'
+                      : `hidden sm:block ${index < current ? 'text-gray-700' : 'text-gray-400'}`
+                  }`}
+                >
+                  {stage}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 flex items-start gap-2 rounded-lg bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-900">
+            <span className="mt-0.5 shrink-0 text-sky-700 [&>svg]:h-4 [&>svg]:w-4" aria-hidden>
+              {GLYPH.clock}
+            </span>
+            {brand.name} is reviewing your add-on. Your standard signs are already approved.
+          </p>
+        </div>
+
+        {shown.length > 0 && (
+          <ul className="grid grid-cols-3 gap-3 px-5 pt-4">
+            {shown.map((sign) => {
+              const status = sign.in_package
+                ? { text: 'Approved', className: 'bg-emerald-50 text-emerald-800' }
+                : { text: `With ${brand.name}`, className: 'bg-sky-50 text-sky-800' };
+              return (
+                <li key={sign.id} className="min-w-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={signImageUrl(sign.image_path)}
+                    alt={sign.name}
+                    className="aspect-square w-full rounded-lg border border-gray-100 object-cover"
+                  />
+                  <p className="mt-1 truncate text-[11px] font-medium text-gray-800">
+                    {signName(sign.name, brand.name)}
+                  </p>
+                  <span className={`mt-0.5 inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[10px] font-medium ${status.className}`}>
+                    {status.text}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        <div className="px-5 pb-5 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold text-gray-900">Package readiness</p>
+            <p className="text-xs text-gray-500">
+              {done} of {rows.length} ready
+            </p>
+          </div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${(done / rows.length) * 100}%`, background: 'var(--color-brand)' }}
+            />
+          </div>
+          <ul className="mt-3 space-y-1">
+            {rows.map((row) => {
+              const tone = ROW_TONE[row.state];
+              return (
+                <li key={row.key} className="flex items-center gap-3 rounded-lg px-1 py-1.5">
+                  <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${tone.tile}`} aria-hidden>
+                    {ROW_GLYPH[row.key]}
+                    <span
+                      className={`absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold leading-none text-white ring-2 ring-white ${tone.badge}`}
+                    >
+                      {tone.mark}
+                    </span>
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm text-gray-800">{row.label}</span>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-right text-[11px] font-medium ${tone.pill}`}>
+                    {row.value}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
+            Flags never hold up the request. Signage.com follows up on them before the quote.
+          </p>
+        </div>
+      </div>
+      <figcaption className="mt-2 px-1 text-[11px] text-gray-500">
+        An example store, as you and Signage.com see it. The signs are {brand.name}&rsquo;s own.
+      </figcaption>
+    </figure>
   );
 }
 
@@ -479,23 +626,107 @@ function Eyebrow({ children, align = 'center' }: { children: React.ReactNode; al
   );
 }
 
-function Check({ children }: { children: React.ReactNode }) {
+function Point({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <li className="flex gap-2.5">
-      <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0" fill="none" aria-hidden>
-        <circle cx="10" cy="10" r="9" fill="var(--color-brand-light)" />
-        <path
-          d="M6 10.5l2.5 2.5L14 7.5"
-          stroke="var(--color-brand-dark)"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-      <span>{children}</span>
+    <li className="flex gap-3.5">
+      <span
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: 'var(--color-brand-light)', color: 'var(--color-brand-dark)' }}
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <div>
+        <p className="text-sm font-semibold text-gray-900">{title}</p>
+        <p className="mt-0.5 text-sm leading-relaxed text-gray-600">{children}</p>
+      </div>
     </li>
   );
 }
+
+const STROKE = {
+  className: 'h-5 w-5',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.7,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+
+/** Line icons on a 24px grid, drawn in the current colour. */
+const GLYPH = {
+  clock: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  ),
+  list: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M9 6.5h10M9 12h10M9 17.5h10" />
+      <path d="M4.5 6.5l1 1 2-2M4.5 12l1 1 2-2" />
+      <circle cx="5.5" cy="17.5" r="1" />
+    </svg>
+  ),
+  bell: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M6 16.5V11a6 6 0 0112 0v5.5l1.5 1.5h-15z" />
+      <path d="M10 20.5a2 2 0 004 0" />
+    </svg>
+  ),
+  store: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M4 9.5l1.5-5h13L20 9.5" />
+      <path d="M4 9.5a2.7 2.7 0 005.3 0 2.7 2.7 0 005.4 0 2.7 2.7 0 005.3 0" />
+      <path d="M5.5 12v7.5h13V12M10 19.5v-4h4v4" />
+    </svg>
+  ),
+  pin: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0113 0c0 5.4-6.5 11-6.5 11z" />
+      <circle cx="12" cy="10" r="2.3" />
+    </svg>
+  ),
+  camera: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M4 8.5h3.5L9 6h6l1.5 2.5H20v10H4z" />
+      <circle cx="12" cy="13.3" r="3.2" />
+    </svg>
+  ),
+  ruler: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M3.5 15.5L15.5 3.5l5 5-12 12z" />
+      <path d="M7 12l2 2M10 9l1.5 1.5M13 6l2 2" />
+    </svg>
+  ),
+  badge: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M12 3l7 3v5.5c0 4.3-3 7.7-7 9.5-4-1.8-7-5.2-7-9.5V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  ),
+  document: (
+    <svg viewBox="0 0 24 24" {...STROKE}>
+      <path d="M6 3.5h8l4 4v13H6z" />
+      <path d="M14 3.5v4h4M9 12h6M9 15.5h6" />
+    </svg>
+  ),
+};
+
+/** Each readiness row's own icon, so the checklist reads at a glance. */
+const ROW_GLYPH: Record<string, React.ReactNode> = {
+  location: GLYPH.pin,
+  photos: GLYPH.camera,
+  sizing: GLYPH.ruler,
+  approvals: GLYPH.badge,
+  landlord: GLYPH.document,
+};
+
+const ROW_TONE: Record<ReadinessState, { tile: string; pill: string; badge: string; mark: string }> = {
+  done: { tile: 'bg-emerald-50 text-emerald-700', pill: 'bg-emerald-50 text-emerald-800', badge: 'bg-emerald-600', mark: '✓' },
+  follow_up: { tile: 'bg-amber-50 text-amber-700', pill: 'bg-amber-50 text-amber-800', badge: 'bg-amber-500', mark: '!' },
+  with_corporate: { tile: 'bg-sky-50 text-sky-700', pill: 'bg-sky-50 text-sky-800', badge: 'bg-sky-600', mark: '…' },
+};
 
 /** "Freshbites Storefront Letters" reads as "Storefront Letters" on the brand's own page. */
 function signName(name: string, brandName: string): string {
@@ -608,13 +839,13 @@ function FAQ(brandName: string) {
 
 const EXAMPLE_READINESS: Readiness = {
   reviewReady: false,
-  followUps: 2,
+  followUps: 1,
   rows: [
     { key: 'location', label: 'Location details', state: 'done', value: 'Received' },
-    { key: 'photos', label: 'Site photos', state: 'follow_up', value: '3 of 4 signs' },
+    { key: 'photos', label: 'Site photos', state: 'follow_up', value: '2 of 3 signs' },
     { key: 'sizing', label: 'Sizes and site details', state: 'done', value: 'All confirmed' },
-    { key: 'approvals', label: 'Approved signs', state: 'done', value: '4 of 4 approved' },
-    { key: 'landlord', label: 'Landlord sign criteria', state: 'follow_up', value: 'Flagged for follow-up' },
+    { key: 'approvals', label: 'Approved signs', state: 'with_corporate', value: '2 approved · 1 in review' },
+    { key: 'landlord', label: 'Landlord sign criteria', state: 'done', value: 'Reviewed' },
   ],
 };
 

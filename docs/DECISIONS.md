@@ -1838,6 +1838,13 @@ item 7's "CRUD UI only when onboarding brand #2".
      the header carries a Sign in link. **Names and pictures only, never
      prices** — prices are for signed-in franchisees (smoke checks no "$" on
      the page). Every claim is what the product does today; no DID copy.
+     **Revised the same night:** the readiness card on the landing page is
+     now an example store panel (landing only; the shared ReadinessCard on
+     the request page and console is unchanged): a store header, the six
+     setup stages as a checked tracker at Approvals, the "now" line, three of
+     the brand's real signs with their approval state, and the readiness rows
+     with an icon each (pin, camera, ruler, badge, document), a state badge,
+     value pills and a progress bar. The points beside it got their own icons.
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
