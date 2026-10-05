@@ -30,6 +30,15 @@ export interface CatalogActor {
   label: string;
 }
 
+/** Where a sign type's price comes from (DECISIONS #179). */
+export type PriceMode = 'studio' | 'fixed' | 'custom';
+
+export const PRICE_MODE_LABEL: Record<PriceMode, string> = {
+  studio: 'Design Studio',
+  fixed: 'Fixed price',
+  custom: 'Custom quote',
+};
+
 export interface MasterRow {
   id: string;
   placement: 'indoor' | 'outdoor';
@@ -38,6 +47,7 @@ export interface MasterRow {
   variant: string | null;
   pricing_type: string | null;
   pricing_basis: 'direct' | 'standin';
+  price_mode: PriceMode;
   render_key: string | null;
   /** The team's uploaded icon for this sign type (#157). */
   icon_path: string | null;
@@ -123,7 +133,7 @@ export async function listMasterCatalog(): Promise<MasterRow[]> {
     brand_items: string;
   }>(
     `select mc.id, mc.placement, mc.category, mc.sign_type, mc.variant, mc.pricing_type,
-            mc.pricing_basis, mc.render_key, mc.icon_path, mc.active, mc.attribute_options,
+            mc.pricing_basis, mc.price_mode, mc.render_key, mc.icon_path, mc.active, mc.attribute_options,
             (select count(*) from brand_items bi where bi.master_catalog_id = mc.id) as brand_items
        from master_catalog mc
       order by mc.placement, mc.category, mc.sign_type, mc.variant nulls first`,
@@ -510,6 +520,45 @@ export async function setMasterActive(masterId: string, actor: CatalogActor, act
       kind: active ? 'master_enabled' : 'master_disabled',
       actor,
       summary: `${actor.label} ${active ? 'switched on' : 'switched off'} ${name}`,
+    });
+  });
+}
+
+/**
+ * The team chooses where a sign type's price comes from (DECISIONS #179).
+ * Its brand signs follow: to a custom quote, their prices are cleared (the
+ * team prices each order); to a fixed price, the price they have is kept as
+ * the starting figure for the team to confirm; to the Studio, a brand admin's
+ * next design save prices them. Requests already made keep their snapshot.
+ */
+export async function setMasterPriceMode(masterId: string, actor: CatalogActor, mode: PriceMode): Promise<void> {
+  if (!['studio', 'fixed', 'custom'].includes(mode)) throw new CatalogError('Choose where the price comes from.');
+  await transaction(async (exec) => {
+    const [row] = await exec.query<{ sign_type: string; variant: string | null; was: PriceMode }>(
+      `update master_catalog mc
+          set price_mode = $2, pricing_basis = case when $2 = 'custom' then 'standin' else 'direct' end::pricing_basis
+         from (select price_mode as was from master_catalog where id = $1) prior
+        where mc.id = $1 and mc.price_mode <> $2
+        returning mc.sign_type, mc.variant, prior.was`,
+      [masterId, mode],
+    );
+    if (!row) return;
+    if (mode === 'custom') {
+      await exec.query(
+        `update brand_items set est_price = null, price_source = 'team' where master_catalog_id = $1`,
+        [masterId],
+      );
+    } else if (mode === 'fixed') {
+      await exec.query(`update brand_items set price_source = 'team' where master_catalog_id = $1`, [masterId]);
+    }
+    const name = row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
+    await record(exec, {
+      brandId: null,
+      masterId,
+      kind: 'price_mode_set',
+      actor,
+      summary: `${actor.label} set ${name} to price from ${PRICE_MODE_LABEL[mode]} (was ${PRICE_MODE_LABEL[row.was]})`,
+      detail: { from: row.was, to: mode },
     });
   });
 }

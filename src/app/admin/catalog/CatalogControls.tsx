@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
+import type { PriceMode } from '@/lib/catalog/manage';
 import type { SubmitFailure } from '@/lib/forms';
 
 import {
@@ -9,6 +10,7 @@ import {
   approveSignAction,
   declineSignAction,
   setMasterActiveAction,
+  setMasterPriceModeAction,
   setSignActiveAction,
   setSignPriceAction,
   updateMasterOptionsAction,
@@ -181,6 +183,61 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
       </button>
       <ErrorLine error={error} />
     </>
+  );
+}
+
+const PRICE_MODES: { value: PriceMode; label: string; hint: string }[] = [
+  { value: 'studio', label: 'Design Studio', hint: 'The Studio engine prices each design, plus the margin on /admin/pricing.' },
+  { value: 'fixed', label: 'Fixed price', hint: 'Signage.com sets each brand sign’s price here; the Studio only draws it.' },
+  { value: 'custom', label: 'Custom quote', hint: 'Priced by the team on every order.' },
+];
+
+/** Where a sign type's price comes from (DECISIONS #179). */
+export function PriceModeSelect({
+  masterId,
+  name,
+  mode,
+  brandSigns,
+}: {
+  masterId: string;
+  name: string;
+  mode: PriceMode;
+  brandSigns: number;
+}) {
+  const { pending, error, go } = useAction();
+  return (
+    <span className="inline-flex flex-col">
+      <label className="inline-flex items-center gap-1.5 text-gray-500">
+        Price from
+        <select
+          value={mode}
+          disabled={pending}
+          aria-label={`${name}: price from`}
+          title={PRICE_MODES.find((option) => option.value === mode)?.hint}
+          onChange={(event) => {
+            const next = event.target.value as PriceMode;
+            if (
+              next === 'custom' &&
+              brandSigns > 0 &&
+              !window.confirm(
+                `${brandSigns} brand sign${brandSigns === 1 ? '' : 's'} use ${name}. Their prices will be cleared and each order quoted by hand. Continue?`,
+              )
+            ) {
+              return;
+            }
+            go(() => setMasterPriceModeAction(masterId, next));
+          }}
+          className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-800"
+        >
+          {PRICE_MODES.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ErrorLine error={error} />
+    </span>
   );
 }
 

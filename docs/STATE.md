@@ -30,6 +30,17 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (late night): "Price from" per sign type
+
+- `/admin/catalog`: each variant has **Price from** — Design Studio, Fixed
+  price (new), Custom quote (DECISIONS #179). Fixed-price signs are drawn by
+  the Studio and carry the team's current price. Migration
+  `20261005110000_price_mode.sql`, applied locally and on live. Driven:
+  Window Frosting switched to Fixed at $450 and shown in the Studio, then put
+  back to Custom quote.
+- Drive-thru: no store type or drive-thru sign types yet; the owner was asked
+  whether to add them (they would be new master-catalog rows).
+
 ## 5 Oct 2026 (late night): Freshbites packages tidied
 
 - Packages renamed Inline / Endcap / Freestanding; Freestanding now 2×

@@ -14,6 +14,7 @@ import {
   declineSign,
   getSign,
   setMasterActive,
+  setMasterPriceMode,
   setSignActive,
   setSignImage,
   setSignPrice,
@@ -21,6 +22,7 @@ import {
   updateMasterOptions,
   type CatalogActor,
   type NewVariant,
+  type PriceMode,
 } from '@/lib/catalog/manage';
 import { storeSignImage } from '@/lib/catalog/images';
 import { notifySignReviewed } from '@/lib/email/catalog';
@@ -114,4 +116,9 @@ export async function setSignTypeIconAction(masterId: string, formData: FormData
     const path = formData ? await storeSignImage(formData) : null;
     await setSignTypeIcon(masterId, actor, path);
   });
+}
+
+/** Where a sign type's price comes from (DECISIONS #179). */
+export async function setMasterPriceModeAction(masterId: string, mode: PriceMode) {
+  return run((actor) => setMasterPriceMode(masterId, actor, mode));
 }

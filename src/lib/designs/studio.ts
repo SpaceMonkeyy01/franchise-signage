@@ -37,6 +37,8 @@ export interface DesignableSign {
   fabricated_finish: string | null;
   pricing_type: string | null;
   pricing_basis: 'direct' | 'standin';
+  /** Where the price comes from (DECISIONS #179): only `studio` calls the engine. */
+  price_mode: 'studio' | 'fixed' | 'custom';
   attribute_options: AllowedOptions;
   design: SignDesign | null;
   design_rules: DesignRules;
@@ -48,7 +50,7 @@ export async function getDesignableSign(itemId: string, brandId: string): Promis
   return queryOne<DesignableSign>(
     `select bi.id, bi.brand_id, b.slug as brand_slug, bi.name, bi.review_status,
             mc.sign_type, mc.placement, mc.render_key, mc.fabricated_finish,
-            mc.pricing_type, mc.pricing_basis, mc.attribute_options,
+            mc.pricing_type, mc.pricing_basis, mc.price_mode, mc.attribute_options,
             bi.design, bi.design_rules, bi.pinned_attributes, bi.est_price
        from brand_items bi
        join brands b on b.id = bi.brand_id
@@ -58,26 +60,31 @@ export async function getDesignableSign(itemId: string, brandId: string): Promis
   );
 }
 
-/** Whether the engine prices this sign; a custom-quote type is priced by the team. */
-export function studioPrices(sign: Pick<DesignableSign, 'pricing_basis' | 'pricing_type'>): boolean {
-  return sign.pricing_basis === 'direct' && !!sign.pricing_type;
+/**
+ * Whether the engine prices this sign: the team chose the Design Studio as its
+ * price source (DECISIONS #179). A fixed-price or custom-quote type is priced
+ * by the team; the Studio only draws it.
+ */
+export function studioPrices(sign: Pick<DesignableSign, 'price_mode' | 'pricing_type'>): boolean {
+  return sign.price_mode === 'studio' && !!sign.pricing_type;
 }
 
 /**
  * Whether the Studio can design this sign at all: one it prices, or a
  * custom-quote type it can at least draw (a mockup style is known).
  */
-export function studioDesigns(sign: Pick<DesignableSign, 'pricing_basis' | 'pricing_type' | 'render_key'>): boolean {
+export function studioDesigns(sign: Pick<DesignableSign, 'price_mode' | 'pricing_type' | 'render_key'>): boolean {
   return studioPrices(sign) || !!sign.render_key;
 }
 
 /**
  * The options a sign type offers, without the engine's bookkeeping fields.
- * None for a custom-quote type: its options are a stand-in pricing model's
- * (channel letters' raceways on a pylon), not choices about the sign.
+ * None unless the engine prices it: a custom-quote type's options are a
+ * stand-in pricing model's (channel letters' raceways on a pylon), and a
+ * fixed-price sign's price does not move with them.
  */
-export function offeredOptions(sign: Pick<DesignableSign, 'attribute_options' | 'pricing_basis'>): AllowedOptions {
-  if (sign.pricing_basis === 'standin') return {};
+export function offeredOptions(sign: Pick<DesignableSign, 'attribute_options' | 'price_mode'>): AllowedOptions {
+  if (sign.price_mode !== 'studio') return {};
   const skip = new Set(['basic_fields', 'avg_char_height', 'depth_range', 'ul_required', 'char_height_band']);
   return Object.fromEntries(
     Object.entries(sign.attribute_options ?? {}).filter(
@@ -227,7 +234,9 @@ async function drawDesign(
     dimension: input.dimension,
     depthInches: input.depthInches,
     mockupPath: stored.storagePath,
-    price: null,
+    // A fixed-price sign carries the price Signage.com set (DECISIONS #179);
+    // a custom-quote one has none until the team quotes the order.
+    price: sign.price_mode === 'fixed' && sign.est_price != null ? Number(sign.est_price) : null,
   };
 }
 
@@ -244,7 +253,7 @@ export async function saveBrandDesign(
 ): Promise<SignDesign> {
   const priced = await quoteDesign(sign, input);
   const rules = rawRules === undefined ? defaultRules(priced) : validRules(rawRules, priced);
-  if (priced.price == null) return saveDrawnDesign(sign, actor, priced, rules);
+  if (!studioPrices(sign)) return saveDrawnDesign(sign, actor, priced, rules);
   await transaction(async (exec) => {
     await exec.query(
       `update brand_items
@@ -270,9 +279,10 @@ export async function saveBrandDesign(
 }
 
 /**
- * A custom-quote sign's design: the picture and the size, and nothing about
- * price — est_price stays empty, price_source stays the team's, and the spec
- * line and locked choices the brand set by hand are left as they are.
+ * A design the engine does not price (fixed price or custom quote): the
+ * picture and the size, and nothing about price — est_price stays as the team
+ * set it, price_source stays the team's, and the spec line and locked choices
+ * the brand set by hand are left as they are.
  */
 async function saveDrawnDesign(
   sign: DesignableSign,
@@ -294,8 +304,8 @@ async function saveDrawnDesign(
         sign.id,
         actor.membershipId,
         actor.label,
-        `${actor.label} designed ${sign.name} in the Studio — custom quote`,
-        JSON.stringify({ price: null, dimension: drawn.dimension, rules }),
+        `${actor.label} designed ${sign.name} in the Studio — ${sign.price_mode === 'fixed' ? 'fixed price' : 'custom quote'}`,
+        JSON.stringify({ price: drawn.price ?? null, dimension: drawn.dimension, rules }),
       ],
     );
   });

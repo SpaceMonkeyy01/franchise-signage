@@ -44,6 +44,8 @@ export default async function DesignPage({
         <p className="text-sm text-gray-500">
           {!studioDesigns(sign)
             ? sign.sign_type
+            : sign.price_mode === 'fixed'
+            ? `${sign.sign_type} · Signage.com sets this sign's price. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`
             : priceable
             ? `${sign.sign_type} · Set the logo, options and size; Signage.com prices it as you go. Then choose what a franchisee may adjust for their store — anything else stays exactly as you set it.`
             : `${sign.sign_type} · Signage.com quotes this sign per order, so it stays a custom quote. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`}

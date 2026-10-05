@@ -25,6 +25,7 @@ import { setSignImageAction, setSignTypeIconAction } from './actions';
 import {
   AddVariantForm,
   MasterToggle,
+  PriceModeSelect,
   OptionsEditor,
   PriceEditor,
   ReviewForm,
@@ -111,7 +112,7 @@ export default async function CatalogPage({
                     <p className="text-sm font-semibold text-gray-900">{sign.name}</p>
                     <p className="text-xs text-gray-500">
                       {variantName(sign)} · {sign.placement} ·{' '}
-                      {sign.pricing_basis === 'standin' ? 'no pricing model: custom quote' : 'priced directly'}
+                      {sign.pricing_basis === 'standin' ? 'custom quote' : 'priced by Signage.com'}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       Proposed by {sign.submitted_by ?? 'the brand'}
@@ -276,11 +277,16 @@ export default async function CatalogPage({
                                   <span className={row.active ? 'text-gray-800' : 'text-gray-400 line-through'}>
                                     {row.variant ?? 'Standard'}
                                   </span>
+                                  <PriceModeSelect
+                                    masterId={row.id}
+                                    name={variantName(row)}
+                                    mode={row.price_mode}
+                                    brandSigns={row.brand_items}
+                                  />
                                   <span className="text-gray-500">
-                                    {row.pricing_basis === 'standin' ? 'custom quote' : 'priced'}
-                                    {row.brand_items > 0 && ` · ${row.brand_items} brand sign${row.brand_items === 1 ? '' : 's'}`}
+                                    {row.brand_items > 0 && `${row.brand_items} brand sign${row.brand_items === 1 ? '' : 's'}`}
                                     {Object.keys(row.options).length > 0 &&
-                                      ` · ${Object.keys(row.options).length} options`}
+                                      `${row.brand_items > 0 ? ' · ' : ''}${Object.keys(row.options).length} options`}
                                   </span>
                                   <MasterToggle masterId={row.id} active={row.active} />
                                   <OptionsEditor

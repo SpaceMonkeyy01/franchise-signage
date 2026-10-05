@@ -1891,6 +1891,24 @@ item 7's "CRUD UI only when onboarding brand #2".
      must include the design's own value"). The limits now follow the size
      until the admin sets them.
 
+179. **The team chooses where each sign type's price comes from** (owner,
+     5 Oct: "a toggle which says where the price will be picked from; Design
+     Studio, Custom etc."). `master_catalog.price_mode`, set per variant on
+     `/admin/catalog` ("Price from"), logged as `price_mode_set`:
+     - **Design Studio** — the engine prices each design, plus the margin
+       (/admin/pricing lists only these types now);
+     - **Fixed price** (new) — Signage.com sets each brand sign's price by hand
+       (the existing price editor); the Studio draws it, and its preview, quote
+       sheet and orders carry that price, always the current one, recorded as
+       a team price;
+     - **Custom quote** — priced per order, as before.
+     `pricing_basis` stays in step (custom = `standin`, else `direct`; a check
+     enforces it, and a trigger fills `price_mode` for rows inserted without
+     one). Switching to Custom quote clears the type's brand-sign prices
+     (confirmed on screen); to Fixed keeps them as the starting figure.
+     Migration `20261005110000_price_mode.sql`. Existing rows: 50 Studio,
+     27 Custom; nothing switched to Fixed yet.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

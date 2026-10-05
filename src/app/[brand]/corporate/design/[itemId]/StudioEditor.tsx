@@ -327,12 +327,18 @@ export function StudioEditor({
           </div>
           {!priced && preview?.mockupPath && (
             <div className={current ? '' : 'opacity-50'} data-studio-price>
-              <p className="mt-3 text-sm font-semibold text-gray-900">Custom quote</p>
-              <p className="text-xs text-gray-500">Signage.com prices this sign for each order.</p>
+              <p className="mt-3 text-sm font-semibold text-gray-900">
+                {preview.price != null ? `$${preview.price.toLocaleString('en-US')}` : 'Custom quote'}
+              </p>
+              <p className="text-xs text-gray-500">
+                {preview.price != null
+                  ? 'Fixed price set by Signage.com.'
+                  : 'Signage.com prices this sign for each order.'}
+              </p>
               {!current && <p className="mt-1 text-xs text-amber-700">You changed the design — preview again.</p>}
             </div>
           )}
-          {preview?.price && (
+          {priced && preview?.price && (
             <div className={current ? '' : 'opacity-50'}>
               <p className="mt-3 text-2xl font-semibold text-gray-900" data-studio-price>
                 ${preview.price.toLocaleString('en-US')}

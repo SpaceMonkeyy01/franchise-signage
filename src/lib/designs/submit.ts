@@ -63,8 +63,15 @@ export async function prepareDesignedItems(
       out.push({
         ...unchanged,
         design: sign.design,
-        estPrice: sign.design.price ?? null,
-        priceSource: sign.design.price == null ? 'team' : 'engine',
+        // A fixed price is the team's current figure, not the one the design
+        // was saved with (DECISIONS #179).
+        estPrice:
+          sign.price_mode === 'fixed'
+            ? sign.est_price == null
+              ? null
+              : Number(sign.est_price)
+            : (sign.design.price ?? null),
+        priceSource: sign.price_mode === 'studio' ? 'engine' : 'team',
         mockup: sign.design.mockupPath
           ? { storagePath: sign.design.mockupPath, fileName: `${sign.name} mockup.jpg`, contentType: 'image/jpeg' }
           : null,
@@ -80,7 +87,7 @@ export async function prepareDesignedItems(
       origin: reason && item.origin === 'standard' ? 'exception' : item.origin,
       design: priced,
       estPrice: priced.price ?? null,
-      priceSource: priced.price == null ? 'team' : 'engine',
+      priceSource: sign.price_mode === 'studio' ? 'engine' : 'team',
       siteNotes:
         reason && item.origin === 'addon'
           ? [item.siteNotes, reason].filter(Boolean).join('\n')

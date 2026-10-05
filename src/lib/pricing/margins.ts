@@ -42,7 +42,7 @@ export async function marginOverview(): Promise<MarginOverview> {
     ),
     query<{ sign_type: string }>(
       `select distinct sign_type from master_catalog
-        where active and pricing_basis = 'direct' order by sign_type`,
+        where active and price_mode = 'studio' order by sign_type`,
     ),
     query<{ brand_id: string; sign_type: string; n: string }>(
       `select bi.brand_id, mc.sign_type, count(*)::text as n
