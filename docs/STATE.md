@@ -10,6 +10,10 @@
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
   margins per sign type on /admin/pricing? And which signs belong in the
   standard packages now?
+- **Raised 5 Oct, parked:** the owner described submission as placing the
+  order (no quote to accept); after walking the current flow they said "this
+  is good for now". If it returns: corporate approval of add-ons, custom-quote
+  signs, owner-only ordering, and retiring the confirmation switch need answers.
 - **Next build:** mockups for custom-quote types (they render — pylon,
   frosting — just not priced). The quote-confirmation switch is built (on for
   Freshbites); when to turn it off is the owner's call.
