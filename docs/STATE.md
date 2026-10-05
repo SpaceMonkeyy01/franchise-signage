@@ -20,7 +20,8 @@
   waiting on others below. Custom-quote mockups are built (#173): Window Frosting is designed locally but still inactive, and
   the Road Sign (pylon) is not designed yet — activating either is the
   owner's call. The quote-confirmation switch is on for Freshbites.
-- **Waiting on others:** `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
+- **Waiting on others:** refined store images from the owner for the landing
+  page (5 Oct); `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
