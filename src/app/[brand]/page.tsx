@@ -951,10 +951,21 @@ function LocationCard({
         ? `/${brandSlug}/location/${location.id}/setup`
         : null;
 
+  const requestSignage = canOrder && started && (
+    <Link
+      href={`/${brandSlug}/location/${location.id}/request`}
+      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-semibold text-gray-800 transition-colors hover:border-gray-400"
+    >
+      + Request signage
+    </Link>
+  );
+
   return (
-    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+    // The setup-tracker handle covers the whole card: its stages, its opening
+    // date and what is happening now are read together (smoke).
+    <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm" data-testid="setup-tracker">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:items-center">
+        <div className="min-w-0">
           <h2 className="text-lg font-semibold text-gray-900">{location.name}</h2>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-500">
             <PinIcon /> {address}
@@ -970,19 +981,40 @@ function LocationCard({
               </>
             )}
           </p>
+          {opening && <p className="mt-1 text-xs font-medium text-gray-600">{opening}</p>}
         </div>
-        {canOrder && started && (
-          <Link
-            href={`/${brandSlug}/location/${location.id}/request`}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--color-brand)' }}
-          >
-            + Request signage
-          </Link>
-        )}
+        <StageTrack progress={progress} />
       </div>
 
-      <SetupTracker progress={progress} opening={opening} href={trackerHref} />
+      <div
+        className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 ${
+          progress.complete ? 'bg-gray-50' : progress.action ? 'bg-amber-50' : 'bg-sky-50'
+        }`}
+      >
+        <p
+          className={`text-sm ${
+            progress.complete ? 'text-gray-700' : progress.action ? 'text-amber-900' : 'text-sky-900'
+          }`}
+        >
+          {progress.now}
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          {trackerHref && progress.action ? (
+            <Link
+              href={trackerHref}
+              className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: 'var(--color-brand)' }}
+            >
+              {progress.action}
+            </Link>
+          ) : trackerHref ? (
+            <Link href={trackerHref} className="px-1 text-xs font-medium text-gray-600 underline underline-offset-2 hover:text-gray-900">
+              View details
+            </Link>
+          ) : null}
+          {requestSignage}
+        </div>
+      </div>
 
       {location.installed_signs.length > 0 ? (
         <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -1056,79 +1088,74 @@ function LocationCard({
   );
 }
 
-/** The six stages of a new store's signage, the current one marked. */
-function SetupTracker({
-  progress,
-  opening,
-  href,
-}: {
-  progress: SetupProgress & { complete: boolean };
-  opening: string | null;
-  /** The setup request, or where to start one; none once installed. */
-  href: string | null;
-}) {
+/**
+ * The six stages of a store's signage as a compact track: done stages
+ * checked, the one under way ringed. A phone shows only that stage's label.
+ */
+function StageTrack({ progress }: { progress: SetupProgress & { complete: boolean } }) {
+  const last = SETUP_STAGES.length - 1;
+  const filled = Math.min(progress.current, last) / last;
   return (
-    <div className="mt-4 rounded-lg border border-gray-100 bg-gray-50/70 p-4" data-testid="setup-tracker">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Store setup</h3>
-        {opening && <span className="text-xs font-medium text-gray-600">{opening}</span>}
-      </div>
-
-      {/* Six labels do not fit a phone: there, one line names the stage. */}
-      <p className="mt-2 text-xs text-gray-600 sm:hidden" aria-hidden="true">
-        {progress.complete ? (
-          <span className="font-semibold text-gray-900">All {SETUP_STAGES.length} stages complete</span>
-        ) : (
-          <>
-            Step {progress.current + 1} of {SETUP_STAGES.length} ·{' '}
-            <span className="font-semibold text-gray-900">{SETUP_STAGES[progress.current]}</span>
-          </>
-        )}
-      </p>
-
-      <ol className="mt-3 grid grid-cols-6 gap-1" aria-label="Setup stages">
-        {SETUP_STAGES.map((stage, index) => {
-          const done = index < progress.current;
-          const current = index === progress.current;
-          return (
-            <li key={stage} aria-current={current ? 'step' : undefined} className="min-w-0">
-              <div
-                className="h-1.5 rounded-full"
-                style={{
-                  background: done || current ? 'var(--color-brand)' : '#e5e7eb',
-                  opacity: current ? 0.55 : 1,
-                }}
-              />
-              <p
-                className={`mt-1.5 truncate text-[11px] max-sm:sr-only ${
-                  current ? 'font-semibold text-gray-900' : done ? 'text-gray-700' : 'text-gray-500'
-                }`}
-              >
-                {done && <span className="sr-only">Done: </span>}
-                {current && <span className="sr-only">Now: </span>}
-                {stage}
-              </p>
-            </li>
-          );
-        })}
-      </ol>
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-gray-700">{progress.now}</p>
-        {!href ? null : progress.action ? (
-          <Link
-            href={href}
-            className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: 'var(--color-brand)' }}
+    <div>
+    <ol className="relative grid grid-cols-6" aria-label="Setup stages">
+      <span className="absolute left-[8.33%] right-[8.33%] top-[9px] h-0.5 bg-gray-200" aria-hidden />
+      <span
+        className="absolute left-[8.33%] top-[9px] h-0.5"
+        style={{ width: `${filled * 83.33}%`, background: 'var(--color-brand)' }}
+        aria-hidden
+      />
+      {SETUP_STAGES.map((stage, index) => {
+        const done = index < progress.current;
+        const current = index === progress.current;
+        return (
+          <li
+            key={stage}
+            aria-current={current ? 'step' : undefined}
+            className="relative flex min-w-0 flex-col items-center text-center"
           >
-            {progress.action}
-          </Link>
-        ) : (
-          <Link href={href} className="text-xs font-medium text-gray-500 underline underline-offset-2 hover:text-gray-900">
-            View details
-          </Link>
-        )}
-      </div>
+            {done ? (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full text-white"
+                style={{ background: 'var(--color-brand)' }}
+              >
+                <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M5 10.5l3 3 7-7" />
+                </svg>
+              </span>
+            ) : current ? (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full border-2 bg-white"
+                style={{ borderColor: 'var(--color-brand)' }}
+              >
+                <span className="h-2 w-2 rounded-full" style={{ background: 'var(--color-brand)' }} />
+              </span>
+            ) : (
+              <span className="h-5 w-5 rounded-full border-2 border-gray-200 bg-white" />
+            )}
+            <span
+              className={`mt-1.5 hidden w-full truncate text-[11px] sm:block ${
+                current ? 'font-semibold text-gray-900' : done ? 'text-gray-700' : 'text-gray-400'
+              }`}
+            >
+              {done && <span className="sr-only">Done: </span>}
+              {current && <span className="sr-only">Now: </span>}
+              {stage}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+    {/* Six labels do not fit a phone: there, one line names the stage. */}
+    <p className="mt-2 text-xs text-gray-600 sm:hidden" aria-hidden="true">
+      {progress.complete ? (
+        <span className="font-semibold text-gray-900">All {SETUP_STAGES.length} stages complete</span>
+      ) : (
+        <>
+          Step {progress.current + 1} of {SETUP_STAGES.length} ·{' '}
+          <span className="font-semibold text-gray-900">{SETUP_STAGES[progress.current]}</span>
+        </>
+      )}
+    </p>
     </div>
   );
 }
