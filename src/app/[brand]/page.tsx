@@ -204,16 +204,16 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
               className="inline-block rounded-full border bg-white px-3 py-1 text-xs font-semibold"
               style={{ color: 'var(--color-brand-dark)', borderColor: 'var(--color-brand-light)' }}
             >
-              {brand.name} franchise signage program
+              {brand.name} franchise signage
             </p>
             <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">
-              Your {brand.name} signage,{' '}
-              <span style={{ color: 'var(--color-brand)' }}>from agreement to install.</span>
+              Signage for your{' '}
+              <span style={{ color: 'var(--color-brand)' }}>{brand.name} store</span>
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-gray-600 sm:text-lg">
-              Every {brand.name} sign is already designed to brand standard and priced by
-              Signage.com. Pick your store&rsquo;s package, fit each sign to your frontage, and follow
-              it through production to install, with the paperwork your lender asks for.
+              {brand.name} has approved a standard set of signs, and Signage.com makes and installs
+              them. Choose the signs for your store, adjust sizes to suit your site, and follow your
+              order through production and installation.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
@@ -231,8 +231,8 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
               </a>
             </div>
             <p className="mt-4 max-w-xl text-xs leading-relaxed text-gray-500">
-              New to {brand.name}? Your account comes from the invitation {brand.name} emails you
-              when you sign your franchise agreement. Open it to choose a password.
+              Don&rsquo;t have an account yet? {brand.name} will email you an invitation when you
+              sign your franchise agreement.
             </p>
           </div>
 
@@ -263,13 +263,14 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
 
         {signs.length > 0 && (
           <section id="signs" className="mx-auto w-full page-wide scroll-mt-6 px-4 py-14 sm:px-6">
-            <Eyebrow>The sign program</Eyebrow>
+            <Eyebrow>Sign catalog</Eyebrow>
             <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-              {signs.length} {brand.name} signs, designed to brand standard
+              The {brand.name} sign catalog
             </h2>
             <p className="mx-auto mt-2 max-w-2xl text-center text-sm leading-relaxed text-gray-600">
-              Your store type&rsquo;s standard package loads pre-filled and is approved automatically.
-              Anything you add goes to {brand.name} for approval.
+              Signs marked &ldquo;Standard package&rdquo; are included for your store type and
+              approved automatically. You can add others, which {brand.name} reviews before they are
+              ordered.
             </p>
             <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
               {signs.map((sign) => (
@@ -309,7 +310,7 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
           <div className="mx-auto w-full page-wide px-4 py-14 sm:px-6">
             <Eyebrow>How it works</Eyebrow>
             <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-              One path from signed agreement to installed signs
+              How ordering works
             </h2>
             <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
               {HOW_IT_WORKS(brand.name).map((step, index) => (
@@ -338,22 +339,22 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
           <section className="mx-auto grid w-full page-wide grid-cols-1 items-start gap-10 px-4 py-14 sm:px-6 md:grid-cols-2">
             {/* Top-aligned and sticky: the card beside it is much taller than this. */}
             <div className="md:sticky md:top-28 md:pt-2">
-              <Eyebrow align="left">Always know what&rsquo;s next</Eyebrow>
+              <Eyebrow align="left">Order tracking</Eyebrow>
               <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                Nothing slips, and nothing blocks
+                See where every order stands
               </h2>
               <ul className="mt-6 space-y-5">
-                <Point icon={GLYPH.clock} title="Unknowns never hold you up">
-                  Anything you don&rsquo;t know yet can stay TBD. Signage.com follows up instead of
-                  holding your order.
+                <Point icon={GLYPH.clock} title="Missing details won’t delay you">
+                  If you don&rsquo;t have a measurement or document yet, mark it TBD and submit.
+                  Signage.com will follow up with you.
                 </Point>
-                <Point icon={GLYPH.list} title="One checklist, both sides">
-                  Each store shows what is done and what is still needed, the same for you and for
-                  Signage.com.
+                <Point icon={GLYPH.list} title="A shared checklist">
+                  You and Signage.com work from the same checklist for each store, so it is always
+                  clear what is still outstanding.
                 </Point>
-                <Point icon={GLYPH.bell} title="Told when it is your turn">
-                  Every approval, quote and milestone lands on one timeline, with an email when you
-                  need to act.
+                <Point icon={GLYPH.bell} title="Email updates">
+                  You&rsquo;ll get an email when something needs your attention, such as a quote to
+                  review or a change requested by {brand.name}.
                 </Point>
               </ul>
             </div>
@@ -365,7 +366,7 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
           <div className="mx-auto w-full max-w-3xl px-4 py-14 sm:px-6">
             <Eyebrow>Questions</Eyebrow>
             <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
-              Before you sign in
+              Common questions
             </h2>
             <div className="mt-6 divide-y divide-gray-200 rounded-xl border border-gray-200">
               {FAQ(brand.name).map((item) => (
@@ -385,19 +386,19 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
 
         <section className="mx-auto w-full page-wide px-4 py-14 text-center sm:px-6">
           <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
-            Already invited? Your stores are one sign-in away.
+            Already have an account?
           </h2>
           <Link
             href={signIn}
             className="mt-5 inline-block rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
             style={{ background: 'var(--color-brand)' }}
           >
-            Sign in to {brand.name} signage
+            Sign in
           </Link>
           <p className="mx-auto mt-5 max-w-xl text-[11px] leading-relaxed text-gray-500">
-            Pictures are generated mockups. Estimates are not quotes: final pricing and timing depend
-            on each site. Signage.com keeps track of landlord approval with you, but cannot guarantee
-            it or any permit.
+            Images are computer-generated previews. Prices shown in the portal are estimates; your
+            final price and timeline depend on your site. Signage.com tracks landlord approval but
+            cannot guarantee landlord or permit approval.
           </p>
         </section>
       </main>
@@ -455,7 +456,7 @@ function HeroSigns({
         className="absolute -top-3 left-4 rounded-full border bg-white px-3 py-1 text-[11px] font-semibold shadow-sm"
         style={{ color: 'var(--color-brand-dark)', borderColor: 'var(--color-brand-light)' }}
       >
-        Designed with the {brand.name} logo
+        {brand.name} approved design
       </p>
     </div>
   );
@@ -605,12 +606,13 @@ function ExampleStore({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSig
             })}
           </ul>
           <p className="mt-2 text-[11px] leading-relaxed text-gray-500">
-            Flags never hold up the request. Signage.com follows up on them before the quote.
+            Open items don&rsquo;t hold up the order. Signage.com follows up on them before
+            preparing the quote.
           </p>
         </div>
       </div>
       <figcaption className="mt-2 px-1 text-[11px] text-gray-500">
-        An example store, as you and Signage.com see it. The signs are {brand.name}&rsquo;s own.
+        Example store for illustration. The signs shown are {brand.name}&rsquo;s approved designs.
       </figcaption>
     </figure>
   );
@@ -747,8 +749,8 @@ const ICON = {
 function WHAT_YOU_GET(brandName: string) {
   return [
     {
-      title: 'Signs already designed',
-      body: `Every sign is set up with the ${brandName} logo to brand standard. Fit a sign to your frontage within ${brandName}'s limits; the logo stays as the brand set it.`,
+      title: 'Approved designs',
+      body: `Each sign is designed with the ${brandName} logo and approved by the brand. You can adjust the size to suit your storefront; the rest of the design stays as specified.`,
       icon: (
         <svg viewBox="0 0 24 24" {...ICON}>
           <path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" />
@@ -756,8 +758,8 @@ function WHAT_YOU_GET(brandName: string) {
       ),
     },
     {
-      title: 'A price as you choose',
-      body: 'Each sign shows Signage.com’s estimate while you pick. Your budget, quote and invoice come as the PDFs a lender asks for.',
+      title: 'Prices up front',
+      body: 'You see Signage.com’s estimate for each sign as you choose it. Budget, quote and invoice documents are available to download for your lender.',
       icon: (
         <svg viewBox="0 0 24 24" {...ICON}>
           <path d="M4 7h16v10H4z" />
@@ -767,8 +769,8 @@ function WHAT_YOU_GET(brandName: string) {
       ),
     },
     {
-      title: 'Every store on record',
-      body: 'Installed signs stay on your store’s record, so a like-for-like replacement is a lookup, approved without waiting on a review.',
+      title: 'A record of every store',
+      body: 'Installed signs are saved to your store’s record. If one is damaged, you can reorder the same sign without going through approval again.',
       icon: (
         <svg viewBox="0 0 24 24" {...ICON}>
           <path d="M4 10l8-6 8 6v9a1 1 0 01-1 1H5a1 1 0 01-1-1z" />
@@ -785,28 +787,28 @@ function HOW_IT_WORKS(brandName: string) {
   return [
     {
       title: 'Accept your invitation',
-      body: `${brandName} registers you when you sign your agreement; the email lets you choose a password.`,
+      body: `${brandName} sends you an invitation when you sign your franchise agreement. Use it to set your password.`,
       output: 'Your account',
     },
     {
-      title: 'Plan the budget',
-      body: 'See the signage number for each store format, ready for your business plan and lender.',
-      output: 'A signage budget',
+      title: 'Plan your budget',
+      body: 'See the signage cost for each store format to include in your business plan and loan application.',
+      output: 'Signage budget',
     },
     {
-      title: 'Set up your store',
-      body: 'Add the address, opening date and your lease sign exhibit. Anything unknown can stay TBD.',
-      output: 'Your location record',
+      title: 'Add your store',
+      body: 'Enter the address, opening date and the sign requirements from your lease. Anything you don’t know yet can be marked TBD.',
+      output: 'Store record',
     },
     {
-      title: 'Confirm your signs',
-      body: `The standard package loads pre-filled. Fit signs to your frontage and add photos; add-ons go to ${brandName} for approval.`,
-      output: 'An approved sign list',
+      title: 'Choose your signs',
+      body: `Your standard package is preselected. Adjust sizes, add site photos and request any extra signs, which ${brandName} reviews.`,
+      output: 'Approved sign list',
     },
     {
-      title: 'Quote to install',
-      body: 'Accept the Signage.com quote and follow production to install, with the PDFs your lender asks for.',
-      output: 'Signs on record',
+      title: 'Order and install',
+      body: 'Accept the Signage.com quote, then track production, shipping and installation.',
+      output: 'Installed signs',
     },
   ];
 }
@@ -817,23 +819,23 @@ function FAQ(brandName: string) {
   return [
     {
       q: 'How do I get an account?',
-      a: `${brandName} registers your email when you sign your franchise agreement, and the welcome email lets you choose a password. There is no public sign-up. Store managers are invited by the franchise owner.`,
+      a: `${brandName} registers your email address when you sign your franchise agreement, and you’ll receive an invitation to set a password. Accounts can’t be created on this site directly. Once you’re set up, you can invite your store managers.`,
     },
     {
       q: 'Can I change a sign’s design?',
-      a: `Where ${brandName} allows it, you can resize a sign to fit your frontage and see it redrawn before you order. The logo stays as ${brandName} set it. You can go beyond the brand’s limits, but that sign then goes to ${brandName} for approval.`,
+      a: `You can adjust the size of most signs to suit your storefront and preview the result before ordering. The logo can’t be changed. If you need something outside ${brandName}’s approved range, you can still request it, and ${brandName} will review it first.`,
     },
     {
-      q: 'Does this work with my SBA or equipment loan?',
-      a: 'Yes. You get the signage number for your store format for your business plan, then a budgetary quote, an invoice and a paid receipt as PDFs to hand your lender. The portal does not process payments or loans.',
+      q: 'Can I use this for an SBA or equipment loan?',
+      a: 'Yes. You can download a signage budget for your business plan, and a budgetary quote, invoice and payment receipt as your order progresses. Signage.com does not arrange financing.',
     },
     {
       q: 'Who handles landlord approval and permits?',
-      a: 'Upload your lease’s sign criteria; Signage.com checks them while preparing your package and tracks the landlord’s approval with you. Neither can guarantee a landlord approval or a permit.',
+      a: 'Upload the sign criteria from your lease and Signage.com will check your order against it and keep track of your landlord’s approval. Landlord and permit approvals can’t be guaranteed.',
     },
     {
       q: 'What if a sign is damaged later?',
-      a: 'Your store keeps a record of every installed sign. Pick it and order a like-for-like replacement: it uses the same approved spec, so it skips review.',
+      a: 'Every installed sign is saved to your store’s record. You can reorder an identical replacement from there, and it doesn’t need to be approved again.',
     },
   ];
 }
