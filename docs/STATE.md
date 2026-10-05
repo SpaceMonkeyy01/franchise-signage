@@ -27,6 +27,14 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (late night): store cards redesigned
+
+- The stage track sits beside the store name (dots: done checked, current
+  ringed); one status strip under it says what is next, with the one green
+  button for the franchisee's move and "+ Request signage" as a secondary
+  button once the store has started. Phone: "Step n of 6 · stage" under the
+  dots. The card itself carries `data-testid="setup-tracker"` for smoke.
+
 ## 5 Oct 2026 (late night): stores can be edited
 
 - **"Edit store"** on each card (owner and Signage.com): name, address,
