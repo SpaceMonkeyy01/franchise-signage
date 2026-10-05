@@ -976,3 +976,36 @@ export function getRegistrationsForBrand(brandId: string): Promise<RegistrationW
     [brandId],
   );
 }
+
+/** A sign on the brand's public landing page: its picture, never its price. */
+export interface ShowcaseSign {
+  id: string;
+  name: string;
+  sign_type: string;
+  placement: 'indoor' | 'outdoor';
+  /** The sign's own picture or Studio mockup. */
+  image_path: string;
+  /** In at least one store type's standard package. */
+  in_package: boolean;
+}
+
+/**
+ * The brand's live signs that have a picture, standard-package signs first,
+ * for the signed-out landing page. Names and pictures only: prices are for
+ * signed-in franchisees, and nothing here says anything about a store.
+ */
+export async function getShowcaseSigns(brandId: string): Promise<ShowcaseSign[]> {
+  return query<ShowcaseSign>(
+    `select bi.id, bi.name, mc.sign_type, mc.placement,
+            coalesce(bi.thumbnail_url, bi.design->>'mockupPath') as image_path,
+            exists (select 1 from brand_packages bp
+                     where bp.brand_id = bi.brand_id
+                       and bp.items @> jsonb_build_array(bi.id::text)) as in_package
+       from brand_items bi
+       join master_catalog mc on mc.id = bi.master_catalog_id
+      where bi.brand_id = $1 and bi.active
+        and coalesce(bi.thumbnail_url, bi.design->>'mockupPath') is not null
+      order by in_package desc, bi.sort_order, bi.name`,
+    [brandId],
+  );
+}

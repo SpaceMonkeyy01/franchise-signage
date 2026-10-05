@@ -26,6 +26,16 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 5 Oct 2026 (night): a new landing page
+
+- **The signed-out brand page** (`/freshbites`, `freshbites.localhost:3000/`)
+  leads with the brand's own sign mockups, then what you get, the sign
+  program gallery, how it works, the readiness example and an FAQ
+  (DECISIONS #175). Pictures and names only, no prices. Query
+  `getShowcaseSigns`. Checked at 1440 and 390 wide: no sideways scroll, no
+  broken images. Smoke updated (two Sign in links now; gallery shown; no
+  price), not rerun.
+
 ## 5 Oct 2026 (evening): the Studio draws custom-quote signs
 
 - **Brand admins design a custom-quote sign for its picture** (DECISIONS

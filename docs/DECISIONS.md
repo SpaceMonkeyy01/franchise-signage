@@ -1829,6 +1829,16 @@ item 7's "CRUD UI only when onboarding brand #2".
      through the Signize engine (#166–#173) rather than the iframe the
      session plan describes.
 
+175. **The signed-out landing page shows the brand's signs** (owner asked to
+     improve it, 5 Oct). The hero is the brand's own Studio mockups (a
+     standard-package sign large, three more small) instead of the example
+     readiness card, which moves to a "Nothing slips, and nothing blocks"
+     section. Added: three "what you get" points, a gallery of every live sign
+     with a picture (standard-package signs first and badged), and five FAQs;
+     the header carries a Sign in link. **Names and pictures only, never
+     prices** — prices are for signed-in franchisees (smoke checks no "$" on
+     the page). Every claim is what the product does today; no DID copy.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

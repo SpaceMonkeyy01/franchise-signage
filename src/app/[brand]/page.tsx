@@ -25,7 +25,7 @@ import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { CursorGlow } from '@/components/CursorGlow';
 import { ReadinessCard } from '@/components/ReadinessCard';
-import { SignThumbnail } from '@/components/SignThumbnail';
+import { SignThumbnail, signImageUrl } from '@/components/SignThumbnail';
 import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
@@ -33,8 +33,10 @@ import { budgetByFormat, budgetMoney } from '@/lib/budget';
 import {
   getBrandBySlug,
   getLocationsForBrand,
+  getShowcaseSigns,
   type BrandPublic,
   type LocationRow,
+  type ShowcaseSign,
 } from '@/lib/db/queries';
 import type { Readiness } from '@/lib/readiness';
 import { openingLine, SETUP_STAGES, setupProgress, type SetupProgress } from '@/lib/setup-progress';
@@ -58,7 +60,9 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
   if (!brand) notFound();
 
   const viewer = await getViewer();
-  if (!viewer || owesSecondFactor(viewer)) return <SignedOut brand={brand} />;
+  if (!viewer || owesSecondFactor(viewer)) {
+    return <SignedOut brand={brand} signs={await getShowcaseSigns(brand.id)} />;
+  }
 
   const scope = await storeScope(viewer, brand.id);
   // Corporate's home is the dashboard, which shows every store and more
@@ -180,19 +184,21 @@ function Shell({
  *
  * The first page a franchisee reaches from the welcome email or the portal
  * address, so it says what the program is before it asks for a password. It
- * still shows nothing about any store and no request link — the example card is
- * made up, and says so. There is no "start" button: accounts come only by
- * invitation (SPEC v2.3 §10), so the one action is signing in.
+ * shows the brand's own signs — pictures and names, never prices — and nothing
+ * about any store; the readiness card is made up, and says so. There is no
+ * "start" button: accounts come only by invitation (SPEC v2.3 §10), so the one
+ * action is signing in.
  */
-function SignedOut({ brand }: { brand: BrandPublic }) {
+function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[] }) {
   const signIn = `/sign-in?next=${encodeURIComponent(`/${brand.slug}`)}`;
+  const [featured, ...others] = signs;
   return (
     <>
       <BrandTheme brand={brand} />
-      <BrandHeader brand={brand} />
+      <BrandHeader brand={brand} account={<HeaderSignIn href={signIn} />} />
       <main className="relative flex-1">
         <CursorGlow />
-        <section className="mx-auto grid grid-cols-1 w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-16">
+        <section className="mx-auto grid grid-cols-1 w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.05fr_1fr] md:py-16">
           <div>
             <p
               className="inline-block rounded-full border bg-white px-3 py-1 text-xs font-semibold"
@@ -200,16 +206,16 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
             >
               {brand.name} franchise signage program
             </p>
-            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-4xl">
+            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-tight text-gray-900 sm:text-5xl">
               Your {brand.name} signage,{' '}
               <span style={{ color: 'var(--color-brand)' }}>from agreement to install.</span>
             </h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-gray-600">
-              Order and track signage for your {brand.name} stores. Choose from the brand&rsquo;s
-              approved sign packages, send the photos and landlord criteria Signage.com needs, and
-              follow every sign through production to install.
+            <p className="mt-5 max-w-xl text-base leading-relaxed text-gray-600 sm:text-lg">
+              Every {brand.name} sign is already designed to brand standard and priced by
+              Signage.com. Pick your store&rsquo;s package, fit each sign to your frontage, and follow
+              it through production to install, with the paperwork your lender asks for.
             </p>
-            <div className="mt-6 flex flex-wrap items-center gap-3">
+            <div className="mt-7 flex flex-wrap items-center gap-3">
               <Link
                 href={signIn}
                 className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
@@ -218,35 +224,91 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
                 Sign in
               </Link>
               <a
-                href="#how-it-works"
+                href={signs.length > 0 ? '#signs' : '#how-it-works'}
                 className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 transition-colors hover:border-gray-400"
               >
-                See how it works
+                {signs.length > 0 ? 'See the signs' : 'See how it works'}
               </a>
             </div>
             <p className="mt-4 max-w-xl text-xs leading-relaxed text-gray-500">
-              New to {brand.name}? Your account is created from the invitation {brand.name} emails
-              you when you sign your franchise agreement. Open it to choose a password.
+              New to {brand.name}? Your account comes from the invitation {brand.name} emails you
+              when you sign your franchise agreement. Open it to choose a password.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-gray-200/80 bg-white/60 p-3 shadow-sm">
-            <ReadinessCard readiness={EXAMPLE_READINESS} audience="franchisee" className="" />
-            <p className="px-1 pb-1 pt-2 text-[11px] text-gray-500">
-              An example of a new store&rsquo;s package, as you and Signage.com see it.
-            </p>
+          {featured ? (
+            <HeroSigns brand={brand} featured={featured} others={others.slice(0, 3)} />
+          ) : (
+            <ExampleReadiness />
+          )}
+        </section>
+
+        <section className="border-t border-gray-200/70 bg-white">
+          <div className="mx-auto grid w-full page-wide grid-cols-1 gap-4 px-4 py-14 sm:px-6 md:grid-cols-3">
+            {WHAT_YOU_GET(brand.name).map((point) => (
+              <div key={point.title} className="rounded-xl border border-gray-200 bg-[#FBFAF6] p-5">
+                <span
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-white"
+                  style={{ background: 'var(--color-brand)' }}
+                  aria-hidden
+                >
+                  {point.icon}
+                </span>
+                <h2 className="mt-3 text-base font-semibold text-gray-900">{point.title}</h2>
+                <p className="mt-1 text-sm leading-relaxed text-gray-600">{point.body}</p>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section id="how-it-works" className="border-t border-gray-200/70 bg-white">
-          <div className="mx-auto w-full page-wide px-4 py-14 sm:px-6">
-            <p
-              className="text-center text-xs font-semibold uppercase tracking-widest"
-              style={{ color: 'var(--color-brand)' }}
-            >
-              How it works
+        {signs.length > 0 && (
+          <section id="signs" className="mx-auto w-full page-wide scroll-mt-6 px-4 py-14 sm:px-6">
+            <Eyebrow>The sign program</Eyebrow>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              {signs.length} {brand.name} signs, designed to brand standard
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm leading-relaxed text-gray-600">
+              Your store type&rsquo;s standard package loads pre-filled and is approved automatically.
+              Anything you add goes to {brand.name} for approval.
             </p>
-            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
+            <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {signs.map((sign) => (
+                <li key={sign.id} className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                  <div className="relative aspect-square bg-gray-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={signImageUrl(sign.image_path)}
+                      alt={sign.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover"
+                    />
+                    {sign.in_package && (
+                      <span
+                        className="absolute left-2 top-2 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-semibold shadow-sm"
+                        style={{ color: 'var(--color-brand-dark)' }}
+                      >
+                        Standard package
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <p className="text-sm font-semibold leading-snug text-gray-900">
+                      {signName(sign.name, brand.name)}
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      {sign.sign_type} · {sign.placement === 'indoor' ? 'Indoor' : 'Outdoor'}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section id="how-it-works" className="scroll-mt-6 border-t border-gray-200/70 bg-white">
+          <div className="mx-auto w-full page-wide px-4 py-14 sm:px-6">
+            <Eyebrow>How it works</Eyebrow>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
               One path from signed agreement to installed signs
             </h2>
             <ol className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
@@ -272,8 +334,53 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
           </div>
         </section>
 
-        <section className="mx-auto w-full page-wide px-4 py-12 text-center sm:px-6">
-          <h2 className="text-xl font-bold tracking-tight text-gray-900">
+        {featured && (
+          <section className="mx-auto grid w-full page-wide grid-cols-1 items-center gap-10 px-4 py-14 sm:px-6 md:grid-cols-2">
+            <div>
+              <Eyebrow align="left">Always know what&rsquo;s next</Eyebrow>
+              <h2 className="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+                Nothing slips, and nothing blocks
+              </h2>
+              <ul className="mt-5 space-y-3 text-sm leading-relaxed text-gray-600">
+                <Check>
+                  Anything you don&rsquo;t know yet can stay TBD. Signage.com follows up instead of
+                  holding your order.
+                </Check>
+                <Check>Each store shows what is done and what is still needed, on your side and Signage.com&rsquo;s.</Check>
+                <Check>
+                  Every approval, quote and milestone lands on one timeline, with an email when it is
+                  your turn.
+                </Check>
+              </ul>
+            </div>
+            <ExampleReadiness />
+          </section>
+        )}
+
+        <section className="border-t border-gray-200/70 bg-white">
+          <div className="mx-auto w-full max-w-3xl px-4 py-14 sm:px-6">
+            <Eyebrow>Questions</Eyebrow>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900">
+              Before you sign in
+            </h2>
+            <div className="mt-6 divide-y divide-gray-200 rounded-xl border border-gray-200">
+              {FAQ(brand.name).map((item) => (
+                <details key={item.q} className="group px-4 py-3">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-gray-900">
+                    {item.q}
+                    <span className="text-lg leading-none text-gray-400 transition-transform group-open:rotate-45" aria-hidden>
+                      +
+                    </span>
+                  </summary>
+                  <p className="mt-2 text-sm leading-relaxed text-gray-600">{item.a}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="mx-auto w-full page-wide px-4 py-14 text-center sm:px-6">
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 sm:text-2xl">
             Already invited? Your stores are one sign-in away.
           </h2>
           <Link
@@ -284,13 +391,160 @@ function SignedOut({ brand }: { brand: BrandPublic }) {
             Sign in to {brand.name} signage
           </Link>
           <p className="mx-auto mt-5 max-w-xl text-[11px] leading-relaxed text-gray-500">
-            Estimates are not quotes: final pricing and timing depend on each site. Signage.com
-            keeps track of landlord approval with you, but cannot guarantee it or any permit.
+            Pictures are generated mockups. Estimates are not quotes: final pricing and timing depend
+            on each site. Signage.com keeps track of landlord approval with you, but cannot guarantee
+            it or any permit.
           </p>
         </section>
       </main>
     </>
   );
+}
+
+function HeaderSignIn({ href }: { href: string }) {
+  return (
+    <Link href={href} className="text-sm font-semibold text-gray-700 underline-offset-2 hover:underline">
+      Sign in
+    </Link>
+  );
+}
+
+/** The brand's own signs as the hero picture: one large, up to three small. */
+function HeroSigns({
+  brand,
+  featured,
+  others,
+}: {
+  brand: BrandPublic;
+  featured: ShowcaseSign;
+  others: ShowcaseSign[];
+}) {
+  return (
+    <div className="relative">
+      <figure className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-lg">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={signImageUrl(featured.image_path)}
+          alt={featured.name}
+          className="aspect-[4/3] w-full object-cover"
+        />
+        <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 px-4 py-3">
+          <span className="text-sm font-semibold text-gray-900">{signName(featured.name, brand.name)}</span>
+          <span className="text-xs text-gray-500">{featured.sign_type}</span>
+        </figcaption>
+      </figure>
+      {others.length > 0 && (
+        <div className="mt-3 grid grid-cols-3 gap-3">
+          {others.map((sign) => (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={sign.id}
+              src={signImageUrl(sign.image_path)}
+              alt={sign.name}
+              title={sign.name}
+              className="aspect-square w-full rounded-xl border border-gray-200 bg-white object-cover shadow-sm"
+            />
+          ))}
+        </div>
+      )}
+      <p
+        className="absolute -top-3 left-4 rounded-full border bg-white px-3 py-1 text-[11px] font-semibold shadow-sm"
+        style={{ color: 'var(--color-brand-dark)', borderColor: 'var(--color-brand-light)' }}
+      >
+        Designed with the {brand.name} logo
+      </p>
+    </div>
+  );
+}
+
+function ExampleReadiness() {
+  return (
+    <div className="rounded-2xl border border-gray-200/80 bg-white/60 p-3 shadow-sm">
+      <ReadinessCard readiness={EXAMPLE_READINESS} audience="franchisee" className="" />
+      <p className="px-1 pb-1 pt-2 text-[11px] text-gray-500">
+        An example of a new store&rsquo;s package, as you and Signage.com see it.
+      </p>
+    </div>
+  );
+}
+
+function Eyebrow({ children, align = 'center' }: { children: React.ReactNode; align?: 'center' | 'left' }) {
+  return (
+    <p
+      className={`text-xs font-semibold uppercase tracking-widest ${align === 'center' ? 'text-center' : ''}`}
+      style={{ color: 'var(--color-brand)' }}
+    >
+      {children}
+    </p>
+  );
+}
+
+function Check({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex gap-2.5">
+      <svg viewBox="0 0 20 20" className="mt-0.5 h-5 w-5 shrink-0" fill="none" aria-hidden>
+        <circle cx="10" cy="10" r="9" fill="var(--color-brand-light)" />
+        <path
+          d="M6 10.5l2.5 2.5L14 7.5"
+          stroke="var(--color-brand-dark)"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+/** "Freshbites Storefront Letters" reads as "Storefront Letters" on the brand's own page. */
+function signName(name: string, brandName: string): string {
+  const trimmed = name.startsWith(`${brandName} `) ? name.slice(brandName.length + 1) : name;
+  return trimmed || name;
+}
+
+const ICON = {
+  className: 'h-5 w-5',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
+} as const;
+
+function WHAT_YOU_GET(brandName: string) {
+  return [
+    {
+      title: 'Signs already designed',
+      body: `Every sign is set up with the ${brandName} logo to brand standard. Fit a sign to your frontage within ${brandName}'s limits; the logo stays as the brand set it.`,
+      icon: (
+        <svg viewBox="0 0 24 24" {...ICON}>
+          <path d="M12 3l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.4l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z" />
+        </svg>
+      ),
+    },
+    {
+      title: 'A price as you choose',
+      body: 'Each sign shows Signage.com’s estimate while you pick. Your budget, quote and invoice come as the PDFs a lender asks for.',
+      icon: (
+        <svg viewBox="0 0 24 24" {...ICON}>
+          <path d="M4 7h16v10H4z" />
+          <circle cx="12" cy="12" r="2.5" />
+          <path d="M7 10v4M17 10v4" />
+        </svg>
+      ),
+    },
+    {
+      title: 'Every store on record',
+      body: 'Installed signs stay on your store’s record, so a like-for-like replacement is a lookup, approved without waiting on a review.',
+      icon: (
+        <svg viewBox="0 0 24 24" {...ICON}>
+          <path d="M4 10l8-6 8 6v9a1 1 0 01-1 1H5a1 1 0 01-1-1z" />
+          <path d="M9 20v-6h6v6" />
+        </svg>
+      ),
+    },
+  ];
 }
 
 // What the steps say is what the product does today, in the order a new
@@ -314,13 +568,40 @@ function HOW_IT_WORKS(brandName: string) {
     },
     {
       title: 'Confirm your signs',
-      body: `The standard package loads pre-filled. Add sizes and photos; add-ons go to ${brandName} for approval.`,
+      body: `The standard package loads pre-filled. Fit signs to your frontage and add photos; add-ons go to ${brandName} for approval.`,
       output: 'An approved sign list',
     },
     {
       title: 'Quote to install',
       body: 'Accept the Signage.com quote and follow production to install, with the PDFs your lender asks for.',
       output: 'Signs on record',
+    },
+  ];
+}
+
+// What a new franchisee asks first. Each answer is what the product does
+// today; none promises an approval, a permit or a price.
+function FAQ(brandName: string) {
+  return [
+    {
+      q: 'How do I get an account?',
+      a: `${brandName} registers your email when you sign your franchise agreement, and the welcome email lets you choose a password. There is no public sign-up. Store managers are invited by the franchise owner.`,
+    },
+    {
+      q: 'Can I change a sign’s design?',
+      a: `Where ${brandName} allows it, you can resize a sign to fit your frontage and see it redrawn before you order. The logo stays as ${brandName} set it. You can go beyond the brand’s limits, but that sign then goes to ${brandName} for approval.`,
+    },
+    {
+      q: 'Does this work with my SBA or equipment loan?',
+      a: 'Yes. You get the signage number for your store format for your business plan, then a budgetary quote, an invoice and a paid receipt as PDFs to hand your lender. The portal does not process payments or loans.',
+    },
+    {
+      q: 'Who handles landlord approval and permits?',
+      a: 'Upload your lease’s sign criteria; Signage.com checks them while preparing your package and tracks the landlord’s approval with you. Neither can guarantee a landlord approval or a permit.',
+    },
+    {
+      q: 'What if a sign is damaged later?',
+      a: 'Your store keeps a record of every installed sign. Pick it and order a like-for-like replacement: it uses the same approved spec, so it skips review.',
     },
   ];
 }

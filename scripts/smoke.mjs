@@ -421,7 +421,14 @@ record(
 );
 
 await expectVisible(page, '#how-it-works', 'it is a landing page: what the program is, before the password');
-await page.getByRole('link', { name: 'Sign in', exact: true }).click();
+await expectVisible(page, '#signs img', "it shows the brand's own signs");
+record(
+  'with pictures and names, never prices',
+  !/\$\d/.test(await page.locator('main').innerText()),
+  'a price appeared on the signed-out page',
+);
+// Two ways in (the header and the hero); either signs in.
+await page.getByRole('link', { name: 'Sign in', exact: true }).first().click();
 await page.waitForURL('**/sign-in**', { timeout: TIMEOUT });
 await page.getByLabel('Email').fill(DEV_FRANCHISEE.email);
 await page.getByLabel('Password', { exact: false }).first().fill(DEV_FRANCHISEE.password);
