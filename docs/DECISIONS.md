@@ -2096,6 +2096,16 @@ item 7's "CRUD UI only when onboarding brand #2".
      replacing #192's per-page placement and the "working screens stay
      still" rule.
 
+194. **Signing out lands where the person signs in** (owner, 6 Oct review).
+     It used to send everyone to `/sign-in` with no brand, so a franchisee or
+     brand admin leaving a Freshbites page landed on "Sign in to Signage.com",
+     which tells them they are in the wrong place; on a brand's own address
+     the action's redirect also skipped the proxy and lost the brand. Now: from
+     a brand's pages (portal header, else the posting page's first path
+     segment, checked against brands) to that brand's front page, `/{slug}`
+     explicitly; from the console or anywhere else to the Signage.com sign-in
+     with "You have signed out."
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

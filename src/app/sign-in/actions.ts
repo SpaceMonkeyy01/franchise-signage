@@ -19,6 +19,7 @@ import {
   lockState,
   recordFailedSignIn,
 } from '@/lib/auth/password';
+import { getBrandBySlug } from '@/lib/db/queries';
 import type { SubmitFailure } from '@/lib/forms';
 
 export async function signIn(
@@ -78,7 +79,30 @@ export async function signIn(
   redirect(destination);
 }
 
+/**
+ * Sign out, and land where this person came in (DECISIONS #194).
+ *
+ * From a brand's pages: that brand's front page, which is where its people sign
+ * in again. Anywhere else (the console, two-factor): the Signage.com sign-in,
+ * saying they are signed out. The brand comes from the portal header on a
+ * brand's own address, otherwise from the page the button was on. The target
+ * is always the explicit `/{slug}` path: a redirect from an action is not
+ * re-routed by the proxy, so `/` would open the Signage.com front page.
+ */
 export async function signOut(): Promise<void> {
+  const slug = (await portalSlug()) ?? brandInReferer((await headers()).get('referer'));
+  const brand = slug ? await getBrandBySlug(slug) : null;
   await endSession();
-  redirect('/sign-in');
+  redirect(brand ? `/${brand.slug}` : '/sign-in?reason=signed_out');
+}
+
+/** The first path segment of the page a form was posted from, if it could be a brand slug. */
+function brandInReferer(referer: string | null): string | null {
+  if (!referer) return null;
+  try {
+    const segment = new URL(referer).pathname.split('/')[1] ?? '';
+    return /^[a-z0-9-]+$/.test(segment) && segment !== 'admin' ? segment : null;
+  } catch {
+    return null;
+  }
 }

@@ -31,6 +31,7 @@ function brandInNext(next: string | undefined): string | null {
 const REASONS: Record<string, string> = {
   expired: 'For security, Signage.com sessions end after 12 hours. Sign in again to continue.',
   reset: 'Your password has been changed. Sign in with the new one.',
+  signed_out: 'You have signed out.',
 };
 
 export default async function SignInPage({
