@@ -38,11 +38,11 @@
   team account and the Freshbites brand admin): the four drive-thru catalog
   types, the Drive-thru store type, Freshbites' four drive-thru signs, and
   the Inline / Endcap / Freestanding (7 signs) and Drive-thru (11) packages.
-- **Not synced to live:** prices and Studio designs. Live Freshbites still has
-  the seed's hand-set prices (Storefront $8,400, Menu Board $3,200, …) and no
-  designs; its Studio needs `SIGNIZE_SESSION_TOKEN` on Render, and local
-  mockups are not in live storage. Once the token is there, the brand admin
-  designs each sign on live and the engine sets the prices.
+- **Then designs and prices too** (#182): all 12 Freshbites designs were run
+  through the engine against live from this machine with the local token;
+  live packages now Inline $2,816 · Endcap $3,400 · Freestanding/Drive-thru
+  $2,917 (+ custom quotes). Still to do by the owner: set
+  `SIGNIZE_SESSION_TOKEN` on Render so the deployed Studio works.
 
 ## 6 Oct 2026 (later): smoke green; brand signs explained
 

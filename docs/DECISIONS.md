@@ -1937,6 +1937,20 @@ item 7's "CRUD UI only when onboarding brand #2".
      seven plus the four. The team can switch any of them to Fixed price.
      Real drive-thru mockup styles would need Signize to add them.
 
+182. **Live Freshbites designed through the engine** (owner, 6 Oct: "use the
+     token"). Render's environment is not reachable from here (no CLI, the
+     connector unauthorised), so the Studio's own save (`saveBrandDesign`)
+     was run from this machine against live — live database, live storage,
+     the local `SIGNIZE_SESSION_TOKEN` — for each of Freshbites' 12 local
+     designs (inputs read from the local database; logos uploaded to live
+     storage), as live's Freshbites brand admin. The engine priced and drew
+     each afresh at live's 40% margin: seven engine-priced (within a few
+     dollars of local — Storefront $717, Menu Board $683, Blade $483), five
+     drawn custom quotes. Live packages now total Inline $2,816, Endcap
+     $3,400, Freestanding and Drive-thru $2,917, plus custom quotes. The
+     deployed Studio still needs `SIGNIZE_SESSION_TOKEN` set on Render for
+     anyone to design there.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
