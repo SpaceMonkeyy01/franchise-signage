@@ -50,6 +50,11 @@ function variantName(row: { sign_type: string; variant: string | null }) {
   return row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
 }
 
+/** A live fixed-price sign the team has not priced: franchisees would see a custom quote. */
+function needsPrice(sign: { price_mode: PriceMode; est_price: string | null; review_status: string; active: boolean }) {
+  return sign.price_mode === 'fixed' && sign.est_price === null && sign.review_status === 'approved' && sign.active;
+}
+
 const MODE_TONE: Record<PriceMode, string> = {
   studio: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
   fixed: 'bg-sky-50 text-sky-800 ring-sky-200',
@@ -81,6 +86,7 @@ export default async function CatalogPage({
   const brand = brands.find((b) => b.slug === brandParam) ?? brands[0] ?? null;
   const signs = brand ? await listBrandSigns(brand.id) : [];
   const categories = [...new Set(master.map((row) => row.category))].sort();
+  const unpriced = signs.filter(needsPrice);
 
   const tab: Tab =
     tabParam === 'review' || tabParam === 'brand' || tabParam === 'catalog'
@@ -102,7 +108,7 @@ export default async function CatalogPage({
         <TabLink href={href('review')} active={tab === 'review'} count={pending.length} alert={pending.length > 0}>
           Waiting for review
         </TabLink>
-        <TabLink href={href('brand')} active={tab === 'brand'} count={signs.length}>
+        <TabLink href={href('brand')} active={tab === 'brand'} count={signs.length} alert={unpriced.length > 0}>
           Brand signs
         </TabLink>
         <TabLink href={href('catalog')} active={tab === 'catalog'} count={master.length}>
@@ -147,7 +153,7 @@ export default async function CatalogPage({
                     itemId={sign.id}
                     name={sign.name}
                     specSummary={sign.spec_summary ?? ''}
-                    standin={sign.pricing_basis === 'standin'}
+                    mode={sign.price_mode}
                   />
                 </article>
               ))}
@@ -176,6 +182,14 @@ export default async function CatalogPage({
               A price change applies to new requests; ones already made keep their price.
             </p>
           </div>
+          {unpriced.length > 0 && (
+            <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              {unpriced.length === 1
+                ? '1 fixed-price sign has no price yet, so franchisees see it as a custom quote.'
+                : `${unpriced.length} fixed-price signs have no price yet, so franchisees see them as custom quotes.`}{' '}
+              Use <strong>Set price</strong> on the highlighted {unpriced.length === 1 ? 'row' : 'rows'}.
+            </p>
+          )}
           <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
             <table className="w-full min-w-[760px] text-sm">
               <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs text-gray-500">
@@ -192,7 +206,7 @@ export default async function CatalogPage({
                 {signs.map((sign) => {
                   const status = statusOf(sign);
                   return (
-                    <tr key={sign.id} className="hover:bg-gray-50/60">
+                    <tr key={sign.id} className={needsPrice(sign) ? 'bg-amber-50/50' : 'hover:bg-gray-50/60'}>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-3">
                           <ImageUpload hasImage={!!sign.thumbnail_url} save={setSignImageAction.bind(null, sign.id)}>
@@ -216,13 +230,13 @@ export default async function CatalogPage({
                         <ModeBadge mode={sign.price_mode} />
                       </td>
                       <td className="px-3 py-2.5">
-                        {sign.price_mode === 'studio' && sign.price_source === 'engine' ? (
-                          <span className="text-sm text-gray-900" title="Priced by the Design Studio when the brand saved its design">
-                            {sign.est_price ? `$${Number(sign.est_price).toLocaleString('en-US')}` : '—'}
-                            <span className="ml-1 text-[11px] text-gray-500">engine</span>
-                          </span>
-                        ) : sign.review_status === 'approved' ? (
-                          <PriceEditor itemId={sign.id} price={sign.est_price} standin={sign.pricing_basis === 'standin'} />
+                        {sign.review_status === 'approved' ? (
+                          <PriceEditor
+                            itemId={sign.id}
+                            price={sign.est_price}
+                            mode={sign.price_mode}
+                            engine={sign.price_source === 'engine'}
+                          />
                         ) : (
                           <span className="text-xs text-gray-500">set on approval</span>
                         )}

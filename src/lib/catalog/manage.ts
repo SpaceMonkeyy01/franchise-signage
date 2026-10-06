@@ -393,6 +393,9 @@ export async function approveSign(
   if (!sign || sign.review_status !== 'pending') throw new CatalogError('That sign is not waiting for review.');
   const name = decision.name.trim();
   if (!name) throw new CatalogError('The sign needs a name.');
+  if (sign.price_mode === 'fixed' && decision.price === null) {
+    throw new CatalogError('Enter the fixed price for this sign before approving it.');
+  }
   const price = priceFor(sign.pricing_basis, decision.price);
 
   await transaction(async (exec) => {
@@ -491,6 +494,11 @@ export async function setSignPrice(itemId: string, actor: CatalogActor, price: n
   const next = priceFor(sign.pricing_basis, price);
   if (sign.pricing_basis === 'standin' && price !== null) {
     throw new CatalogError('This sign type has no pricing model yet, so it is always a custom quote.');
+  }
+  if (sign.price_mode === 'fixed' && price === null) {
+    throw new CatalogError(
+      'A fixed-price sign needs a price. To quote it per order instead, set its type to Custom quote in the catalog.',
+    );
   }
   await transaction(async (exec) => {
     await exec.query(`update brand_items set est_price = $2 where id = $1`, [itemId, next]);

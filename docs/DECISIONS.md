@@ -1908,6 +1908,13 @@ item 7's "CRUD UI only when onboarding brand #2".
      (confirmed on screen); to Fixed keeps them as the starting figure.
      Migration `20261005110000_price_mode.sql`. Existing rows: 50 Studio,
      27 Custom; nothing switched to Fixed yet.
+     **Refined 6 Oct:** a fixed-price sign must have a price — approving one
+     without it, or clearing it, is refused (to quote per order, set the type
+     to Custom quote). The team's catalog flags live fixed-price signs with no
+     price (amber tab count, banner, highlighted row, "Set price"); switching
+     a type to Fixed offers a link to set its brand signs' prices; the
+     approval form's price field follows the type (required for Fixed,
+     optional estimate for Studio, none for Custom).
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's

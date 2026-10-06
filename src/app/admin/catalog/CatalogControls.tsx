@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 
 import type { PriceMode } from '@/lib/catalog/manage';
@@ -41,12 +42,13 @@ export function ReviewForm({
   itemId,
   name: initialName,
   specSummary: initialSpec,
-  standin,
+  mode,
 }: {
   itemId: string;
   name: string;
   specSummary: string;
-  standin: boolean;
+  /** Where the sign's price comes from: decides what the price field asks for. */
+  mode: PriceMode;
 }) {
   const [name, setName] = useState(initialName);
   const [spec, setSpec] = useState(initialSpec);
@@ -62,19 +64,26 @@ export function ReviewForm({
           <input className={`${input} mt-1 w-full`} value={name} onChange={(e) => setName(e.target.value)} />
         </label>
         <label className="text-xs text-gray-600">
-          Price estimate
-          {standin ? (
+          {mode === 'fixed' ? 'Fixed price' : mode === 'studio' ? 'Price estimate (optional)' : 'Price'}
+          {mode === 'custom' ? (
             <p className="mt-1 rounded-lg bg-gray-50 px-2.5 py-1.5 text-sm text-gray-500">
-              Custom quote (no pricing model)
+              Custom quote: priced on each order
             </p>
           ) : (
-            <input
-              className={`${input} mt-1 w-full`}
-              value={price}
-              inputMode="decimal"
-              placeholder="e.g. 2400 — empty for custom quote"
-              onChange={(e) => setPrice(e.target.value)}
-            />
+            <>
+              <input
+                className={`${input} mt-1 w-full`}
+                value={price}
+                inputMode="decimal"
+                placeholder={mode === 'fixed' ? 'e.g. 450' : 'e.g. 2400'}
+                onChange={(e) => setPrice(e.target.value)}
+              />
+              <span className="mt-1 block text-[11px] text-gray-500">
+                {mode === 'fixed'
+                  ? 'Required. Every order of this sign uses it.'
+                  : 'The Design Studio sets the price once the brand designs this sign.'}
+              </span>
+            </>
           )}
         </label>
       </div>
@@ -109,48 +118,97 @@ export function ReviewForm({
   );
 }
 
+/**
+ * A brand sign's price, as the team sets it (DECISIONS #179). What it offers
+ * follows where the price comes from: a custom quote has none, an engine
+ * price is the Studio's, and a fixed price (or a Studio sign not designed
+ * yet) is typed here. A fixed-price sign without one is flagged.
+ */
 export function PriceEditor({
   itemId,
   price,
-  standin,
+  mode,
+  engine,
 }: {
   itemId: string;
   price: string | null;
-  standin: boolean;
+  mode: PriceMode;
+  /** The Design Studio set this price when the brand saved its design. */
+  engine: boolean;
 }) {
-  const shown = price === null ? 'Custom quote' : `$${Number(price).toLocaleString('en-US')}`;
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(price === null ? '' : String(Number(price)));
   const { error, pending, go } = useAction();
+  const amount = price === null ? null : `$${Number(price).toLocaleString('en-US')}`;
 
-  if (standin) return <span className="text-xs text-gray-500">Custom quote</span>;
-  if (!editing) {
+  if (mode === 'custom') {
+    return <span className="text-xs text-gray-500">Quoted per order</span>;
+  }
+  if (mode === 'studio' && engine) {
     return (
-      <button type="button" onClick={() => setEditing(true)} className="text-sm text-gray-900 underline-offset-2 hover:underline">
-        {shown}
-      </button>
+      <span className="text-sm text-gray-900" title="Priced by the Design Studio when the brand saved its design">
+        {amount ?? '—'}
+        <span className="ml-1 text-[11px] text-gray-500">from the Studio</span>
+      </span>
+    );
+  }
+
+  const save = () => go(() => setSignPriceAction(itemId, value), () => setEditing(false));
+
+  if (!editing) {
+    if (amount === null) {
+      return (
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+        >
+          {mode === 'fixed' ? 'Set price' : 'Set an estimate'}
+        </button>
+      );
+    }
+    return (
+      <span className="inline-flex items-baseline gap-2">
+        <span className="text-sm text-gray-900">{amount}</span>
+        {mode === 'studio' && <span className="text-[11px] text-gray-500">until designed</span>}
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-xs font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
+        >
+          Edit
+        </button>
+      </span>
     );
   }
   return (
     <div>
-      <div className="flex items-center gap-1.5">
-        <input
-          className={`${input} w-24`}
-          value={value}
-          inputMode="decimal"
-          aria-label="Price"
-          placeholder="custom"
-          onChange={(e) => setValue(e.target.value)}
-        />
+      <div className="flex items-center gap-2">
+        <span className="relative">
+          <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-gray-500">$</span>
+          <input
+            autoFocus
+            className={`${input} w-28 pl-5`}
+            value={value}
+            inputMode="decimal"
+            aria-label="Price"
+            placeholder="0"
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') save();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+          />
+        </span>
         <button
           type="button"
           disabled={pending}
-          onClick={() => go(() => setSignPriceAction(itemId, value), () => setEditing(false))}
-          className="text-xs font-medium text-gray-900 underline-offset-2 hover:underline disabled:opacity-40"
+          onClick={save}
+          className="rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-white hover:opacity-90 disabled:opacity-40"
         >
-          Save
+          {pending ? 'Saving…' : 'Save'}
         </button>
-        <button type="button" onClick={() => setEditing(false)} className="text-xs text-gray-500">
+        <button type="button" onClick={() => setEditing(false)} className="text-xs text-gray-500 hover:text-gray-900">
           Cancel
         </button>
       </div>
@@ -215,6 +273,7 @@ export function PriceModeSelect({
   compact?: boolean;
 }) {
   const { pending, error, go } = useAction();
+  const [switchedToFixed, setSwitchedToFixed] = useState(false);
   return (
     <span className="inline-flex flex-col">
       <label className="inline-flex items-center gap-1.5 text-gray-500">
@@ -235,7 +294,10 @@ export function PriceModeSelect({
             ) {
               return;
             }
-            go(() => setMasterPriceModeAction(masterId, next));
+            go(
+              () => setMasterPriceModeAction(masterId, next),
+              () => setSwitchedToFixed(next === 'fixed' && brandSigns > 0),
+            );
           }}
           className={`rounded-md border px-1.5 py-0.5 text-xs font-medium ${
             compact ? SELECT_TONE[mode] : 'border-gray-300 bg-white text-gray-800'
@@ -248,6 +310,11 @@ export function PriceModeSelect({
           ))}
         </select>
       </label>
+      {switchedToFixed && mode === 'fixed' && (
+        <Link href="/admin/catalog?tab=brand" className="mt-1 text-[11px] font-medium text-sky-800 underline underline-offset-2">
+          Set {brandSigns === 1 ? 'its brand sign’s price' : `prices for its ${brandSigns} brand signs`} →
+        </Link>
+      )}
       <ErrorLine error={error} />
     </span>
   );
