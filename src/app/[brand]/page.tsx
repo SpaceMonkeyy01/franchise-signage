@@ -23,7 +23,6 @@ import { notFound, redirect } from 'next/navigation';
 
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
-import { CursorGlow } from '@/components/CursorGlow';
 
 import { SignThumbnail, signImageUrl } from '@/components/SignThumbnail';
 import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
@@ -198,7 +197,6 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
       <BrandTheme brand={brand} />
       <BrandHeader brand={brand} account={<HeaderSignIn href={signIn} />} />
       <main className="relative flex-1">
-        <CursorGlow />
         <section className="mx-auto grid grid-cols-1 w-full page-wide items-center gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.05fr_1fr] md:py-16">
           <div>
             <p

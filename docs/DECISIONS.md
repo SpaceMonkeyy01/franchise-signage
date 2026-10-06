@@ -2084,7 +2084,17 @@ item 7's "CRUD UI only when onboarding brand #2".
 192. **The console gets the pointer glow, in Signage blue** (owner, 6 Oct).
      The landing pages' grid glow (`CursorGlow`) takes a colour, and the
      admin layout renders it in #2563eb. Same rules: a real mouse only,
-     never with reduced motion. Brand working screens still stay still.
+     never with reduced motion.
+
+193. **Signage blue is the default theme, and the glow is on every page**
+     (owner, 6 Oct). The theme tokens default to Signage blue (#2563eb), so
+     Signage.com's own pages (the main landing page, the console, sign-in
+     without a brand) are blue; a brand's pages still set their colours with
+     BrandTheme, so Freshbites stays green. The invitation page now wears the
+     inviting brand's colours (it had relied on the old green default).
+     `CursorGlow` is rendered once by the root layout in the page's colour,
+     replacing #192's per-page placement and the "working screens stay
+     still" rule.
 
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's

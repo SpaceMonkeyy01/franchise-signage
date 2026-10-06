@@ -1,8 +1,8 @@
 'use client';
 
-// The drafting grid, lit where the pointer is: the two signed-out front pages
-// (`/` and a brand's landing page) in the brand colour, and the Signage.com
-// console in Signage blue (owner, 6 Oct). Brand working screens stay still.
+// The drafting grid, lit where the pointer is — on every page (owner, 6 Oct;
+// DECISIONS #193), rendered once by the root layout. It takes the page's
+// colour: the brand's on a brand's pages, Signage blue everywhere else.
 //
 // It draws the same grid as body::before (globals.css), stronger, with a soft
 // wash of the brand colour, masked to a circle that follows the pointer. Only

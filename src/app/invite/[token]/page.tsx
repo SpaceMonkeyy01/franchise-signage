@@ -6,6 +6,7 @@
 import Link from 'next/link';
 
 import { AuthCard, FormNotice } from '@/components/AuthCard';
+import { BrandTheme } from '@/components/BrandChrome';
 import { resolveInvitation, ROLE_LABEL } from '@/lib/auth/invitations';
 import { PASSWORD_MIN_LENGTH } from '@/lib/auth/password';
 
@@ -34,7 +35,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
 
   if (!invitation) {
     return (
-      <AuthCard title="This link isn't valid" subtitle="Check that you opened the whole link from the email.">
+      <AuthCard
+        title="This link isn't valid"
+        subtitle="Check that you opened the whole link from the email."
+      >
         <SignInLink />
       </AuthCard>
     );
@@ -56,35 +60,44 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   const hasAccount = invitation.existingProfileId !== null;
 
   return (
-    <AuthCard
-      eyebrow={invitation.brandName ? `${invitation.brandName} · Franchise by Signage` : undefined}
-      title={hasAccount ? `Add ${where} to your account` : 'Create your account'}
-      subtitle={
-        <>
-          You&rsquo;ve been invited as <strong>{ROLE_LABEL[invitation.role]}</strong>
-          {invitation.brandName ? ` for ${invitation.brandName}` : ''}.{' '}
-          {hasAccount
-            ? 'You already have an account — sign in to accept.'
-            : 'Choose a password; you’ll use it to sign in from now on.'}
-        </>
-      }
-    >
-      <AcceptForm
-        token={token}
-        email={invitation.email}
-        hasAccount={hasAccount}
-        askCompany={invitation.role === 'franchisee_owner' && !invitation.franchiseeId}
-        askSite={invitation.role === 'franchisee_owner'}
-        brandName={invitation.brandName}
-        minPassword={PASSWORD_MIN_LENGTH}
-      />
-    </AuthCard>
+    <>
+      {/* A brand's invitation wears its colours; Signage.com's stays blue. */}
+      {invitation.brandSlug && <BrandTheme brand={{ brand_colors: invitation.brandColors ?? {} }} />}
+      <AuthCard
+        eyebrow={
+          invitation.brandName ? `${invitation.brandName} · Franchise by Signage` : undefined
+        }
+        title={hasAccount ? `Add ${where} to your account` : 'Create your account'}
+        subtitle={
+          <>
+            You&rsquo;ve been invited as <strong>{ROLE_LABEL[invitation.role]}</strong>
+            {invitation.brandName ? ` for ${invitation.brandName}` : ''}.{' '}
+            {hasAccount
+              ? 'You already have an account — sign in to accept.'
+              : 'Choose a password; you’ll use it to sign in from now on.'}
+          </>
+        }
+      >
+        <AcceptForm
+          token={token}
+          email={invitation.email}
+          hasAccount={hasAccount}
+          askCompany={invitation.role === 'franchisee_owner' && !invitation.franchiseeId}
+          askSite={invitation.role === 'franchisee_owner'}
+          brandName={invitation.brandName}
+          minPassword={PASSWORD_MIN_LENGTH}
+        />
+      </AuthCard>
+    </>
   );
 }
 
 function SignInLink() {
   return (
-    <Link href="/sign-in" className="block text-center text-sm font-medium text-gray-900 hover:underline">
+    <Link
+      href="/sign-in"
+      className="block text-center text-sm font-medium text-gray-900 hover:underline"
+    >
       Go to sign in
     </Link>
   );

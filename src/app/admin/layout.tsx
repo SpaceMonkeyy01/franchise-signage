@@ -6,7 +6,6 @@
 
 import Link from 'next/link';
 
-import { CursorGlow } from '@/components/CursorGlow';
 import { SignageLogo } from '@/components/SignageLogo';
 
 import { getTeamMember } from '@/lib/auth/team';
@@ -72,8 +71,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           )}
         </div>
       </header>
-      {/* Signage blue: the console is Signage.com's own surface, not a brand's. */}
-      <CursorGlow color="#2563eb" />
       {children}
     </>
   );

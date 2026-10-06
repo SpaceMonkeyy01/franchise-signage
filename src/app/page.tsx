@@ -17,7 +17,6 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 import { FormNotice } from '@/components/AuthCard';
-import { CursorGlow } from '@/components/CursorGlow';
 import { SignageLogo } from '@/components/SignageLogo';
 import { getViewer, homeFor, owesSecondFactor } from '@/lib/auth/access';
 import { getBrandsPublic, type BrandPublic } from '@/lib/db/queries';
@@ -223,7 +222,6 @@ function Backdrop() {
         style={{ background: 'radial-gradient(closest-side, #E0F2FE, transparent)' }}
       />
       {/* The dot pattern this page once drew is the site-wide grid now. */}
-      <CursorGlow />
 
       <svg
         className="absolute bottom-[4%] left-[2%] hidden h-36 w-36 md:block"

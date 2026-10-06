@@ -17,7 +17,7 @@ import type { BrandPublic } from '@/lib/db/queries';
  * re-skins every screen by shipping different `brand_colors` — nothing is
  * hardcoded to Freshbites green outside the seed.
  */
-export function BrandTheme({ brand }: { brand: BrandPublic }) {
+export function BrandTheme({ brand }: { brand: Pick<BrandPublic, 'brand_colors'> }) {
   const { primary, primaryDark, primaryLight } = brand.brand_colors ?? {};
   if (!primary) return null;
   return (

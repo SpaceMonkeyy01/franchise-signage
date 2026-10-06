@@ -7,11 +7,12 @@
 
 @theme {
   /* Co-branding is per brand at runtime (brands.brand_colors), so components
-     reference these tokens and the brand overrides them on :root. The defaults
-     are Freshbites, the pilot brand in docs/flow-demo.jsx. */
-  --color-brand: #2e7d32;
-  --color-brand-dark: #1b5e20;
-  --color-brand-light: #e8f5e9;
+     reference these tokens and a brand's pages override them on :root
+     (BrandTheme). The defaults are Signage.com blue, for its own pages: the
+     main landing page, the console, sign-in without a brand (DECISIONS #193). */
+  --color-brand: #2563eb;
+  --color-brand-dark: #1d4ed8;
+  --color-brand-light: #eff6ff;
 
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
