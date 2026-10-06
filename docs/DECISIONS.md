@@ -1962,6 +1962,18 @@ item 7's "CRUD UI only when onboarding brand #2".
      `20261006090000_app_settings.sql`. The owner's current local token was
      saved to live, so the deployed Studio works without touching Render.
 
+184. **"Customize in Studio" opens the Studio** (owner, 6 Oct: it "just asks
+     for any change in dimensions and shows a small preview"). The franchisee's
+     adjust panel is now a full window (`StudioAdjust`, used by setup, add
+     signs and change requests): the mockup large with its size, overall size
+     and turnaround; a size slider and box within the brand's range; depth
+     when allowed; choice options as buttons; what the brand set (logo,
+     locked options) listed; a note when a change goes beyond the brand's
+     limits; price, Update preview, Quote sheet, Cancel and Use this design
+     (enabled once the preview matches the settings and differs from the
+     brand's). Esc closes it. Behaviour behind it is unchanged: the preview
+     prices on the server and submission checks and prices again.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

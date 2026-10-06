@@ -115,6 +115,7 @@ export function ResubmitPanel({
                 brandSlug={brandSlug}
                 locationId={null}
                 brandItemId={item.brand_item_id}
+                signName={item.brand_item_name}
                 base={studioBase(item)!}
                 rules={item.design_rules ?? {}}
                 value={edits[item.id].design === undefined ? customized(item) : (edits[item.id].design ?? null)}

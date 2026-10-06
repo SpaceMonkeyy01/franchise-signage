@@ -97,6 +97,7 @@ export function AddForm({
                 brandSlug={brand.slug}
                 locationId={locationId}
                 brandItemId={item.id}
+                signName={item.name}
                 base={item.design}
                 rules={item.design_rules}
                 value={selected[item.id].design}

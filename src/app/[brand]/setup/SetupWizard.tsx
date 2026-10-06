@@ -614,6 +614,7 @@ function StepPackage({
                       brandSlug={brand.slug}
                       locationId={null}
                       brandItemId={brandItem.id}
+                      signName={brandItem.name}
                       base={brandItem.design}
                       rules={brandItem.design_rules}
                       value={item.design}
@@ -750,6 +751,7 @@ function StepAddons({
                   brandSlug={brand.slug}
                   locationId={null}
                   brandItemId={item.id}
+                  signName={item.name}
                   base={item.design}
                   rules={item.design_rules}
                   value={chosen.design}
