@@ -2081,6 +2081,11 @@ item 7's "CRUD UI only when onboarding brand #2".
        row and for the "back on" save before clearing, which a back-to-back
        run had tripped on.
 
+192. **The console gets the pointer glow, in Signage blue** (owner, 6 Oct).
+     The landing pages' grid glow (`CursorGlow`) takes a colour, and the
+     admin layout renders it in #2563eb. Same rules: a real mouse only,
+     never with reduced motion. Brand working screens still stay still.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

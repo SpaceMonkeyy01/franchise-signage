@@ -1,8 +1,8 @@
 'use client';
 
-// The drafting grid, lit where the pointer is — on the two signed-out front
-// pages only (`/` and a brand's landing page). Working screens stay still: a
-// moving background beside a form or an approval is a distraction.
+// The drafting grid, lit where the pointer is: the two signed-out front pages
+// (`/` and a brand's landing page) in the brand colour, and the Signage.com
+// console in Signage blue (owner, 6 Oct). Brand working screens stay still.
 //
 // It draws the same grid as body::before (globals.css), stronger, with a soft
 // wash of the brand colour, masked to a circle that follows the pointer. Only
@@ -10,7 +10,7 @@
 
 import { useEffect, useRef } from 'react';
 
-export function CursorGlow() {
+export function CursorGlow({ color = 'var(--color-brand)' }: { color?: string }) {
   const layer = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,9 +54,9 @@ export function CursorGlow() {
       className="pointer-events-none fixed inset-0 -z-10 opacity-0 transition-opacity duration-500 print:hidden"
       style={{
         backgroundImage: [
-          'radial-gradient(260px circle at var(--glow-x) var(--glow-y), color-mix(in srgb, var(--color-brand) 10%, transparent), transparent 70%)',
-          'linear-gradient(color-mix(in srgb, var(--color-brand) 22%, transparent) 1px, transparent 1px)',
-          'linear-gradient(90deg, color-mix(in srgb, var(--color-brand) 22%, transparent) 1px, transparent 1px)',
+          `radial-gradient(260px circle at var(--glow-x) var(--glow-y), color-mix(in srgb, ${color} 10%, transparent), transparent 70%)`,
+          `linear-gradient(color-mix(in srgb, ${color} 22%, transparent) 1px, transparent 1px)`,
+          `linear-gradient(90deg, color-mix(in srgb, ${color} 22%, transparent) 1px, transparent 1px)`,
         ].join(','),
         backgroundSize: 'auto, 24px 24px, 24px 24px',
         backgroundPosition: '0 0, -1px -1px, -1px -1px',
