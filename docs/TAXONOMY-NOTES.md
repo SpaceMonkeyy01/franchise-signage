@@ -74,3 +74,7 @@ TSV's `pricing_type` column when seeding.
    `wall-plaques-*`, `yard-sign`, `post-panel-sign-*`, `vinyl-graphics-*`). Worth
    asking whether the engine can actually render those; if so, several rows
    currently treated as mockup-less could get real renders.
+
+## Drive-thru (6 Oct 2026, DECISIONS #181)
+
+Four outdoor variants added under Freestanding Signs → Drive-Thru Signs, all custom quote to start: Outdoor Menu Board and Pre-Sell Board (drawn in the `light-box` style), Clearance Bar (no style), Directional Signs (`post-panel-sign-standard`). The catalog now has 81 leaves, 31 of them standin.

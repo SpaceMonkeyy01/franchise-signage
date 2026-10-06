@@ -7,8 +7,9 @@
   Packages, 7 signs each: Inline $2,767 + 1 custom (storefront, blade, lobby,
   menu, frosting, banner, A-frame); Endcap $3,334 + 1 (2× storefront, blade,
   lobby, menu, frosting, banner); Freestanding $2,867 + 2 (2× storefront, road
-  sign, lobby, menu, frosting, banner). Neon Leaf is the one add-on. Local
-  data; live not changed.
+  sign, lobby, menu, frosting, banner); Drive-thru 11 (the Freestanding seven
+  plus drive-thru menu board, pre-sell board, clearance bar, directional —
+  custom quote, #181). Neon Leaf is the one add-on.
 - **Two questions left with the owner:** engine prices run far below the old
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
   margins per sign type on /admin/pricing? And which signs belong in the

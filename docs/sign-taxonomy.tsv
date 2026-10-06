@@ -76,3 +76,7 @@ outdoor	Specialty Signs	Banners & Flags	Vinyl Banners	Vinyl Banners	direct	vinyl
 outdoor	Specialty Signs	Banners & Flags	Feather Flags	Halo Lit Channel Letters	standin			57	true
 outdoor	Specialty Signs	Banners & Flags	Teardrop Flags	Halo Lit Channel Letters	standin			58	true
 outdoor	Specialty Signs	Vehicle Graphics/Wraps		Halo Lit Channel Letters	standin			33	true
+outdoor	Freestanding Signs	Drive-Thru Signs	Outdoor Menu Board	Halo Lit Channel Letters	standin	light-box			true
+outdoor	Freestanding Signs	Drive-Thru Signs	Pre-Sell Board	Halo Lit Channel Letters	standin	light-box			true
+outdoor	Freestanding Signs	Drive-Thru Signs	Clearance Bar	Halo Lit Channel Letters	standin				true
+outdoor	Freestanding Signs	Drive-Thru Signs	Directional Signs	Halo Lit Channel Letters	standin	post-panel-sign-standard			true

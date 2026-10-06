@@ -1924,6 +1924,19 @@ item 7's "CRUD UI only when onboarding brand #2".
      price — that price and "re-save the design to apply". Cost stays team
      only. `src/lib/catalog/details.ts`.
 
+181. **Drive-thru** (owner, 6 Oct: "one of the store types will be a drive
+     thru site"). Signage.com catalog: Freestanding Signs → Drive-Thru Signs,
+     four variants, custom quote to start — Outdoor Menu Board and Pre-Sell
+     Board (Studio-drawn as `light-box`), Clearance Bar (no style; standard
+     picture), Directional Signs (`post-panel-sign-standard`); also in the
+     seed TSV (81 rows, 31 standin). Freshbites: a Drive-thru store type
+     ("A freestanding building with a drive-thru lane"), the four signs
+     (proposed by the brand admin, approved by the team), three of them
+     designed in the Studio with the logo (menu 72", pre-sell 48",
+     directional 30"), and an 11-sign Drive-thru package: the Freestanding
+     seven plus the four. The team can switch any of them to Fixed price.
+     Real drive-thru mockup styles would need Signize to add them.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

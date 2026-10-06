@@ -16,14 +16,15 @@ const itemNames = new Set(brandItems.map((item) => item.name));
 
 describe('sign-taxonomy.tsv', () => {
   it('parses every leaf row', () => {
-    // docs/TAXONOMY-NOTES.md: 77 leaves, six of them variant-less.
-    expect(taxonomy).toHaveLength(77);
+    // docs/TAXONOMY-NOTES.md: 77 leaves, six of them variant-less, plus the
+    // four drive-thru variants added on 6 Oct 2026 (DECISIONS #181).
+    expect(taxonomy).toHaveLength(81);
     expect(taxonomy.filter((row) => row.variant === null)).toHaveLength(6);
   });
 
   it('splits pricing_basis the way the notes describe', () => {
     expect(taxonomy.filter((r) => r.pricing_basis === 'direct')).toHaveLength(50);
-    expect(taxonomy.filter((r) => r.pricing_basis === 'standin')).toHaveLength(27);
+    expect(taxonomy.filter((r) => r.pricing_basis === 'standin')).toHaveLength(31);
   });
 
   it('attaches the attribute matrix by pricing model', () => {
