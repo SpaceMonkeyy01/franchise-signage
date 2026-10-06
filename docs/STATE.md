@@ -28,7 +28,11 @@
 - **Waiting on others:** refined store images from the owner for the landing
   page (5 Oct); an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
-  code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
+  code); theme alignment; review of spec v2.5/v2.6.
+- **Live email is on** (6 Oct): Resend key and `RESEND_FROM_EMAIL=onboarding@resend.dev`
+  set on the Render web service; a live password reset went out with
+  `provider: resend`. Until a domain is verified in Resend, mail only reaches
+  the Resend account's own address.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
