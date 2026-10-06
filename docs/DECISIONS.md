@@ -2026,6 +2026,19 @@ item 7's "CRUD UI only when onboarding brand #2".
      the estimate, and "What happens next". Same data, actions and smoke
      anchors (one heading renamed in smoke).
 
+189. **The brand admin's Studio redesigned** (owner, 6 Oct). A status bar
+     pinned under the site header: price, "Saved" / "Unsaved changes" (and a
+     leave-page warning when unsaved), Quote sheet, Preview, Save. Each option
+     is one row — its value, and a "Let franchisees choose" switch that opens
+     its choices as chips (the default always included) — instead of a
+     dropdown plus a row of checkboxes; options grouped Look / Installation /
+     Technical, Technical folded. Size limits behind a switch, with a bar
+     showing the range and the design's own size. A larger logo panel on a
+     checkerboard. Beside the preview: overall size, turnaround, and "What
+     franchisees can change" in plain lines. Same rules, actions and save
+     behaviour. The franchisee's Studio window now also shows the price
+     difference from the brand's design ("+$266 vs the brand's design").
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

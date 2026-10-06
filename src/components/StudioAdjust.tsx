@@ -363,6 +363,11 @@ function StudioWindow({
             <p className="text-[11px] text-gray-500">{current ? 'Price' : 'Price for the preview shown'}</p>
             <p className="text-xl font-semibold text-gray-900" data-studio-price>
               {money(shown.price)}
+              {shown !== base && shown.price != null && base.price != null && Math.round(shown.price) !== Math.round(base.price) && (
+                <span className={`ml-2 text-xs font-medium ${shown.price > base.price ? 'text-amber-700' : 'text-emerald-700'}`}>
+                  {shown.price > base.price ? '+' : '−'}${Math.abs(Math.round(shown.price - base.price)).toLocaleString('en-US')} vs the brand&apos;s design
+                </span>
+              )}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
