@@ -1985,6 +1985,19 @@ item 7's "CRUD UI only when onboarding brand #2".
      Flush/Stud; the seed's Storefront pin and spec line say flush/stud too.
      The catalog's option is named "Backerboard Cabinet".
 
+186. **Franchisees complete their package after submitting** (owner, 6 Oct:
+     "how do I add missing items … the package readiness card"). Until the
+     quote (submitted → sent_for_quote), the request page shows "Complete your
+     package" under the readiness card, listing only what is open: a site (or
+     condition) photo per sign — saved the moment it uploads; a size for any
+     sign still TBD; the lease sign exhibit and property manager; and, for
+     unconfirmed location details, a link to Edit store. Each addition is a
+     `details_added` request event naming who added it ("Dana Whitfield added
+     a site photo for …"), so the team sees it on the timeline. Authorised by
+     the request link, like the change-request panel; it changes no approval
+     and no price. `src/lib/requests/complete.ts`. Readiness itself is
+     unchanged and still never gates anything.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

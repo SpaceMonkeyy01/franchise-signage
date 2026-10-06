@@ -32,6 +32,16 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 6 Oct 2026 (evening): franchisee Studio window, mounting, completing a package
+
+- "Customize in Studio" opens a full Studio window (#184).
+- Mounting defaults to Flush/Stud; Backerboard Cabinet added as a choice (#185).
+- "Complete your package" on the request page (#186): photos, TBD sizes,
+  lease exhibit and landlord, until the quote. Driven on throwaway Cedar Park
+  orders (removed). No smoke case yet.
+- **Local data:** Oak Plaza has the owner's own order REQ-1010 (submitted
+  6 Oct); left as it is.
+
 ## 6 Oct 2026 (later still): drive-thru, and the live catalog brought in line
 
 - Drive-thru built locally (#181) and the same catalog structure applied to

@@ -8,6 +8,7 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { getViewer } from '@/lib/auth/access';
 import { acceptQuoteAccess } from '@/lib/auth/stores';
 import { toRequestFile } from '@/lib/db/create-request';
 import { notifyFranchisee } from '@/lib/email/franchisee';
@@ -21,6 +22,7 @@ import { notifyReviewNeeded } from '@/lib/email/notify';
 import { query, queryOne, transaction } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
 import { resubmitRequest, transitionPackage } from '@/lib/status';
+import { CompleteError, addLeaseExhibit, addSitePhoto, setSignSize } from '@/lib/requests/complete';
 import type { StoredObject } from '@/lib/storage';
 
 /**
@@ -286,4 +288,41 @@ async function applyRedesign(
 function trimmed(value: string | null): string | null {
   const next = value?.trim();
   return next ? next : null;
+}
+
+// ------------------------------------------------- completing the package
+// Until the quote, the franchisee adds what the readiness card says is still
+// to follow up (DECISIONS #186). The request's link authorises it, as it does
+// the change-request panel; a signed-in person is named on the timeline.
+
+async function completer(): Promise<string> {
+  const viewer = await getViewer();
+  return viewer?.profile.name ?? viewer?.profile.email ?? 'The franchisee';
+}
+
+async function completing(token: string, work: (by: string) => Promise<void>): Promise<SubmitFailure | undefined> {
+  try {
+    await work(await completer());
+  } catch (error) {
+    if (error instanceof CompleteError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath('/[brand]/request/[token]', 'page');
+  return undefined;
+}
+
+export async function addSitePhotoAction(token: string, lineItemId: string, file: StoredObject) {
+  return completing(token, (by) => addSitePhoto(token, lineItemId, file, by));
+}
+
+export async function setSignSizeAction(token: string, lineItemId: string, sizing: string) {
+  return completing(token, (by) => setSignSize(token, lineItemId, sizing, by));
+}
+
+export async function addLeaseExhibitAction(
+  token: string,
+  file: StoredObject | null,
+  landlord: { name: string; email: string; phone: string } | null,
+) {
+  return completing(token, (by) => addLeaseExhibit(token, file, landlord, by));
 }

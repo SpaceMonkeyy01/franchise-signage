@@ -22,10 +22,12 @@ import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/d
 import { originLabel, plural } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
+import { COMPLETABLE } from '@/lib/requests/complete';
 import type { LineItemStatus, RequestStatus } from '@/lib/status/types';
 import { fileUrl } from '@/lib/storage';
 
 import { acceptQuote } from './actions';
+import { CompletePackage } from './CompletePackage';
 import { ResubmitPanel } from './ResubmitPanel';
 
 const FILE_KIND_LABEL: Record<string, string> = {
@@ -87,6 +89,19 @@ export default async function RequestStatusPage({
   const readiness = request.quotes.some((candidate) => candidate.accepted_at)
     ? null
     : packageReadiness(request);
+  // Until the quote, what readiness says is open can be added here (#186).
+  const completable = readiness !== null && COMPLETABLE.includes(request.status);
+  const photoKind = request.intent === 'replace_like' ? 'condition_photo' : 'placement_photo';
+  const openItems = request.items
+    .filter((item) => item.item_status !== 'declined')
+    .map((item) => ({
+      id: item.id,
+      name: item.brand_item_name,
+      needsPhoto: !item.files.some((file) => file.kind === photoKind),
+      needsSize: request.intent !== 'replace_like' && (item.tbd_fields.length > 0 || !item.sizing?.trim()),
+      sizing: item.sizing,
+    }));
+  const locationRow = readiness?.rows.find((row) => row.key === 'location' && row.state === 'follow_up');
 
   return (
     <>
@@ -132,6 +147,21 @@ export default async function RequestStatusPage({
             {request.quotes.length === 0 && <EstimateCard items={request.items} />}
 
             {readiness && <ReadinessCard readiness={readiness} audience="franchisee" />}
+
+            {completable && (
+              <CompletePackage
+                token={token}
+                brandSlug={slug}
+                photoLabel={request.intent === 'replace_like' ? 'Condition photo' : 'Site photo'}
+                items={openItems}
+                needsLease={request.intent === 'initial_setup' && !request.files.some((file) => file.kind === 'landlord_criteria')}
+                location={
+                  locationRow
+                    ? { missing: locationRow.value, editHref: `/${slug}/location/${request.location.id}/edit` }
+                    : null
+                }
+              />
+            )}
 
             {/* §8b: the documents come with the quote, but the franchisee told us a
             lender is involved at submission — so acknowledge it from the start
