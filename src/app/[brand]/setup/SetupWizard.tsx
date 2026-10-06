@@ -582,7 +582,10 @@ function StepPackage({
                     </span>
                   </span>
                 </span>
-                <span className="shrink-0 text-gray-500">{isOpen ? '▾' : '▸'}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <PhotoState added={Boolean(item.photo)} />
+                  <span className="text-gray-500">{isOpen ? '▾' : '▸'}</span>
+                </span>
               </button>
 
               {isOpen && (
@@ -697,6 +700,23 @@ function StepPackage({
   );
 }
 
+/** On a collapsed sign row: whether its placement photo is in, without opening it. */
+function PhotoState({ added }: { added: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+        added ? 'bg-emerald-50 text-emerald-800' : 'bg-gray-100 text-gray-500'
+      }`}
+    >
+      <svg viewBox="0 0 20 20" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+        <path d="M3 7h3l1.5-2h5L14 7h3v9H3z" />
+        <circle cx="10" cy="11.5" r="2.6" />
+      </svg>
+      {added ? 'Photo added' : 'Add photo'}
+    </span>
+  );
+}
+
 // ----------------------------------------------------------------- step three
 
 function StepAddons({
@@ -745,6 +765,17 @@ function StepAddons({
                   onValueChange={(sizing) => patch(chosen.key, { sizing })}
                   onTbdChange={(tbd) => patch(chosen.key, { tbd })}
                 />
+              )}
+              {chosen && (
+                <div className="mt-2">
+                  <PhotoUpload
+                    compact
+                    label="Add placement photo"
+                    prefix={brand.slug}
+                    value={chosen.photo}
+                    onChange={(photo) => patch(chosen.key, { photo })}
+                  />
+                </div>
               )}
               {chosen && hasAdjustableDesign(item.design, item.design_rules) && (
                 <StudioAdjust

@@ -1998,6 +1998,15 @@ item 7's "CRUD UI only when onboarding brand #2".
      and no price. `src/lib/requests/complete.ts`. Readiness itself is
      unchanged and still never gates anything.
 
+187. **Placement photos wherever signs are chosen** (owner, 6 Oct). Before,
+     only the standard package (setup step 2) took a photo, inside each
+     collapsed row; add-ons (step 3) and "Add a new sign" took none. Now each
+     chosen add-on and each sign on "Add a new sign" has "Add placement
+     photo" (saved as `placement_photo` on its line), and step 2's collapsed
+     rows show "Photo added" or "Add photo" so a missing photo is visible
+     before submitting. Still optional; "Complete your package" (#186)
+     catches anything left.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

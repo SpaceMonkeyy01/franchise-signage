@@ -10,7 +10,7 @@
 import { redirect } from 'next/navigation';
 
 import { checkStoreOrdering } from '@/lib/auth/stores';
-import { createAndSubmitRequest } from '@/lib/db/create-request';
+import { createAndSubmitRequest, toRequestFile } from '@/lib/db/create-request';
 import type { SignDesign } from '@/lib/designs/design';
 import { attachQuoteSheets } from '@/lib/designs/sheets';
 import { prepareDesignedItems } from '@/lib/designs/submit';
@@ -18,12 +18,20 @@ import { StudioError } from '@/lib/designs/studio';
 import { notifyFranchisee } from '@/lib/email/franchisee';
 import { queryOne } from '@/lib/db/pool';
 import type { SubmitFailure } from '@/lib/forms';
+import type { StoredObject } from '@/lib/storage';
 import { plural } from '@/lib/format';
 
 export interface AddSignsInput {
   brandSlug: string;
   locationId: string;
-  items: Array<{ brandItemId: string; sizing: string | null; tbd: boolean; design?: SignDesign | null }>;
+  items: Array<{
+    brandItemId: string;
+    sizing: string | null;
+    tbd: boolean;
+    design?: SignDesign | null;
+    /** Where the sign goes at the store; uploaded before submission. */
+    photo?: StoredObject | null;
+  }>;
 }
 
 export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailure | undefined> {
@@ -68,7 +76,10 @@ export async function submitAddSigns(input: AddSignsInput): Promise<SubmitFailur
         design: designed[index].design,
         estPrice: designed[index].estPrice,
         priceSource: designed[index].priceSource,
-        files: designed[index].mockup ? [{ kind: 'mockup' as const, ...designed[index].mockup }] : [],
+        files: [
+          ...(item.photo ? [toRequestFile('placement_photo', item.photo)] : []),
+          ...(designed[index].mockup ? [{ kind: 'mockup' as const, ...designed[index].mockup }] : []),
+        ],
         // A Studio design carries its own size; the franchisee's site note follows it.
         sizing: designed[index].design
           ? [`${designed[index].design.dimension.inches}" ${designed[index].design.dimension.axis}`, item.sizing?.trim()]

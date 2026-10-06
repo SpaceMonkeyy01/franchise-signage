@@ -3,11 +3,13 @@
 import { useState, useTransition } from 'react';
 
 import { CatalogCard } from '@/components/CatalogCard';
+import { PhotoUpload } from '@/components/PhotoUpload';
 import { SizingField } from '@/components/SizingField';
 import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import { formatPrice } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic } from '@/lib/db/queries';
 import type { SignDesign } from '@/lib/designs/design';
+import type { StoredObject } from '@/lib/storage';
 
 import { submitAddSigns } from './actions';
 
@@ -16,6 +18,8 @@ interface Selection {
   tbd: boolean;
   /** Adjusted in the Studio (SPEC v2.6 §8); null keeps the brand's design. */
   design: SignDesign | null;
+  /** Where the sign goes, at the store. */
+  photo: StoredObject | null;
 }
 
 /** What a chosen sign costs: its Studio price when adjusted, else the catalog's. */
@@ -47,7 +51,7 @@ export function AddForm({
     setSelected((current) => {
       const next = { ...current };
       if (next[id]) delete next[id];
-      else next[id] = { sizing: '', tbd: false, design: null };
+      else next[id] = { sizing: '', tbd: false, design: null, photo: null };
       return next;
     });
   }
@@ -67,6 +71,7 @@ export function AddForm({
           sizing: selected[item.id].sizing.trim() || null,
           tbd: selected[item.id].tbd,
           design: selected[item.id].design,
+          photo: selected[item.id].photo,
         })),
       });
       if (failure) setError(failure.error);
@@ -92,6 +97,17 @@ export function AddForm({
               onValueChange={(value) => patch(item.id, { sizing: value })}
               onTbdChange={(tbd) => patch(item.id, { tbd })}
             />
+            {selected[item.id] && (
+              <div className="mt-2">
+                <PhotoUpload
+                  compact
+                  label="Add placement photo"
+                  prefix={brand.slug}
+                  value={selected[item.id].photo}
+                  onChange={(photo) => patch(item.id, { photo })}
+                />
+              </div>
+            )}
             {selected[item.id] && hasAdjustableDesign(item.design, item.design_rules) && (
               <StudioAdjust
                 brandSlug={brand.slug}

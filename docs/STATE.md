@@ -39,6 +39,8 @@
 - "Complete your package" on the request page (#186): photos, TBD sizes,
   lease exhibit and landlord, until the quote. Driven on throwaway Cedar Park
   orders (removed). No smoke case yet.
+- Placement photos on add-ons and "Add a new sign"; step 2 rows show photo
+  state (#187). Driven: photos landed on all three (test orders removed).
 - **Local data:** Oak Plaza has the owner's own order REQ-1010 (submitted
   6 Oct); left as it is.
 
