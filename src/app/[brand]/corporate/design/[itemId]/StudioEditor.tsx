@@ -43,7 +43,9 @@ export function StudioEditor({
     const chosen: Record<string, string> = {};
     for (const [name, values] of Object.entries(options)) {
       const from = saved?.options[name] ?? (typeof pinned[name] === 'string' ? (pinned[name] as string) : undefined);
-      chosen[name] = from && values.some((v) => v.value === from) ? from : values[0].value;
+      // A new design mounts flush/stud unless the brand chose otherwise (owner, 6 Oct).
+      const preferred = name === 'mounting_type' ? values.find((v) => /flush/i.test(v.value))?.value : undefined;
+      chosen[name] = from && values.some((v) => v.value === from) ? from : (preferred ?? values[0].value);
     }
     return chosen;
   }, [options, saved, pinned]);

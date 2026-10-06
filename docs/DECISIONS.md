@@ -1974,6 +1974,17 @@ item 7's "CRUD UI only when onboarding brand #2".
      brand's). Esc closes it. Behaviour behind it is unchanged: the preview
      prices on the server and submission checks and prices again.
 
+185. **Flush/stud mounting by default** (owner, 6 Oct: "keep it Flush/stud
+     mounted by default … missing the Backboard option … keep it this way
+     across the settings and pages"). Freshbites' Storefront and Lobby
+     Letters (the two signs with a mounting option) now mount Flush/Stud by
+     default, and franchisees may choose Flush/Stud mounted, Standard Raceway
+     or Backerboard Cabinet — re-saved through the engine, locally and on
+     live (Storefront $700 → $567; Backerboard Cabinet prices at $917). The
+     brand admin's Studio starts any new design with a mounting option at
+     Flush/Stud; the seed's Storefront pin and spec line say flush/stud too.
+     The catalog's option is named "Backerboard Cabinet".
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

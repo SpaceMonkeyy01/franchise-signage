@@ -4,7 +4,8 @@
 
 - **Freshbites** (#171, #178): seven engine-priced signs plus Road Sign and
   Window Frosting (custom quote, Studio-drawn); Entrance Sign inactive.
-  Packages, 7 signs each: Inline $2,767 + 1 custom (storefront, blade, lobby,
+  Mounting defaults to Flush/Stud (choices Flush/Stud · Raceway · Backerboard,
+  #185). Packages, 7 signs each: Inline (storefront, blade, lobby,
   menu, frosting, banner, A-frame); Endcap $3,334 + 1 (2× storefront, blade,
   lobby, menu, frosting, banner); Freestanding $2,867 + 2 (2× storefront, road
   sign, lobby, menu, frosting, banner); Drive-thru 11 (the Freestanding seven
