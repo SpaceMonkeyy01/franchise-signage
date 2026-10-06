@@ -421,7 +421,21 @@ record(
 );
 
 await expectVisible(page, '#how-it-works', 'it is a landing page: what the program is, before the password');
-await expectVisible(page, '#signs img', "it shows the brand's own signs");
+// The gallery shows the brand's live signs that have a picture; the seed's
+// have none until a brand admin designs them, and then it is rightly absent.
+const pictured = await withDb(async (client) =>
+  Number(
+    (
+      await client.query(
+        `select count(*) as n from brand_items bi join brands b on b.id = bi.brand_id
+          where b.slug = 'freshbites' and bi.active
+            and coalesce(bi.thumbnail_url, bi.design->>'mockupPath') is not null`,
+      )
+    ).rows[0].n,
+  ),
+);
+if (pictured > 0) await expectVisible(page, '#signs img', "it shows the brand's own signs");
+else await expectCount(page, '#signs', 0, 'with no sign pictures yet, it shows no empty gallery');
 record(
   'with pictures and names, never prices',
   !/\$\d/.test(await page.locator('main').innerText()),
@@ -2487,7 +2501,7 @@ const portalPage = await portal.newPage();
 portalPage.on('pageerror', (error) => pageErrors.push(error.message));
 
 await portalPage.goto(`${PORTAL}/`, { waitUntil: 'networkidle' });
-await expectVisible(portalPage, 'text=Order and track signage for your Freshbites stores', 'freshbites.localhost serves the brand at its root');
+await expectVisible(portalPage, 'h1:has-text("Signage for your Freshbites store")', 'freshbites.localhost serves the brand at its root');
 await portalPage.goto(`${PORTAL}/sign-in`, { waitUntil: 'networkidle' });
 await expectVisible(portalPage, 'h1:text-is("Sign in to Freshbites signage")', 'its sign-in wears the brand');
 await portalPage.getByLabel('Email').fill(BRAND_ADMIN.email);
@@ -2671,13 +2685,18 @@ const confirmQuotes = page.getByLabel('Team confirms Freshbites quotes');
 record('team confirmation of quotes is on by default', await confirmQuotes.isChecked());
 await confirmQuotes.uncheck();
 await expectVisible(page, 'text=/goes to the franchisee as soon as the request is routed/', 'it can be turned off for a brand');
-const confirmLog = await withDb(async (client) =>
-  (
-    await client.query(
-      `select brand_id, summary from catalog_events where kind = 'quote_confirmation_set' order by created_at desc limit 1`,
-    )
-  ).rows[0],
-);
+// The box moves at once and saves behind it (DECISIONS #172), so wait for the save.
+let confirmLog;
+for (let attempt = 0; attempt < 40 && !confirmLog; attempt++) {
+  confirmLog = await withDb(async (client) =>
+    (
+      await client.query(
+        `select brand_id, summary from catalog_events where kind = 'quote_confirmation_set' order by created_at desc limit 1`,
+      )
+    ).rows[0],
+  );
+  if (!confirmLog) await new Promise((resolve) => setTimeout(resolve, 250));
+}
 record(
   'and the change is logged beside the margins',
   confirmLog?.brand_id === null && /turned off team confirmation of quotes for Freshbites/.test(confirmLog?.summary ?? ''),

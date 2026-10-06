@@ -30,6 +30,17 @@
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
 
+## 6 Oct 2026 (later): smoke green; brand signs explained
+
+- **Smoke: 331/331** on a freshly reset database (local data backed up from
+  `.pglite/` first and restored after). Three checks were updated for today's
+  changes: the landing gallery only when the brand has sign pictures, the new
+  landing headline, and waiting for the quote-confirmation save (the box now
+  moves before the save lands). Lesson: after several restarts the app's
+  single PGlite connection jammed (ECONNREFUSED from Next while scripts still
+  connected); killing every project node process and restarting fixed it.
+- **Brand signs** show packages, history and engine cost/margin (#180).
+
 ## 6 Oct 2026: the team's catalog page reorganised
 
 - `/admin/catalog` is three tabs (`?tab=review|brand|catalog`; opens on

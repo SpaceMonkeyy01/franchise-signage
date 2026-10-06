@@ -1916,6 +1916,14 @@ item 7's "CRUD UI only when onboarding brand #2".
      approval form's price field follows the type (required for Fixed,
      optional estimate for Studio, none for Custom).
 
+180. **The team's Brand signs table explains each sign** (owner, 6 Oct).
+     Under each sign: the store-type packages that hold it ("In Endcap ×2 ·
+     Inline", or "an add-on"), and its catalog history folded away (last 8:
+     approvals, designs, price changes). Under a Studio price: Signize's cost
+     and the margin applied, and — when today's margin would give a different
+     price — that price and "re-save the design to apply". Cost stays team
+     only. `src/lib/catalog/details.ts`.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

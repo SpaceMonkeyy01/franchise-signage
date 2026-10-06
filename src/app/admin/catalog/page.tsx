@@ -20,6 +20,8 @@ import {
   signStatus as statusOf,
   type PriceMode,
 } from '@/lib/catalog/manage';
+import type { SignDetails } from '@/lib/catalog/details';
+import { brandSignDetails } from '@/lib/catalog/details';
 import { getBrandsPublic } from '@/lib/db/queries';
 
 import { setSignImageAction } from './actions';
@@ -85,6 +87,7 @@ export default async function CatalogPage({
   ]);
   const brand = brands.find((b) => b.slug === brandParam) ?? brands[0] ?? null;
   const signs = brand ? await listBrandSigns(brand.id) : [];
+  const details = brand ? await brandSignDetails(brand.id, signs) : new Map();
   const categories = [...new Set(master.map((row) => row.category))].sort();
   const unpriced = signs.filter(needsPrice);
 
@@ -208,7 +211,7 @@ export default async function CatalogPage({
                   return (
                     <tr key={sign.id} className={needsPrice(sign) ? 'bg-amber-50/50' : 'hover:bg-gray-50/60'}>
                       <td className="px-4 py-2.5">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                           <ImageUpload hasImage={!!sign.thumbnail_url} save={setSignImageAction.bind(null, sign.id)}>
                             <SignThumbnail
                               renderKey={sign.render_key}
@@ -220,6 +223,7 @@ export default async function CatalogPage({
                           <div className="min-w-0">
                             <p className="font-medium text-gray-900">{sign.name}</p>
                             <p className="truncate text-xs text-gray-500">{variantName(sign)}</p>
+                            <SignExtras details={details.get(sign.id)} />
                           </div>
                         </div>
                       </td>
@@ -240,6 +244,7 @@ export default async function CatalogPage({
                         ) : (
                           <span className="text-xs text-gray-500">set on approval</span>
                         )}
+                        <EngineLine engine={details.get(sign.id)?.engine ?? null} />
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums text-gray-700">{sign.installed}</td>
                       <td className="px-4 py-2.5 text-right">
@@ -292,6 +297,61 @@ export default async function CatalogPage({
         </section>
       )}
     </main>
+  );
+}
+
+const money = (value: number) => `$${Math.round(value).toLocaleString('en-US')}`;
+
+/** Under a sign's name: the packages it is in, and its history folded away. */
+function SignExtras({ details }: { details: SignDetails | undefined }) {
+  if (!details) return null;
+  return (
+    <div className="mt-1 space-y-1">
+      {details.packages.length > 0 ? (
+        <p className="flex flex-wrap items-center gap-1 text-[11px] text-gray-500">
+          In
+          {details.packages.map((pkg) => (
+            <span key={pkg.label} className="rounded bg-gray-100 px-1.5 py-0.5 text-gray-700">
+              {pkg.label}
+              {pkg.count > 1 && ` ×${pkg.count}`}
+            </span>
+          ))}
+        </p>
+      ) : (
+        <p className="text-[11px] text-gray-400">Not in a standard package: an add-on</p>
+      )}
+      {details.history.length > 0 && (
+        <details className="text-[11px]">
+          <summary className="cursor-pointer text-gray-500 hover:text-gray-800">History ({details.history.length})</summary>
+          <ul className="mt-1 space-y-0.5 border-l border-gray-200 pl-2 text-gray-600">
+            {details.history.map((event) => (
+              <li key={event.id}>
+                <span className="text-gray-400">
+                  {new Date(event.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </span>{' '}
+                {event.summary}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </div>
+  );
+}
+
+/** Under a Studio price: Signize's cost and the margin on it, team only. */
+function EngineLine({ engine }: { engine: SignDetails['engine'] }) {
+  if (!engine) return null;
+  const drift = engine.priceToday !== null && Math.round(engine.priceToday) !== Math.round(engine.price);
+  return (
+    <p className="mt-0.5 text-[11px] text-gray-500" title="Signize's cost for the saved design, and the margin applied">
+      cost {money(engine.cost)} · {engine.marginPercent}% margin
+      {drift && (
+        <span className="block text-amber-800">
+          {money(engine.priceToday!)} at today&rsquo;s {engine.marginToday}%; re-save the design to apply
+        </span>
+      )}
+    </p>
   );
 }
 
