@@ -590,7 +590,7 @@ await page.getByRole('button', { name: /Flag for corporate review/ }).click();
 await expectVisible(page, 'text=/corporate will review this item/', 'a flagged standard sign becomes an exception');
 await page.getByRole('button', { name: /Continue ·/ }).click();
 await page.getByRole('button', { name: /No add-ons needed|Continue →/ }).click();
-await expectVisible(page, 'h2:has-text("Going to corporate for approval (1)")', 'review splits the package by approval path');
+await expectVisible(page, 'h2:has-text("Needs Freshbites approval (1)")', 'review splits the package by approval path');
 await page.getByRole('button', { name: /Submit location request/ }).click();
 await page.waitForURL('**/freshbites/request/**', { timeout: TIMEOUT });
 await expectCount(

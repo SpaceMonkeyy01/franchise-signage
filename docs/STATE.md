@@ -41,6 +41,8 @@
   orders (removed). No smoke case yet.
 - Placement photos on add-ons and "Add a new sign"; step 2 rows show photo
   state (#187). Driven: photos landed on all three (test orders removed).
+- Store setup wizard redesigned (#188): step bar, summary column, cards,
+  date picker, package estimates per store type, review with Edit links.
 - **Local data:** Oak Plaza has the owner's own order REQ-1010 (submitted
   6 Oct); left as it is.
 

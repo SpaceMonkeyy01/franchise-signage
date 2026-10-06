@@ -2007,6 +2007,25 @@ item 7's "CRUD UI only when onboarding brand #2".
      before submitting. Still optional; "Complete your package" (#186)
      catches anything left.
 
+188. **The store setup wizard redesigned** (owner, 6 Oct: review steps 1–4
+     and improve layout, design and UX). A step bar (Location · Package ·
+     Add-ons · Review; visited steps clickable, state kept) and, on a wide
+     screen, a sticky "Your store" summary beside the steps: store, type,
+     opening, signs, how many approve automatically and how many need the
+     brand, photos added, running estimate. Step 1 in cards (Store, contact,
+     lender, landlord), a date picker for the opening date, each store type
+     showing its package estimate, and a hint saying what is needed to
+     continue. Step 2: a summary strip, each row with its picture, price and
+     photo state; the opened row puts the mockup beside the photo and notes,
+     and asks for "Site notes" (not a size) when the design sets the size;
+     Continue counts photos ("1 of 7 with photos"). Step 3: one approval note
+     up top, whole picture cards to select with a clear selected state, the
+     vendor tag only for an outside vendor. Step 4: the store details with
+     Edit links back to each step, signs grouped "Approved automatically" /
+     "Needs {brand} approval" with picture, detail, photo state and price,
+     the estimate, and "What happens next". Same data, actions and smoke
+     anchors (one heading renamed in smoke).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
