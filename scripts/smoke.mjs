@@ -2247,7 +2247,7 @@ await removeSmokeCatalog();
     (await client.query(`select id, attribute_options, render_key from master_catalog where sign_type = 'A-Frame Sign'`)).rows[0],
   );
   try {
-    await team.reload({ waitUntil: 'networkidle' });
+    await team.goto(`${BASE}/admin/catalog?tab=catalog`, { waitUntil: 'networkidle' });
     await team.locator('[data-type-icon="A-Frame Sign"]').getByRole('button', { name: 'Edit options' }).first().click();
     const editor = team.locator('[data-options-editor="A-Frame Sign"]');
     await editor.getByRole('button', { name: 'Add an attribute' }).click();
@@ -2389,7 +2389,7 @@ await removeSmokeCatalog();
       .setInputFiles({ name: 'notes.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
     await expectVisible(corp, '[data-sign-image="Freshbites Blade Sign"] >> text=Upload a PNG, JPG or WEBP picture.', 'a PDF is refused as a picture');
 
-    await team.goto(`${BASE}/admin/catalog`, { waitUntil: 'networkidle' });
+    await team.goto(`${BASE}/admin/catalog?tab=catalog`, { waitUntil: 'networkidle' });
     await team
       .locator('[data-type-icon="A-Frame Sign"] input[type=file]')
       .setInputFiles({ name: 'aframe.png', mimeType: 'image/png', buffer: PIXEL_PNG });

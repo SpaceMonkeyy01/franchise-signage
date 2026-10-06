@@ -1,18 +1,18 @@
 'use client';
 
-// The Signage.com catalog, as a browsable list: search and filters on top,
-// then placement → category → sign type, each sign type a card whose
-// variants line up in columns. Filtering happens here, in the browser; every
-// change still goes through the same server actions.
+// The Signage.com catalog as one table: search and filters on top, then each
+// sign type as a group row with its variants beneath, in aligned columns.
+// Filtering happens here, in the browser; every change still goes through the
+// same server actions.
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 import { ImageUpload } from '@/components/ImageUpload';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import type { MasterRow, PriceMode } from '@/lib/catalog/manage';
 
 import { setSignTypeIconAction } from './actions';
-import { MasterToggle, OptionsEditor, PriceModeSelect } from './CatalogControls';
+import { AddVariantForm, MasterToggle, OptionsEditor, PriceModeSelect } from './CatalogControls';
 
 function variantName(row: { sign_type: string; variant: string | null }) {
   return row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
@@ -20,7 +20,7 @@ function variantName(row: { sign_type: string; variant: string | null }) {
 
 type Placement = 'all' | 'indoor' | 'outdoor';
 
-export function MasterCatalog({ rows }: { rows: MasterRow[] }) {
+export function MasterCatalog({ rows, categories }: { rows: MasterRow[]; categories: string[] }) {
   const [search, setSearch] = useState('');
   const [placement, setPlacement] = useState<Placement>('all');
   const [mode, setMode] = useState<PriceMode | 'all'>('all');
@@ -43,128 +43,141 @@ export function MasterCatalog({ rows }: { rows: MasterRow[] }) {
     );
   }, [rows, search, placement, mode, inUse]);
 
-  // placement → category → sign type → variants
-  const grouped = useMemo(() => {
-    const out = new Map<string, Map<string, Map<string, MasterRow[]>>>();
+  // One group per sign type and placement, in catalog order.
+  const groups = useMemo(() => {
+    const out = new Map<string, MasterRow[]>();
     for (const row of shown) {
-      const byCategory = out.get(row.placement) ?? new Map<string, Map<string, MasterRow[]>>();
-      const byType = byCategory.get(row.category) ?? new Map<string, MasterRow[]>();
-      byType.set(row.sign_type, [...(byType.get(row.sign_type) ?? []), row]);
-      byCategory.set(row.category, byType);
-      out.set(row.placement, byCategory);
+      const key = `${row.placement}|${row.category}|${row.sign_type}`;
+      out.set(key, [...(out.get(key) ?? []), row]);
     }
-    return out;
+    return [...out.values()];
   }, [shown]);
+
+  const filtered = search.trim() !== '' || placement !== 'all' || mode !== 'all' || inUse;
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-1 mt-3 rounded-xl border border-gray-200 bg-white/95 p-3 shadow-sm backdrop-blur">
-        <div className="flex flex-wrap items-center gap-2">
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search sign types and variants"
-            aria-label="Search the catalog"
-            className="min-w-48 flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
-          />
-          <Segmented
-            label="Placement"
-            value={placement}
-            onChange={setPlacement}
-            options={[
-              { value: 'all', label: 'All' },
-              { value: 'indoor', label: 'Indoor' },
-              { value: 'outdoor', label: 'Outdoor' },
-            ]}
-          />
-          <Segmented
-            label="Price from"
-            value={mode}
-            onChange={setMode}
-            options={[
-              { value: 'all', label: 'Any price' },
-              { value: 'studio', label: `Studio · ${counts.studio}` },
-              { value: 'fixed', label: `Fixed · ${counts.fixed}` },
-              { value: 'custom', label: `Custom · ${counts.custom}` },
-            ]}
-          />
-          <label className="flex items-center gap-1.5 text-xs text-gray-700">
-            <input type="checkbox" checked={inUse} onChange={(event) => setInUse(event.target.checked)} />
-            Used by a brand
-          </label>
-        </div>
-        <p className="mt-2 text-xs text-gray-500">
-          Showing {shown.length} of {rows.length} variants · {rows.filter((row) => row.active).length} switched on
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Search sign types and variants"
+          aria-label="Search the catalog"
+          className="min-w-56 flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
+        />
+        <Segmented
+          label="Placement"
+          value={placement}
+          onChange={setPlacement}
+          options={[
+            { value: 'all', label: 'All' },
+            { value: 'indoor', label: 'Indoor' },
+            { value: 'outdoor', label: 'Outdoor' },
+          ]}
+        />
+        <Segmented
+          label="Price from"
+          value={mode}
+          onChange={setMode}
+          options={[
+            { value: 'all', label: 'Any price' },
+            { value: 'studio', label: `Studio ${counts.studio}` },
+            { value: 'fixed', label: `Fixed ${counts.fixed}` },
+            { value: 'custom', label: `Custom ${counts.custom}` },
+          ]}
+        />
+        <label className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700">
+          <input type="checkbox" checked={inUse} onChange={(event) => setInUse(event.target.checked)} />
+          In use
+        </label>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-gray-500">
+          {filtered ? `${shown.length} of ${rows.length} variants match` : `${rows.length} variants`} ·{' '}
+          {rows.filter((row) => row.active).length} switched on
+          {filtered && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setPlacement('all');
+                setMode('all');
+                setInUse(false);
+              }}
+              className="ml-2 font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900"
+            >
+              Clear
+            </button>
+          )}
         </p>
+        <AddVariantForm categories={categories} />
       </div>
 
-      {shown.length === 0 && (
-        <p className="mt-4 rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-          Nothing matches. Clear the search or filters.
-        </p>
-      )}
-
-      <div className="mt-4 space-y-8">
-        {[...grouped.entries()].map(([place, byCategory]) => (
-          <div key={place}>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500">{place}</h3>
-            <div className="mt-2 space-y-5">
-              {[...byCategory.entries()].map(([category, byType]) => (
-                <div key={category}>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {category}{' '}
-                    <span className="font-normal text-gray-500">
-                      · {[...byType.values()].reduce((n, variants) => n + variants.length, 0)} variants
-                    </span>
-                  </p>
-                  <div className="mt-2 grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
-                    {[...byType.entries()].map(([signType, variants]) => (
-                      <SignTypeCard key={signType} signType={signType} variants={variants} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+        <table className="w-full min-w-[760px] text-sm">
+          <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-50 text-left text-xs text-gray-500">
+            <tr>
+              <th className="px-4 py-2.5 font-medium">Variant</th>
+              <th className="px-3 py-2.5 font-medium">Price from</th>
+              <th className="px-3 py-2.5 text-right font-medium">Brand signs</th>
+              <th className="px-3 py-2.5 text-right font-medium">Options</th>
+              <th className="px-3 py-2.5 font-medium">Status</th>
+              <th className="px-4 py-2.5" />
+            </tr>
+          </thead>
+          {groups.map((variants) => (
+            <SignTypeGroup key={variants[0].id} variants={variants} />
+          ))}
+          {groups.length === 0 && (
+            <tbody>
+              <tr>
+                <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                  Nothing matches. Clear the search or filters.
+                </td>
+              </tr>
+            </tbody>
+          )}
+        </table>
       </div>
     </div>
   );
 }
 
-function SignTypeCard({ signType, variants }: { signType: string; variants: MasterRow[] }) {
-  const brandSigns = variants.reduce((n, row) => n + row.brand_items, 0);
+function SignTypeGroup({ variants }: { variants: MasterRow[] }) {
+  const first = variants[0];
+  const inUse = variants.reduce((n, row) => n + row.brand_items, 0);
   return (
-    <article className="overflow-hidden rounded-xl border border-gray-200 bg-white" data-type-icon={signType}>
-      <header className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
-        <ImageUpload
-          label="icon"
-          hasImage={variants.some((v) => v.icon_path)}
-          save={setSignTypeIconAction.bind(null, variants[0].id)}
-        >
-          <SignThumbnail
-            renderKey={variants.find((v) => v.render_key)?.render_key ?? null}
-            imagePath={variants.find((v) => v.icon_path)?.icon_path ?? null}
-            label={signType}
-            className="block h-10 w-14 rounded-md"
-          />
-        </ImageUpload>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-gray-900">{signType}</p>
-          <p className="text-xs text-gray-500">
-            {variants.length} variant{variants.length === 1 ? '' : 's'}
-            {brandSigns > 0 && ` · ${brandSigns} brand sign${brandSigns === 1 ? '' : 's'}`}
-          </p>
-        </div>
-      </header>
-      <ul className="divide-y divide-gray-100">
-        {variants.map((row) => (
-          <VariantRow key={row.id} row={row} />
-        ))}
-      </ul>
-    </article>
+    <tbody className="border-t border-gray-200 first-of-type:border-t-0" data-type-icon={first.sign_type}>
+      <tr className="bg-gray-50/70">
+        <td colSpan={6} className="px-4 py-2">
+          <div className="flex items-center gap-3">
+            <ImageUpload
+              label="icon"
+              hasImage={variants.some((v) => v.icon_path)}
+              save={setSignTypeIconAction.bind(null, first.id)}
+            >
+              <SignThumbnail
+                renderKey={variants.find((v) => v.render_key)?.render_key ?? null}
+                imagePath={variants.find((v) => v.icon_path)?.icon_path ?? null}
+                label={first.sign_type}
+                className="block h-9 w-12 rounded-md"
+              />
+            </ImageUpload>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-900">{first.sign_type}</p>
+              <p className="text-xs text-gray-500">
+                {first.category} · {first.placement === 'indoor' ? 'Indoor' : 'Outdoor'}
+                {inUse > 0 && ` · ${inUse} brand sign${inUse === 1 ? '' : 's'}`}
+              </p>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {variants.map((row) => (
+        <VariantRow key={row.id} row={row} />
+      ))}
+    </tbody>
   );
 }
 
@@ -172,42 +185,60 @@ function VariantRow({ row }: { row: MasterRow }) {
   const [editing, setEditing] = useState(false);
   const options = Object.keys(row.options).length;
   return (
-    <li className="px-4 py-2.5 text-xs">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className={`min-w-32 flex-1 text-sm ${row.active ? 'text-gray-900' : 'text-gray-400 line-through'}`}>
-          {row.variant ?? 'Standard'}
-          {!row.active && <span className="ml-1.5 text-[11px] no-underline">(off)</span>}
-        </span>
-        <PriceModeSelect masterId={row.id} name={variantName(row)} mode={row.price_mode} brandSigns={row.brand_items} compact />
-        <span className={`w-16 text-right ${row.brand_items > 0 ? 'font-medium text-gray-700' : 'text-gray-400'}`}>
-          {row.brand_items > 0 ? `${row.brand_items} in use` : 'unused'}
-        </span>
-      </div>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-gray-500">
-        <span>
-          {options} option{options === 1 ? '' : 's'}
-        </span>
-        <span aria-hidden>·</span>
-        <MasterToggle masterId={row.id} active={row.active} />
-        <span aria-hidden>·</span>
-        <button
-          type="button"
-          onClick={() => setEditing((open) => !open)}
-          className="underline-offset-2 hover:text-gray-900 hover:underline"
-        >
-          {editing ? 'Close options' : 'Edit options'}
-        </button>
-      </div>
+    <Fragment>
+      <tr className="border-t border-gray-100 hover:bg-gray-50/60">
+        <td className="py-2 pl-[4.75rem] pr-3">
+          <span className={row.active ? 'text-gray-900' : 'text-gray-400'}>{row.variant ?? 'Standard'}</span>
+        </td>
+        <td className="px-3 py-2">
+          <PriceModeSelect
+            masterId={row.id}
+            name={variantName(row)}
+            mode={row.price_mode}
+            brandSigns={row.brand_items}
+            compact
+          />
+        </td>
+        <td className={`px-3 py-2 text-right tabular-nums ${row.brand_items > 0 ? 'font-medium text-gray-900' : 'text-gray-400'}`}>
+          {row.brand_items}
+        </td>
+        <td className="px-3 py-2 text-right tabular-nums text-gray-600">{options}</td>
+        <td className="px-3 py-2">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              row.active ? 'bg-emerald-50 text-emerald-800' : 'bg-gray-100 text-gray-500'
+            }`}
+          >
+            {row.active ? 'On' : 'Off'}
+          </span>
+        </td>
+        <td className="whitespace-nowrap px-4 py-2 text-right text-xs">
+          <span className="inline-flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setEditing((open) => !open)}
+              className="font-medium text-gray-700 underline-offset-2 hover:text-gray-900 hover:underline"
+            >
+              {editing ? 'Close' : 'Edit options'}
+            </button>
+            <MasterToggle masterId={row.id} active={row.active} />
+          </span>
+        </td>
+      </tr>
       {editing && (
-        <OptionsEditor
-          masterId={row.id}
-          name={variantName(row)}
-          options={row.options}
-          renderKey={row.render_key}
-          onClose={() => setEditing(false)}
-        />
+        <tr>
+          <td colSpan={6} className="px-4 pb-3">
+            <OptionsEditor
+              masterId={row.id}
+              name={variantName(row)}
+              options={row.options}
+              renderKey={row.render_key}
+              onClose={() => setEditing(false)}
+            />
+          </td>
+        </tr>
       )}
-    </li>
+    </Fragment>
   );
 }
 

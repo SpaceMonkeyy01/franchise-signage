@@ -32,13 +32,14 @@
 
 ## 6 Oct 2026: the team's catalog page reorganised
 
-- `/admin/catalog`: summary tiles that jump to each section; brand signs
-  show a "Price from" badge and mark engine prices; the Signage.com catalog
-  is now searchable and filterable (placement, price source, used by a
-  brand) with each sign type a card and its variants in aligned rows (price
-  source as a coloured select, usage, options, switch, edit options).
-  `MasterCatalog.tsx` (client). Smoke's "Edit options" step now finds the
-  sign type card by `data-type-icon`; not rerun.
+- `/admin/catalog` is three tabs (`?tab=review|brand|catalog`; opens on
+  review when something waits, else brand signs). Brand signs show a "Price
+  from" badge and mark engine prices. The Signage.com catalog is one table:
+  search and filters (placement, price source, in use), each sign type a
+  group row, variants in aligned columns (Price from select, brand signs,
+  options, On/Off, Edit options, Switch off); options open as a full-width
+  row; recent changes fold away below. `MasterCatalog.tsx` (client). Smoke's
+  catalog steps now open `?tab=catalog`; not rerun.
 
 ## 5 Oct 2026 (late night): "Price from" per sign type
 
