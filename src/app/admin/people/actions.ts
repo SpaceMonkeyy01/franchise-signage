@@ -8,9 +8,12 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { createInvitation } from '@/lib/auth/invitations';
+import { resetTotp } from '@/lib/auth/identity';
+import { createInvitation, revokeInvitation } from '@/lib/auth/invitations';
+import { clearFailedSignIns } from '@/lib/auth/password';
 import { assertTeamMember } from '@/lib/auth/team';
-import { queryOne } from '@/lib/db/pool';
+import { query, queryOne } from '@/lib/db/pool';
+import { sendWelcomeEmail } from '@/lib/email/welcome';
 import type { SubmitFailure } from '@/lib/forms';
 import { registerFranchisee } from '@/lib/registrations';
 import { inviteStaff } from '@/lib/staff';
@@ -46,7 +49,7 @@ export async function inviteSomeoneAction(input: InviteInput): Promise<InviteDon
           where lower(p.email) = lower($1) and m.role = 'platform_admin'`,
         [email],
       );
-      if (already) return { error: already.active ? `${email} is already on the Signage.com team.` : `${email} was deactivated; reactivate them on Team.` };
+      if (already) return { error: already.active ? `${email} is already on the Signage.com team.` : `${email} was deactivated; reactivate them in the accounts list.` };
       const minted = await createInvitation({ brandId: null, email, role: 'platform_admin', ...inviter });
       return done(email, minted.url, null);
     }
@@ -96,4 +99,69 @@ export async function inviteSomeoneAction(input: InviteInput): Promise<InviteDon
 function done(sentTo: string, url: string | null, warning: string | null): InviteDone {
   revalidatePath('/admin/people');
   return { sentTo, url, warning };
+}
+
+// ------------------------------------------------------------------ accounts
+// What used to be Team's four controls, for every account rather than only
+// Signage.com's: deactivate or reactivate, reset a lost authenticator, clear a
+// lockout, withdraw an invitation. Plus the welcome resend that sat on the
+// queue's registrations panel.
+
+type Done = SubmitFailure | undefined;
+
+async function people(fn: (member: Awaited<ReturnType<typeof assertTeamMember>>) => Promise<string | void>): Promise<Done> {
+  try {
+    const member = await assertTeamMember();
+    const failure = await fn(member);
+    if (failure) return { error: failure };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'That did not work.' };
+  }
+  revalidatePath('/admin/people');
+  return undefined;
+}
+
+/** Deactivate or reactivate any account. Takes effect on their next click. */
+export async function setAccountActiveAction(membershipId: string, active: boolean): Promise<Done> {
+  return people(async (member) => {
+    // Nobody locks themselves out by accident; someone else has to do it.
+    if (membershipId === member.membershipId) return 'You cannot deactivate yourself.';
+    const changed = await query<{ id: string }>(
+      `update memberships set active = $2, deactivated_at = case when $2 then null else now() end
+        where id = $1 returning id`,
+      [membershipId, active],
+    );
+    if (changed.length === 0) return 'That account no longer exists.';
+  });
+}
+
+export async function resetTwoFactorAction(profileId: string): Promise<Done> {
+  return people(async (member) => {
+    if (profileId === member.id) return 'Ask another admin to reset your two-factor.';
+    await resetTotp(profileId);
+  });
+}
+
+export async function clearLockoutAction(profileId: string): Promise<Done> {
+  return people(async () => {
+    await clearFailedSignIns(profileId);
+  });
+}
+
+export async function withdrawInvitationAction(invitationId: string): Promise<Done> {
+  return people(async () => {
+    await revokeInvitation(invitationId);
+  });
+}
+
+/**
+ * Send a franchisee's welcome email again. Deliberately keeps the same link:
+ * the usual reason is "they never got it", and the first email should still
+ * work if they find it later.
+ */
+export async function resendWelcomeAction(registrationId: string): Promise<Done> {
+  return people(async () => {
+    const outcome = await sendWelcomeEmail(registrationId);
+    if (outcome.reason === 'not_found') return 'That registration no longer exists.';
+  });
 }

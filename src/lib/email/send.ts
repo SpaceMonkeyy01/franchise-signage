@@ -104,11 +104,24 @@ export interface SentEmailRow {
 }
 
 /** The outbox, newest first — what /admin/outbox renders. */
-export function recentEmails(limit = 25): Promise<SentEmailRow[]> {
-  return query<SentEmailRow>(
-    `select id, request_id, kind, to_email, cc_email, subject, html, provider, error, created_at
-       from sent_emails order by created_at desc limit $1`,
-    [limit],
+export function recentEmails(
+  limit = 25,
+  filter: { kinds?: string[]; kindPrefix?: string; search?: string } = {},
+): Promise<(SentEmailRow & { request_code: string | null })[]> {
+  return query<SentEmailRow & { request_code: string | null }>(
+    `select e.id, e.request_id, e.kind, e.to_email, e.cc_email, e.subject, e.html, e.provider, e.error,
+            e.created_at, r.code as request_code
+       from sent_emails e left join requests r on r.id = e.request_id
+      where ($2::text[] is null or e.kind = any($2) or ($3::text is not null and e.kind like $3 || '%'))
+        and ($4::text is null or e.to_email ilike '%' || $4 || '%' or e.subject ilike '%' || $4 || '%'
+             or coalesce(e.cc_email, '') ilike '%' || $4 || '%')
+      order by e.created_at desc limit $1`,
+    [
+      limit,
+      filter.kinds || filter.kindPrefix ? (filter.kinds ?? []) : null,
+      filter.kindPrefix ?? null,
+      filter.search?.trim() || null,
+    ],
   );
 }
 

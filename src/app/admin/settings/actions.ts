@@ -27,7 +27,7 @@ export async function setMarginAction(
     if (error instanceof MarginError || error instanceof RangeError) return { error: error.message };
     throw error;
   }
-  revalidatePath('/admin/pricing');
+  revalidatePath('/admin/settings');
   return undefined;
 }
 
@@ -46,7 +46,7 @@ export async function setQuoteConfirmationAction(
     if (error instanceof MarginError) return { error: error.message };
     throw error;
   }
-  revalidatePath('/admin/pricing');
+  revalidatePath('/admin/settings');
   return undefined;
 }
 
@@ -59,6 +59,6 @@ export async function saveEngineTokenAction(token: string): Promise<SubmitFailur
     if (error instanceof TokenError) return { error: error.message };
     throw error;
   }
-  revalidatePath('/admin/pricing');
+  revalidatePath('/admin/settings');
   return undefined;
 }

@@ -1419,7 +1419,8 @@ record(
   `status ${anonymousPdf.status}`,
 );
 
-await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+// On the catalog's brand tab since DECISIONS #191, beside the packages it prices.
+await page.goto(`${BASE}/admin/catalog?tab=brand&brand=freshbites`, { waitUntil: 'networkidle' });
 const documents = page.locator('section:has(h2:text-is("Brand documents"))');
 await documents.waitFor({ timeout: TIMEOUT }).catch(() => {});
 // One link per format that actually HAS a package — a brand with no
@@ -1428,8 +1429,8 @@ await documents.waitFor({ timeout: TIMEOUT }).catch(() => {});
 await expectCount(
   page,
   'section:has(h2:text-is("Brand documents")) a',
-  3,
-  'the queue offers a budget sheet per format with a package',
+  4,
+  'the catalog offers a budget sheet per format with a package',
 );
 
 // Downloaded through the browser, as an operator does it — the route builds the
@@ -1533,23 +1534,18 @@ console.log('\nThe welcome email and level-1 access (SPEC §8d)');
 
 // Registration IS the trigger: there is no separate send step, and the check
 // that matters is that one form submission produces a real message.
-await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
-const registrations = page.locator('section:has(h2:text-is("Franchisee registrations"))');
-await registrations.locator('input[type="email"]').fill(SMOKE_REGISTRATION);
-await registrations.locator('input[type="text"]').fill('Dana Whitfield');
-await registrations.getByRole('button', { name: /Register/i }).click();
+// From People since DECISIONS #191: inviting a franchisee owner is the registration.
+await page.goto(`${BASE}/admin/people`, { waitUntil: 'networkidle' });
+await page.getByRole('radio', { name: /Franchisee owner/ }).check();
+await page.getByLabel('Email', { exact: true }).fill(SMOKE_REGISTRATION);
+await page.getByLabel(/^Name/).fill('Dana Whitfield');
+await page.getByRole('button', { name: 'Send invitation' }).click();
+await expectVisible(page, `text=Invitation sent to ${SMOKE_REGISTRATION}`, 'inviting a franchisee owner from People');
+await page.goto(`${BASE}/admin/people?view=welcome`, { waitUntil: 'networkidle' });
 await expectVisible(
   page,
-  `section:has(h2:text-is("Franchisee registrations")) >> text=${SMOKE_REGISTRATION}`,
-  'registering a franchisee records them on the queue',
-);
-await expectVisible(
-  page,
-  // The row's own chip: "invited" since Phase B (the welcome carries the
-  // account invitation). It read "welcomed" before, and the old selector only
-  // passed while some other text on the page happened to contain the word.
-  `section:has(h2:text-is("Franchisee registrations")) li:has-text("${SMOKE_REGISTRATION}") >> text=invited`,
-  'and the welcome email went out on that one action',
+  `tr[data-registration="${SMOKE_REGISTRATION}"] >> text=Invited`,
+  'records the registration, and the welcome email went out on that one action',
 );
 
 const registration = await withDb(async (client) =>
@@ -1663,19 +1659,26 @@ record(
 // Re-sending is the realistic support case ("they never got it"), and it must
 // NOT mint a new token — the franchisee who finds the first email later still
 // has to get in.
-await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
-await registrations.getByRole('button', { name: /Resend welcome/i }).first().click();
-await page.waitForTimeout(500);
-const afterResend = await withDb(async (client) =>
-  (
-    await client.query(
-      `select access_token,
-              (select count(*) from sent_emails where to_email = $1 and kind = 'welcome') as sent
-         from franchisee_registrations where email = $1`,
-      [SMOKE_REGISTRATION],
-    )
-  ).rows[0],
-);
+await page.goto(`${BASE}/admin/people?view=welcome`, { waitUntil: 'networkidle' });
+await page
+  .locator(`tr[data-registration="${SMOKE_REGISTRATION}"]`)
+  .getByRole('button', { name: 'Resend welcome' })
+  .click();
+let afterResend;
+for (let attempt = 0; attempt < 40; attempt++) {
+  afterResend = await withDb(async (client) =>
+    (
+      await client.query(
+        `select access_token,
+                (select count(*) from sent_emails where to_email = $1 and kind = 'welcome') as sent
+           from franchisee_registrations where email = $1`,
+        [SMOKE_REGISTRATION],
+      )
+    ).rows[0],
+  );
+  if (Number(afterResend?.sent) >= 2) break;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+}
 record(
   're-sending the welcome keeps the link that is already in their inbox',
   afterResend?.access_token === registration?.access_token && Number(afterResend?.sent) === 2,
@@ -1718,10 +1721,10 @@ record(
 );
 await franchisee.close();
 
-await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/people?view=welcome`, { waitUntil: 'networkidle' });
 await expectVisible(
   page,
-  `section:has(h2:text-is("Franchisee registrations")) li:has-text("${SMOKE_REGISTRATION}") >> text=account created`,
+  `tr[data-registration="${SMOKE_REGISTRATION}"] >> text=Account created`,
   "the team's registration list shows the account was created",
 );
 
@@ -2569,17 +2572,16 @@ await page.getByRole('link', { name: 'Outbox' }).click();
 await page.waitForLoadState('networkidle');
 await expectVisible(page, 'h1:text-is("Sent messages")', 'and is one click from the queue when you are');
 
-// -------------------------------------------------------- the entry points
-// The same bargain as the outbox, and the same check. This page lists live
-// franchisee tokens and welcome links in one place, which is only safe because
-// the allowlist decides who reads it. A signed-out response must carry no page
-// and, more to the point, no token — a redirect that still ships the payload
-// would leak every one of them.
-const entrySignedOut = await fetch(`${BASE}/admin/entry-points`, { redirect: 'manual' });
+// --------------------------------------------------------- the links view
+// The walkthrough's list of live links (was /admin/entry-points, DECISIONS
+// #191). Franchisee tokens and welcome links in one place, which is only safe
+// because the allowlist decides who reads it: a signed-out response must carry
+// no page and no token.
+const entrySignedOut = await fetch(`${BASE}/admin/demo?view=links`, { redirect: 'manual' });
 const entryBody = entrySignedOut.status < 300 ? await entrySignedOut.text() : '';
 record(
-  'the entry points are not readable without signing in',
-  entrySignedOut.status >= 300 || !entryBody.includes('Every live link'),
+  'the links view is not readable without signing in',
+  entrySignedOut.status >= 300 || !entryBody.includes('Request links'),
   `status ${entrySignedOut.status}`,
 );
 record(
@@ -2587,10 +2589,8 @@ record(
   !/request\/[A-Za-z0-9_-]{16,}/.test(entryBody),
   'a token appeared in the body of a page that redirects',
 );
-await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
-await page.getByRole('link', { name: 'Entry points' }).click();
-await page.waitForLoadState('networkidle');
-await expectVisible(page, 'h1:text-is("Entry points")', 'and are one click from the queue when you are');
+await page.goto(`${BASE}/admin/entry-points`, { waitUntil: 'networkidle' });
+await expectVisible(page, 'h1:text-is("All links")', 'the old entry points address lands on the links view');
 
 // The walkthrough frames every participant's live link, so it gets the same
 // two checks — and the tabs themselves, since they are the page.
@@ -2612,6 +2612,8 @@ await page.waitForLoadState('networkidle');
 await expectVisible(page, 'iframe[src*="/request/"]', 'the walkthrough opens on the franchisee view of a request');
 await page.getByRole('button', { name: 'Corporate dashboard', exact: true }).click();
 await expectVisible(page, 'iframe[src$="/freshbites/corporate"]', 'and its corporate tab opens the dashboard');
+await page.getByRole('link', { name: 'All links' }).click();
+await expectVisible(page, 'h1:text-is("All links")', 'and the walkthrough links to every live link');
 
 // ------------------------------------------- the Design Studio (DECISIONS #166)
 // What does not call the engine (every call is billed, and CI has no Signize
@@ -2657,7 +2659,7 @@ console.log('\nThe Design Studio: who reaches it (SPEC v2.6 §8)');
 // it, the change is logged with no brand, and clearing it falls back.
 console.log('\nPricing: margins per brand and sign type (SPEC v2.6 §8)');
 await page.goto(`${BASE}/admin/pricing`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'h1:text-is("Pricing")', 'the team has a Pricing page');
+await expectVisible(page, 'h1:text-is("Settings")', 'margins live on Settings, and the old Pricing address lands there');
 await expectVisible(page, 'text=$1,000 cost → $1,667','the standard margin is 40%: $1,000 cost → $1,667');
 const channelMargin = page.getByLabel('Illuminated Channel Letters margin').first();
 await channelMargin.fill('30');
@@ -2691,7 +2693,7 @@ for (let attempt = 0; attempt < 40 && !confirmLog; attempt++) {
   confirmLog = await withDb(async (client) =>
     (
       await client.query(
-        `select brand_id, summary from catalog_events where kind = 'quote_confirmation_set' order by created_at desc limit 1`,
+        `select brand_id, summary from catalog_events where kind = 'quote_confirmation_set' and summary like '%turned off%' order by created_at desc limit 1`,
       )
     ).rows[0],
   );
@@ -2704,6 +2706,15 @@ record(
 );
 await confirmQuotes.check();
 await expectVisible(page, 'text=/waits for "Deliver quote to franchisee"/', 'and back on');
+// Wait for that save too before clearing, or it lands after the delete and the
+// next run reads it as the latest change.
+for (let attempt = 0; attempt < 40; attempt++) {
+  const backOn = await withDb(async (client) =>
+    (await client.query(`select 1 from catalog_events where kind = 'quote_confirmation_set' and summary like '%back on%'`)).rows[0],
+  );
+  if (backOn) break;
+  await new Promise((resolve) => setTimeout(resolve, 250));
+}
 await withDb((client) => client.query(`delete from catalog_events where kind = 'quote_confirmation_set'`));
 
 // --------------------------------------------------------- show password
@@ -2729,8 +2740,10 @@ console.log('\nAccounts (SPEC v2.3 §10): invite, sign up, two-factor, lockout, 
 
 await removeSmokeAdmin();
 
+// Team folded into People (DECISIONS #191); the old address still lands there.
 await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
-await page.getByPlaceholder('name@signage.com').fill(SMOKE_ADMIN);
+await page.getByRole('radio', { name: /Signage\.com admin/ }).check();
+await page.getByLabel('Email', { exact: true }).fill(SMOKE_ADMIN);
 await page.getByRole('button', { name: 'Send invitation' }).click();
 await expectVisible(page, `text=Invitation sent to ${SMOKE_ADMIN}`, 'a team member can invite another admin');
 
@@ -2788,13 +2801,10 @@ await signInAsAdmin(inviteePage, {
 await expectVisible(inviteePage, 'h1:has-text("Request queue")', 'the new admin signs in with password and code');
 
 // Deactivated from the first admin's browser; locked out on the next click.
-await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/people?type=team`, { waitUntil: 'networkidle' });
 page.once('dialog', (dialog) => dialog.accept());
-await page
-  .locator('div.rounded-xl', { hasText: SMOKE_ADMIN })
-  .getByRole('button', { name: 'Deactivate' })
-  .click();
-await expectVisible(page, `div.rounded-xl:has-text("${SMOKE_ADMIN}") >> text=deactivated`, 'an admin can deactivate another');
+await page.locator(`tr[data-account="${SMOKE_ADMIN}"]`).getByRole('button', { name: 'Deactivate' }).click();
+await expectVisible(page, `tr[data-account="${SMOKE_ADMIN}"] >> text=deactivated`, 'an admin can deactivate another');
 await inviteePage.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 record(
   'and the deactivated admin is locked out on their next click',
@@ -2804,11 +2814,8 @@ record(
 
 // Forgotten password: the same sentence whether or not the address exists, a
 // link by email, and the old password stops working.
-await page
-  .locator('div.rounded-xl', { hasText: SMOKE_ADMIN })
-  .getByRole('button', { name: 'Reactivate' })
-  .click();
-await expectVisible(page, `div.rounded-xl:has-text("${SMOKE_ADMIN}") >> text=Deactivate`, 'and reactivate them');
+await page.locator(`tr[data-account="${SMOKE_ADMIN}"]`).getByRole('button', { name: 'Reactivate' }).click();
+await expectVisible(page, `tr[data-account="${SMOKE_ADMIN}"] >> text=Deactivate`, 'and reactivate them');
 
 await inviteePage.goto(`${BASE}/forgot-password`, { waitUntil: 'networkidle' });
 await inviteePage.getByLabel('Email').fill('nobody@nowhere.test');

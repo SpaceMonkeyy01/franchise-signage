@@ -9,10 +9,10 @@
 // inbox to the franchisor's dashboard without typing a URL.
 //
 // It is an operator's tool and guarded like one: the team allowlist, the same
-// guard as /admin/entry-points and /admin/outbox, both of which already show a
+// guard as its Links view and /admin/outbox, both of which already show a
 // signed-in operator every credential used here. Nothing is widened:
 //
-//   · The franchisee tab is the request's own status link — entry points lists it.
+//   · The franchisee tab is the request's own status link — the Links view lists it.
 //   · The reviewer tab is the approval EMAIL in the outbox, not a review link
 //     lifted out of it. Clicking through from there is exactly what the reviewer
 //     does, and the narrowest credential in the build stays gettable only where
@@ -27,15 +27,17 @@ import { requireTeamMember } from '@/lib/auth/team';
 import { query } from '@/lib/db/pool';
 import { getRequestQueue } from '@/lib/db/queries';
 
+import { Links } from './Links';
 import { Walkthrough, type DemoRequest } from './Walkthrough';
 
 export default async function DemoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ as?: string; req?: string }>;
+  searchParams: Promise<{ as?: string; req?: string; view?: string }>;
 }) {
   await requireTeamMember();
-  const { as, req } = await searchParams;
+  const { as, req, view } = await searchParams;
+  if (view === 'links') return <Links />;
 
   const [queue, approvals, brands] = await Promise.all([
     getRequestQueue(),

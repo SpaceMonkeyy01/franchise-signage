@@ -9,7 +9,7 @@
 //
 // Nobody signs up: accounts come from invitations (SPEC v2.3 §10), and the page
 // says so rather than offering a button that cannot exist. Nothing here is a
-// credential; the operator's index of live links is /admin/entry-points, and
+// credential; the operator's index of live links is /admin/demo?view=links, and
 // the walkthrough is /admin/demo — both behind sign-in, for that reason.
 
 import Link from 'next/link';

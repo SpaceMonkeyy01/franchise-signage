@@ -7,7 +7,7 @@
 //
 // Credential: a signize.ai session (owner's login, 2FA verified), from the
 // host's SIGNIZE_SESSION_TOKEN or else the token the team saved on
-// /admin/pricing (./token.ts, DECISIONS #183). It expires; when it does the
+// /admin/settings (./token.ts, DECISIONS #183). It expires; when it does the
 // engine answers 401 and this throws EngineUnavailableError, and every screen
 // falls back as §8 point 6 requires.
 

@@ -27,6 +27,15 @@ import { signOut } from '../sign-in/actions';
  */
 export const dynamic = 'force-dynamic';
 
+// The console's five sections (DECISIONS #191).
+const NAV = [
+  { href: '/admin', label: 'Requests' },
+  { href: '/admin/catalog', label: 'Catalog' },
+  { href: '/admin/people', label: 'People' },
+  { href: '/admin/outbox', label: 'Outbox' },
+  { href: '/admin/settings', label: 'Settings' },
+];
+
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const member = await getTeamMember();
 
@@ -40,42 +49,19 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
           {member && (
             <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-gray-400">
-              {/* Support tools, not daily ones — findable from every screen, and
-                  never competing with the queue for attention. */}
-              <Link href="/admin/demo" className="text-gray-300 underline-offset-2 hover:underline">
+              {NAV.map((item) => (
+                <Link key={item.href} href={item.href} className="text-gray-200 underline-offset-2 hover:underline">
+                  {item.label}
+                </Link>
+              ))}
+              {/* A support tool, not a daily one: findable, but set apart. */}
+              <Link
+                href="/admin/demo"
+                className="border-l border-gray-700 pl-3 text-gray-400 underline-offset-2 hover:underline"
+              >
                 Walkthrough
               </Link>
-              <Link
-                href="/admin/entry-points"
-                className="text-gray-300 underline-offset-2 hover:underline"
-              >
-                Entry points
-              </Link>
-              <Link
-                href="/admin/outbox"
-                className="text-gray-300 underline-offset-2 hover:underline"
-              >
-                Outbox
-              </Link>
-              <Link
-                href="/admin/catalog"
-                className="text-gray-300 underline-offset-2 hover:underline"
-              >
-                Catalog
-              </Link>
-              <Link
-                href="/admin/pricing"
-                className="text-gray-300 underline-offset-2 hover:underline"
-              >
-                Pricing
-              </Link>
-              <Link href="/admin/people" className="text-gray-300 underline-offset-2 hover:underline">
-                People
-              </Link>
-              <Link href="/admin/team" className="text-gray-300 underline-offset-2 hover:underline">
-                Team
-              </Link>
-              <span className="hidden sm:inline">{member.name ?? member.email}</span>
+              <span className="hidden border-l border-gray-700 pl-3 sm:inline">{member.name ?? member.email}</span>
               <form action={signOut}>
                 <button type="submit" className="text-gray-300 underline-offset-2 hover:underline">
                   Sign out

@@ -221,8 +221,9 @@ if (want('A')) {
   // 7.1.3 — a second admin, then deactivated: signed out on their next click.
   const second = await newPage();
   if (!state.admin2.secret) {
-    await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
-    await page.getByPlaceholder('name@signage.com').fill(state.admin2.email);
+    await page.goto(`${BASE}/admin/people`, { waitUntil: 'networkidle' });
+    await page.getByRole('radio', { name: /Signage\.com admin/ }).check();
+    await page.getByLabel('Email', { exact: true }).fill(state.admin2.email);
     await page.getByRole('button', { name: 'Send invitation' }).click();
     await expectVisible(page, `text=Invitation sent to ${state.admin2.email}`, '7.1.3 the console invites a second admin');
     const url = await latestLinkTo(state.admin2.email, 'invitation', /\/invite\/[A-Za-z0-9_-]+/);
@@ -235,14 +236,14 @@ if (want('A')) {
   }
   await expectVisible(second, 'h1:has-text("Request queue")', 'the second admin is in, in another browser');
 
-  await page.goto(`${BASE}/admin/team`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/admin/people?type=team`, { waitUntil: 'networkidle' });
   page.once('dialog', (dialog) => dialog.accept());
-  await page.locator('div.rounded-xl', { hasText: state.admin2.email }).getByRole('button', { name: 'Deactivate' }).click();
-  await expectVisible(page, `div.rounded-xl:has-text("${state.admin2.email}") >> text=deactivated`, 'the first admin deactivates them');
+  await page.locator(`tr[data-account="${state.admin2.email}"]`).getByRole('button', { name: 'Deactivate' }).click();
+  await expectVisible(page, `tr[data-account="${state.admin2.email}"] >> text=deactivated`, 'the first admin deactivates them');
   await second.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
   record('the second browser is signed out on its next click', second.url().includes('/sign-in'), second.url().replace(BASE, ''));
-  await page.locator('div.rounded-xl', { hasText: state.admin2.email }).getByRole('button', { name: 'Reactivate' }).click();
-  await expectVisible(page, `div.rounded-xl:has-text("${state.admin2.email}") >> text=Deactivate`, 'and reactivates them');
+  await page.locator(`tr[data-account="${state.admin2.email}"]`).getByRole('button', { name: 'Reactivate' }).click();
+  await expectVisible(page, `tr[data-account="${state.admin2.email}"] >> text=Deactivate`, 'and reactivates them');
 
   // 7.1.4 — forgot password, from a third browser (another device).
   const device = await newPage();

@@ -23,10 +23,35 @@ import Link from 'next/link';
 import { requireTeamMember } from '@/lib/auth/team';
 import { emailProvider, recentEmails } from '@/lib/email/send';
 
-export default async function Outbox() {
+// Who a message was for, which is how the team looks for one (DECISIONS #191).
+const GROUPS: { key: string; label: string; kinds?: string[]; kindPrefix?: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'franchisee', label: 'Franchisees', kindPrefix: 'franchisee_' },
+  { key: 'review', label: 'Approvals', kinds: ['review_requested', 'review_requested_again', 'package_to_corporate'] },
+  { key: 'vendor', label: 'Vendors', kinds: ['vendor_package'] },
+  { key: 'accounts', label: 'Accounts', kinds: ['invitation', 'welcome', 'password_reset'] },
+  { key: 'catalog', label: 'Catalog', kindPrefix: 'catalog_' },
+];
+
+const LIMIT = 50;
+
+export default async function Outbox({
+  searchParams,
+}: {
+  searchParams: Promise<{ type?: string; q?: string }>;
+}) {
   await requireTeamMember();
-  const emails = await recentEmails(30);
+  const { type, q } = await searchParams;
+  const group = GROUPS.find((g) => g.key === type) ?? GROUPS[0];
+  const emails = await recentEmails(LIMIT, { kinds: group.kinds, kindPrefix: group.kindPrefix, search: q });
   const provider = emailProvider();
+  const href = (key: string) => {
+    const params = new URLSearchParams();
+    if (key !== 'all') params.set('type', key);
+    if (q) params.set('q', q);
+    const query = params.toString();
+    return query ? `/admin/outbox?${query}` : '/admin/outbox';
+  };
 
   return (
     <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
@@ -48,7 +73,38 @@ export default async function Outbox() {
       </div>
 
       <h1 className="mt-6 text-xl font-bold text-gray-900">Sent messages</h1>
-      <p className="mt-1 text-sm text-gray-500">{emails.length} most recent.</p>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <nav className="flex flex-wrap gap-2">
+          {GROUPS.map((g) => (
+            <Link
+              key={g.key}
+              href={href(g.key)}
+              className={`rounded-lg border px-2.5 py-1 text-xs font-medium ${
+                g.key === group.key
+                  ? 'border-gray-900 bg-gray-900 text-white'
+                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {g.label}
+            </Link>
+          ))}
+        </nav>
+        <form action="/admin/outbox" className="flex gap-2">
+          {group.key !== 'all' && <input type="hidden" name="type" value={group.key} />}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q ?? ''}
+            placeholder="Search email or subject"
+            aria-label="Search the outbox"
+            className="w-56 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm"
+          />
+        </form>
+      </div>
+      <p className="mt-2 text-xs text-gray-500">
+        {emails.length === LIMIT ? `The ${LIMIT} most recent.` : `${emails.length} message${emails.length === 1 ? '' : 's'}.`}
+      </p>
 
       <div className="mt-4 space-y-2">
         {emails.map((email) => (
@@ -69,6 +125,7 @@ export default async function Outbox() {
               <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
                 {email.kind}
               </span>
+              {email.request_code && <span className="ml-1.5 text-gray-700">{email.request_code}</span>}
               {email.error && <span className="ml-1.5 text-rose-600">failed: {email.error}</span>}
             </p>
           </Link>
@@ -76,11 +133,7 @@ export default async function Outbox() {
 
         {emails.length === 0 && (
           <p className="rounded-xl border border-dashed border-gray-300 px-4 py-8 text-center text-sm text-gray-500">
-            Nothing sent yet. Prepare a package with pending items at{' '}
-            <Link href="/admin" className="underline">
-              /admin
-            </Link>{' '}
-            and the approval email lands here.
+            {group.key === 'all' && !q ? 'Nothing sent yet.' : 'No messages match.'}
           </p>
         )}
       </div>

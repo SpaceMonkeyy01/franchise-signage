@@ -22,7 +22,7 @@ import {
 } from '@/lib/catalog/manage';
 import type { SignDetails } from '@/lib/catalog/details';
 import { brandSignDetails } from '@/lib/catalog/details';
-import { getBrandsPublic } from '@/lib/db/queries';
+import { getBrandsPublic, getBrandsWithPackages } from '@/lib/db/queries';
 
 import { setSignImageAction } from './actions';
 
@@ -79,17 +79,19 @@ export default async function CatalogPage({
   await requireTeamMember();
   const { brand: brandParam, tab: tabParam } = await searchParams;
 
-  const [pending, brands, master, history] = await Promise.all([
+  const [pending, brands, master, history, packaged] = await Promise.all([
     listPendingSigns(),
     getBrandsPublic(),
     listMasterCatalog(),
     catalogHistory(null, 12),
+    getBrandsWithPackages(),
   ]);
   const brand = brands.find((b) => b.slug === brandParam) ?? brands[0] ?? null;
   const signs = brand ? await listBrandSigns(brand.id) : [];
   const details = brand ? await brandSignDetails(brand.id, signs) : new Map();
   const categories = [...new Set(master.map((row) => row.category))].sort();
   const unpriced = signs.filter(needsPrice);
+  const formats = packaged.find((b) => b.id === brand?.id)?.formats ?? [];
 
   const tab: Tab =
     tabParam === 'review' || tabParam === 'brand' || tabParam === 'catalog'
@@ -265,6 +267,30 @@ export default async function CatalogPage({
               </tbody>
             </table>
           </div>
+
+          {/* The §8b budget one-pager: a format's standard package priced, for a
+              candidate's loan application before any site exists. Moved here
+              from the queue (DECISIONS #191): it is about packages, not requests. */}
+          {brand && formats.length > 0 && (
+            <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="text-sm font-semibold text-gray-900">Brand documents</h2>
+              <p className="mt-1 text-xs text-gray-500">
+                The budget sheet a franchise candidate takes to their lender: {brand.name}&rsquo;s standard
+                package prices for one store type. An estimate, not a quote.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {formats.map((format) => (
+                  <a
+                    key={format.key}
+                    href={`/api/documents/budget/${brand.slug}/${format.key}`}
+                    className="rounded-lg border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+                  >
+                    {format.label} budget PDF
+                  </a>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       )}
 

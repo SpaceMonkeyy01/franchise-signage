@@ -143,7 +143,9 @@ const roles = [
       queue: `${BASE}/admin`,
       request: `${BASE}/admin/request/${request.id}`,
       catalog: `${BASE}/admin/catalog`,
-      pricing: `${BASE}/admin/pricing`,
+      settings: `${BASE}/admin/settings`,
+      people: `${BASE}/admin/people`,
+      outbox: `${BASE}/admin/outbox`,
     },
   },
 ];

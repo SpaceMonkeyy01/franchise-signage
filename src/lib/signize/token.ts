@@ -1,6 +1,6 @@
 // Where the Design Studio engine's credential comes from (DECISIONS #183):
 // the host's SIGNIZE_SESSION_TOKEN when set, else the token the team saved on
-// /admin/pricing (app_settings). SERVER ONLY — the token never reaches a page.
+// /admin/settings (app_settings). SERVER ONLY — the token never reaches a page.
 
 import { query, queryOne } from '../db/pool';
 

@@ -13,7 +13,7 @@
   custom quote, #181). Neon Leaf is the one add-on.
 - **Two questions left with the owner:** engine prices run far below the old
   fixed ones (Neon Leaf $167 vs $1,600; Menu Board $667 vs $3,200) — raise
-  margins per sign type on /admin/pricing? And which signs belong in the
+  margins per sign type on /admin/settings? And which signs belong in the
   standard packages now?
 - **Raised 5 Oct, parked:** the owner described submission as placing the
   order (no quote to accept); after walking the current flow they said "this
@@ -31,6 +31,16 @@
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
   Cedar Park empty. Smoke needs `npm run dev:db:reset`, which wipes this.
+
+## 6 Oct 2026 (late): the operator console audited (#191)
+
+- Nav is Requests · Catalog · People · Outbox · Settings, with Walkthrough set apart.
+- People now holds every account (filters, deactivate, lockout, two-factor
+  reset), invitations (withdraw) and welcome emails (resend). Team and the
+  queue's registrations panel are gone; `/admin/team` redirects.
+- Entry points is the Walkthrough's "All links" view; Pricing is Settings;
+  the budget PDFs sit on the catalog's brand tab; the outbox filters and searches.
+- Smoke 332/332; unit tests 228/228.
 
 ## 6 Oct 2026 (evening): franchisee Studio window, mounting, completing a package
 
@@ -63,7 +73,7 @@
   live packages now Inline $2,816 · Endcap $3,400 · Freestanding/Drive-thru
   $2,917 (+ custom quotes).
 - **The deployed Studio reads its token from the live database** (#183):
-  saved from /admin/pricing → "Design Studio connection"; the owner's
+  saved from /admin/settings → "Design Studio connection"; the owner's
   current token is saved on live. When it expires, paste a new one there.
   Render's environment is no longer needed for it.
 
@@ -167,7 +177,7 @@
 
 ## 5 Oct 2026 (later): team confirmation of quotes, per brand
 
-- **A switch per brand on `/admin/pricing`** (DECISIONS #172): "Team confirms
+- **A switch per brand on `/admin/settings`** (was /admin/pricing) (DECISIONS #172): "Team confirms
   quotes before they are sent", on by default. Off, a fully priced
   Signage.com package goes to the franchisee as the team routes the request
   (the system's event, the usual quote email); custom-quote items and
@@ -232,7 +242,7 @@
 
 ## 2 Oct 2026 (evening): margins, and the Signize engine reached
 
-- **Margins per brand and sign type** (#165): `/admin/pricing` (team only) sets
+- **Margins per brand and sign type** (#165): `/admin/settings` (was /admin/pricing; team only) sets
   a standard margin (40% to start), a default per brand, and a margin per brand
   and sign type; the most specific applies. Price = cost ÷ (1 − margin).
   Migration `20261002090000_pricing_margins.sql`; no brand role can read a

@@ -27,7 +27,7 @@ const PERSONAS: Array<{ id: Persona; label: string; how: string }> = [
   {
     id: 'franchisee',
     label: 'Franchisee',
-    how: 'No account. Opens the private link for this request, from any email the portal sends them.',
+    how: 'Signs in to their account. The private link for one request, in every email the portal sends, opens it too.',
   },
   {
     id: 'team',
@@ -37,12 +37,12 @@ const PERSONAS: Array<{ id: Persona; label: string; how: string }> = [
   {
     id: 'reviewer',
     label: 'Corporate reviewer',
-    how: 'No account. Decides from the approval email: each button is a signed, single-use, 7-day link.',
+    how: 'Decides from the approval email (signed, single-use, 7-day links), or signs in and decides on the dashboard.',
   },
   {
     id: 'corporate',
     label: 'Corporate dashboard',
-    how: 'No account. A 30-day, read-only link emailed to a contact on the brand.',
+    how: 'Brand admins and reviewers sign in. As Signage.com you see what a brand admin sees.',
   },
 ];
 
@@ -146,6 +146,9 @@ export function Walkthrough({
           </select>
 
           <div className="ml-auto flex items-center gap-3 text-xs">
+            <Link href="/admin/demo?view=links" className="text-gray-600 underline-offset-2 hover:underline">
+              All links
+            </Link>
             <button
               type="button"
               onClick={refresh}

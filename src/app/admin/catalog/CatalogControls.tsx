@@ -245,7 +245,7 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
 }
 
 const PRICE_MODES: { value: PriceMode; label: string; hint: string }[] = [
-  { value: 'studio', label: 'Design Studio', hint: 'The Studio engine prices each design, plus the margin on /admin/pricing.' },
+  { value: 'studio', label: 'Design Studio', hint: 'The Studio engine prices each design, plus the margin set in Settings.' },
   { value: 'fixed', label: 'Fixed price', hint: 'Signage.com sets each brand sign’s price here; the Studio only draws it.' },
   { value: 'custom', label: 'Custom quote', hint: 'Priced by the team on every order.' },
 ];

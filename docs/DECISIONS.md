@@ -2051,6 +2051,36 @@ item 7's "CRUD UI only when onboarding brand #2".
      registration now return their link. Below: the last 40 invitations
      across the platform with their status.
 
+191. **The operator console, audited and cut to five sections** (owner, 6 Oct:
+     "some pages or sections may not be even needed"). Nav: Requests ·
+     Catalog · People · Outbox · Settings, with Walkthrough set apart.
+     - **People absorbs Team and the queue's registrations panel.** Tabs:
+       Accounts (every membership, filter Everyone / Signage.com / Brand /
+       Franchisee; deactivate, reactivate, clear lockout, reset two-factor
+       for Signage.com admins), Invitations (withdraw a waiting one) and
+       Welcome emails (open their page, resend; resend keeps the token).
+       Deactivating is no longer limited to platform_admin from the team's
+       side: the team may already reach every brand. `/admin/team` redirects
+       to `?type=team`.
+     - **Entry points became the Walkthrough's "All links" view**
+       (`/admin/demo?view=links`, same guard); `/admin/entry-points`
+       redirects. Reviewer approval links stay only in the outbox (#75).
+     - **Pricing is Settings** (`/admin/settings`; the old address
+       redirects): the Studio connection, then margins and the per-brand
+       quote-confirmation switch.
+     - **Brand documents** (the §8b budget PDFs) moved from the queue to
+       the catalog's brand tab, beside the packages they price.
+     - **Outbox:** filter by who it was for (Franchisees, Approvals,
+       Vendors, Accounts, Catalog), search recipient or subject, request
+       code on each row, the latest 50.
+     - **Request page:** mockups and quote sheets fold under the Files card
+       (they are on each line already); the landlord card's copy is one line.
+     - The walkthrough's persona notes still said franchisees and corporate
+       had no accounts; corrected.
+     - Smoke: the quote-confirmation check waits for its own "turned off"
+       row and for the "back on" save before clearing, which a back-to-back
+       run had tripped on.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

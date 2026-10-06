@@ -609,23 +609,34 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
 function FilesPanel({ request }: { request: RequestDetail }) {
   const files = [...request.files, ...request.items.flatMap((item) => item.files)];
   if (files.length === 0) return null;
+  // Mockups and quote sheets are already on each line item; what the franchisee
+  // sent (photos, the lease exhibit, site files) is what the team looks for here.
+  const generated = files.filter((file) => file.kind === 'mockup' || file.kind === 'quote_sheet');
+  const sent = files.filter((file) => !generated.includes(file));
+
+  const list = (shown: typeof files) => (
+    <ul className="space-y-1 text-xs text-gray-600">
+      {shown.map((file) => (
+        <li key={file.id} className="truncate">
+          <a href={fileUrl(file.storage_path)} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+            {FILE_KIND_LABEL[file.kind] ?? file.kind}: {file.file_name ?? 'view'}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <Section title={`Files (${files.length})`}>
-      <ul className="space-y-1 text-xs text-gray-600">
-        {files.map((file) => (
-          <li key={file.id}>
-            <a
-              href={fileUrl(file.storage_path)}
-              target="_blank"
-              rel="noreferrer"
-              className="underline underline-offset-2"
-            >
-              {FILE_KIND_LABEL[file.kind] ?? file.kind}: {file.file_name ?? 'view'}
-            </a>
-          </li>
-        ))}
-      </ul>
+      {sent.length > 0 ? list(sent) : <p className="text-xs text-gray-500">Nothing uploaded by the franchisee yet.</p>}
+      {generated.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-xs font-medium text-gray-600">
+            {generated.length} mockups and quote sheets
+          </summary>
+          <div className="mt-1.5">{list(generated)}</div>
+        </details>
+      )}
     </Section>
   );
 }
@@ -636,11 +647,9 @@ function LandlordPanel({ request, act }: { request: RequestDetail; act: Act }) {
   const [note, setNote] = useState('');
 
   return (
-    <Section title="Landlord approval — tracked, never automated">
+    <Section title="Landlord approval">
       <p className="text-xs text-gray-500">
-        Logged by hand. Nothing here promises a compliance or approval outcome; the events exist so
-        the timeline can answer &ldquo;where is this with the landlord&rdquo;. Permit stages are
-        phase 2 and are deliberately not modelled.
+        Log what the landlord said; it goes on the history. Nothing here promises an outcome.
       </p>
       <input
         value={note}
