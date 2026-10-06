@@ -2,6 +2,16 @@
 
 ## Pick up here (end of 2 Oct 2026)
 
+- **End of 6 Oct:** console audited (#191), Signage blue theme and the glow
+  on every page (#192–#193), sign-out lands on the brand's front page (#194),
+  live email through Resend. Usman (epiccraftings.com) has three live
+  invitations, handed over by link because Resend cannot reach him yet:
+  Signage.com admin, and Freshbites franchisee owner and brand admin as
+  `usman+franchisee@` / `usman+brandadmin@`. **Open:** verify a domain in
+  Resend and set `RESEND_FROM_EMAIL` to it (until then mail reaches only
+  saad@bluecascade.org); rotate the Resend key (it was pasted in chat); deploy
+  latest main on Render.
+
 - **Freshbites** (#171, #178): seven engine-priced signs plus Road Sign and
   Window Frosting (custom quote, Studio-drawn); Entrance Sign inactive.
   Mounting defaults to Flush/Stud (choices Flush/Stud · Raceway · Backerboard,
