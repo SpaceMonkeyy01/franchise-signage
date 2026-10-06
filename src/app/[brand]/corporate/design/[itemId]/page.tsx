@@ -56,7 +56,7 @@ export default async function DesignPage({
             The Studio has no drawing style for {sign.sign_type} yet. It stays a custom quote, shown with its
             standard picture.
           </p>
-        ) : !engineConfigured() ? (
+        ) : !(await engineConfigured()) ? (
           <p className="mt-6 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
             The Design Studio is not connected right now. Your signs, packages and prices work as before.
           </p>

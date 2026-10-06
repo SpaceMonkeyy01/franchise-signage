@@ -25,7 +25,7 @@
   the Road Sign (pylon) is not designed yet — activating either is the
   owner's call. The quote-confirmation switch is on for Freshbites.
 - **Waiting on others:** refined store images from the owner for the landing
-  page (5 Oct); `SIGNIZE_SESSION_TOKEN` on Render; an `sz_live_` key
+  page (5 Oct); an `sz_live_` key
   from the owner's team (the session token expires; renewing needs their 2FA
   code); theme alignment; one real Resend send; review of spec v2.5/v2.6.
 - **Local data:** REQ-0912 (Riverside) installed end to end; Oak Plaza and
@@ -41,8 +41,11 @@
 - **Then designs and prices too** (#182): all 12 Freshbites designs were run
   through the engine against live from this machine with the local token;
   live packages now Inline $2,816 · Endcap $3,400 · Freestanding/Drive-thru
-  $2,917 (+ custom quotes). Still to do by the owner: set
-  `SIGNIZE_SESSION_TOKEN` on Render so the deployed Studio works.
+  $2,917 (+ custom quotes).
+- **The deployed Studio reads its token from the live database** (#183):
+  saved from /admin/pricing → "Design Studio connection"; the owner's
+  current token is saved on live. When it expires, paste a new one there.
+  Render's environment is no longer needed for it.
 
 ## 6 Oct 2026 (later): smoke green; brand signs explained
 

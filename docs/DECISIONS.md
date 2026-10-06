@@ -1951,6 +1951,17 @@ item 7's "CRUD UI only when onboarding brand #2".
      deployed Studio still needs `SIGNIZE_SESSION_TOKEN` set on Render for
      anyone to design there.
 
+183. **The engine token can be saved from the console** (owner, 6 Oct: "have
+     the code use my token"). Not hardcoded: a token in the source would sit
+     in the repository's history and need a redeploy whenever it expires.
+     Instead `app_settings` (team-only RLS, behavioural check added) holds it,
+     saved from a "Design Studio connection" card on /admin/pricing (password
+     field, never shown back; shows who saved it and when). The engine reads
+     the host's SIGNIZE_SESSION_TOKEN when set, else the saved one
+     (`src/lib/signize/token.ts`, cached a minute). Migration
+     `20261006090000_app_settings.sql`. The owner's current local token was
+     saved to live, so the deployed Studio works without touching Render.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

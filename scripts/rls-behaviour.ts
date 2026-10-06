@@ -989,6 +989,28 @@ const checks: NamedCheck[] = [
     },
   },
   {
+    label: 'platform settings (the engine token) are read by the team, and no one else',
+    run: async (db) => {
+      await asOwner(db);
+      await db.exec(`insert into app_settings (key, value, updated_by) values ('signize_session_token', 'secret', 'test')`);
+      const n = () => count(db, `select count(*) as n from app_settings`);
+      await asAuthenticated(db, PERSON.team);
+      const team = await n();
+      await asAuthenticated(db, PERSON.ownerA1);
+      const owner = await n();
+      await asAuthenticated(db, PERSON.alphaAdmin);
+      const brandAdmin = await n();
+      await asAnon(db, ALPHA_TOKEN);
+      const anon = (await refusal(db, `select count(*) from app_settings`)) ? 0 : await n();
+      await asOwner(db);
+      await db.exec(`delete from app_settings`);
+      return expect(
+        team === 1 && owner === 0 && brandAdmin === 0 && anon === 0,
+        `team ${team}, owner ${owner}, brand admin ${brandAdmin}, anon ${anon} (want 1, 0, 0, 0)`,
+      );
+    },
+  },
+  {
     label: "a store's change history is read by those who can see the store, and no one else",
     run: async (db) => {
       await asOwner(db);

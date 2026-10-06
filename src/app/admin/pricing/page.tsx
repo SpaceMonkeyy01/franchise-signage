@@ -9,6 +9,9 @@ import { requireTeamMember } from '@/lib/auth/team';
 import { priceFromCost } from '@/lib/pricing/margin';
 import { marginOverview } from '@/lib/pricing/margins';
 
+import { engineConnection } from '@/lib/signize/token';
+
+import { EngineTokenForm } from './EngineTokenForm';
 import { MarginInput } from './MarginInput';
 import { QuoteConfirmationToggle } from './QuoteConfirmationToggle';
 
@@ -23,7 +26,7 @@ function example(percent: number) {
 
 export default async function PricingPage() {
   await requireTeamMember();
-  const { platformPercent, brands } = await marginOverview();
+  const [{ platformPercent, brands }, connection] = await Promise.all([marginOverview(), engineConnection()]);
 
   return (
     <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
@@ -37,7 +40,32 @@ export default async function PricingPage() {
         quotes before the franchisee sees them.
       </p>
 
-      <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <section className="mt-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-900">
+              Design Studio connection
+              <span
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                  connection.source ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'
+                }`}
+              >
+                {connection.source ? 'Connected' : 'Not connected'}
+              </span>
+            </h2>
+            <p className="mt-0.5 max-w-2xl text-xs text-gray-500">
+              {connection.source === 'environment'
+                ? 'Using the token set in the server environment (SIGNIZE_SESSION_TOKEN).'
+                : connection.source === 'console'
+                  ? `Using the token saved here by ${connection.savedBy} on ${new Date(connection.savedAt!).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}. Signize session tokens expire; when the Studio says it is unavailable, sign in to signize.ai and paste a new one.`
+                  : 'Paste a signize.ai session token to price and draw signs in the Studio. Until then, every flow works without it.'}
+            </p>
+          </div>
+          {connection.source !== 'environment' && <EngineTokenForm hasToken={connection.source === 'console'} />}
+        </div>
+      </section>
+
+      <section className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div>
           <h2 className="text-sm font-semibold text-gray-900">Standard margin</h2>
           <p className="text-xs text-gray-500">

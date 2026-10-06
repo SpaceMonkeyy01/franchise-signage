@@ -5,9 +5,11 @@
 // SERVER ONLY — import from server actions, route handlers and server
 // components, never from a 'use client' module.
 //
-// Credential: SIGNIZE_SESSION_TOKEN, a signize.ai session (owner's login, 2FA
-// verified). It expires; when it does the engine answers 401 and this throws
-// EngineUnavailableError, and every screen falls back as §8 point 6 requires.
+// Credential: a signize.ai session (owner's login, 2FA verified), from the
+// host's SIGNIZE_SESSION_TOKEN or else the token the team saved on
+// /admin/pricing (./token.ts, DECISIONS #183). It expires; when it does the
+// engine answers 401 and this throws EngineUnavailableError, and every screen
+// falls back as §8 point 6 requires.
 
 import {
   EngineRejectedError,
@@ -20,6 +22,7 @@ import {
   type EngineQuote,
   type MockupDesign,
 } from './engine';
+import { engineToken } from './token';
 
 export { EngineRejectedError };
 export type { AllowedOptions, EngineDesign, EngineQuote };
@@ -38,8 +41,8 @@ export class EngineUnavailableError extends Error {
   }
 }
 
-export function engineConfigured(): boolean {
-  return Boolean(process.env.SIGNIZE_SESSION_TOKEN);
+export async function engineConfigured(): Promise<boolean> {
+  return Boolean(await engineToken());
 }
 
 const cache = new Map<string, { at: number; quote: EngineQuote }>();
@@ -51,7 +54,7 @@ const inFlight = new Map<string, Promise<EngineQuote>>();
  * every call is billed to Signage.com's Signize account.
  */
 export async function priceDesign(design: EngineDesign, allowed: AllowedOptions): Promise<EngineQuote> {
-  const token = process.env.SIGNIZE_SESSION_TOKEN;
+  const token = await engineToken();
   if (!token) throw new EngineUnavailableError('The design engine is not connected.');
 
   const fields = pricingFields(design, allowed);
@@ -115,7 +118,7 @@ const mockups = new Map<string, { at: number; image: { bytes: Buffer; contentTyp
  * and every call is billed.
  */
 export async function renderMockup(design: MockupDesign): Promise<{ bytes: Buffer; contentType: string }> {
-  const token = process.env.SIGNIZE_SESSION_TOKEN;
+  const token = await engineToken();
   if (!token) throw new EngineUnavailableError('The design engine is not connected.');
   const fields = mockupFields(design);
   const key = designKey([...fields, ['scene', design.scene.fileName]], {
