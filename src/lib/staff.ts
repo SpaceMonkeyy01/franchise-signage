@@ -183,7 +183,7 @@ async function staffOfCompany(membershipId: string, franchiseeId: string): Promi
 export async function inviteStaff(
   scope: StaffScope,
   input: { email: string; locationIds: string[]; invitedBy: string; inviterName: string },
-): Promise<{ sentTo: string; warning: string | null } | { error: string }> {
+): Promise<{ sentTo: string; warning: string | null; url: string } | { error: string }> {
   const address = input.email.trim();
   const stores = await notCompanyStores(input.locationIds, scope.franchiseeId);
   if (stores) return { error: stores };
@@ -211,7 +211,7 @@ export async function inviteStaff(
     invitedBy: input.invitedBy,
     inviterName: input.inviterName,
   });
-  return { sentTo: address, warning: minted.domainWarning };
+  return { sentTo: address, warning: minted.domainWarning, url: minted.url };
 }
 
 /** Replace a staff member's stores. Takes effect on their next click. */

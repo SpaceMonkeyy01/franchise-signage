@@ -41,6 +41,8 @@
   orders (removed). No smoke case yet.
 - Placement photos on add-ons and "Add a new sign"; step 2 rows show photo
   state (#187). Driven: photos landed on all three (test orders removed).
+- `/admin/people`: invite anyone — account type, brand, company and stores
+  for a store manager — with a copyable invitation link (#190).
 - Brand admin's Studio redesigned (#189): status bar, option rows with
   "Let franchisees choose" switches, grouped options, "What franchisees can
   change" summary.

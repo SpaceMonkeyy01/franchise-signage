@@ -2039,6 +2039,18 @@ item 7's "CRUD UI only when onboarding brand #2".
      behaviour. The franchisee's Studio window now also shows the price
      difference from the brand's design ("+$266 vs the brand's design").
 
+190. **One place for the team to invite anyone** (owner, 6 Oct: "we should
+     be able to select the company and the account type"). `/admin/people`:
+     account type (Brand admin, Brand reviewer, Franchisee owner, Store
+     manager, Signage.com admin), brand, and for a store manager the
+     franchisee company and its stores; then email (and a name for an
+     owner). Each goes through the function its own screen uses
+     (createInvitation, registerFranchisee — the welcome email —, inviteStaff),
+     so their rules stay single. The result shows the invitation link with
+     "Copy invitation link", since live sends no email yet; inviteStaff and
+     registration now return their link. Below: the last 40 invitations
+     across the platform with their status.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

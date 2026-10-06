@@ -21,6 +21,8 @@ export interface RegisterResult {
   /** False when the address was already registered — see below. */
   created: boolean;
   emailSent: boolean;
+  /** The welcome email's account link, for handing over by hand when email is down. */
+  accountUrl: string | null;
 }
 
 /** Deliberately loose: this rejects typos, not unusual-but-valid addresses. */
@@ -67,5 +69,5 @@ export async function registerFranchisee(options: {
   if (!existing) throw new Error('That registration could not be saved.');
 
   const outcome = await sendWelcomeEmail(existing.id);
-  return { registrationId: existing.id, created: !!inserted, emailSent: outcome.sent };
+  return { registrationId: existing.id, created: !!inserted, emailSent: outcome.sent, accountUrl: outcome.accountUrl ?? null };
 }

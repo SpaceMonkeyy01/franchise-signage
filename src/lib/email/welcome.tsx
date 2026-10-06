@@ -23,6 +23,8 @@ export interface WelcomeOutcome {
   sent: boolean;
   reason?: 'not_found';
   result?: SendResult;
+  /** The email's main link: an owner invitation, or sign-in for someone who already has the role. */
+  accountUrl?: string;
 }
 
 /** `/{brand_slug}/welcome/{access_token}` — the level-1 landing page. */
@@ -78,7 +80,7 @@ export async function sendWelcomeEmail(registrationId: string): Promise<WelcomeO
     ]);
   }
 
-  return { sent: !result.error, result };
+  return { sent: !result.error, result, accountUrl: account.url };
 }
 
 /**
