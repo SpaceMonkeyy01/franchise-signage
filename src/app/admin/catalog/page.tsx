@@ -15,22 +15,16 @@ import {
   listBrandSigns,
   listMasterCatalog,
   listPendingSigns,
+  PRICE_MODE_LABEL,
   signStatus as statusOf,
-  type MasterRow,
+  type PriceMode,
 } from '@/lib/catalog/manage';
 import { getBrandsPublic } from '@/lib/db/queries';
 
-import { setSignImageAction, setSignTypeIconAction } from './actions';
+import { setSignImageAction } from './actions';
 
-import {
-  AddVariantForm,
-  MasterToggle,
-  PriceModeSelect,
-  OptionsEditor,
-  PriceEditor,
-  ReviewForm,
-  SignActiveToggle,
-} from './CatalogControls';
+import { AddVariantForm, PriceEditor, ReviewForm, SignActiveToggle } from './CatalogControls';
+import { MasterCatalog } from './MasterCatalog';
 
 export const metadata = { title: 'Catalog · Signage.com' };
 
@@ -53,6 +47,29 @@ function variantName(row: { sign_type: string; variant: string | null }) {
   return row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
 }
 
+const MODE_TONE: Record<PriceMode, string> = {
+  studio: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
+  fixed: 'bg-sky-50 text-sky-800 ring-sky-200',
+  custom: 'bg-amber-50 text-amber-800 ring-amber-200',
+};
+
+function ModeBadge({ mode }: { mode: PriceMode }) {
+  return (
+    <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${MODE_TONE[mode]}`}>
+      {PRICE_MODE_LABEL[mode]}
+    </span>
+  );
+}
+
+function Stat({ href, label, value, tone }: { href: string; label: string; value: number; tone?: string }) {
+  return (
+    <a href={href} className="rounded-xl border border-gray-200 bg-white px-4 py-3 transition-colors hover:border-gray-300">
+      <p className={`text-xl font-semibold ${tone ?? 'text-gray-900'}`}>{value}</p>
+      <p className="text-xs text-gray-500">{label}</p>
+    </a>
+  );
+}
+
 export default async function CatalogPage({
   searchParams,
 }: {
@@ -70,15 +87,6 @@ export default async function CatalogPage({
   const brand = brands.find((b) => b.slug === brandParam) ?? brands[0] ?? null;
   const signs = brand ? await listBrandSigns(brand.id) : [];
 
-  // placement → category → sign type → variants
-  const grouped = new Map<string, Map<string, Map<string, MasterRow[]>>>();
-  for (const row of master) {
-    const byCategory = grouped.get(row.placement) ?? new Map<string, Map<string, MasterRow[]>>();
-    const byType = byCategory.get(row.category) ?? new Map<string, MasterRow[]>();
-    byType.set(row.sign_type, [...(byType.get(row.sign_type) ?? []), row]);
-    byCategory.set(row.category, byType);
-    grouped.set(row.placement, byCategory);
-  }
   const categories = [...new Set(master.map((row) => row.category))].sort();
 
   return (
@@ -89,8 +97,20 @@ export default async function CatalogPage({
         edit their own packages; prices are set here, and only here.
       </p>
 
+      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat
+          href="#review"
+          label="Waiting for review"
+          value={pending.length}
+          tone={pending.length > 0 ? 'text-amber-700' : undefined}
+        />
+        <Stat href="#brand-signs" label={`${brand?.name ?? 'Brand'} signs`} value={signs.length} />
+        <Stat href="#catalog" label="Catalog variants" value={master.length} />
+        <Stat href="#catalog" label="Switched on" value={master.filter((row) => row.active).length} />
+      </div>
+
       {/* ------------------------------------------------ waiting for review */}
-      <section className="mt-8">
+      <section id="review" className="mt-8 scroll-mt-6">
         <h2 className="text-sm font-semibold text-gray-900">
           Waiting for review{' '}
           <span className="ml-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
@@ -111,8 +131,7 @@ export default async function CatalogPage({
                     <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{sign.brand_name}</p>
                     <p className="text-sm font-semibold text-gray-900">{sign.name}</p>
                     <p className="text-xs text-gray-500">
-                      {variantName(sign)} · {sign.placement} ·{' '}
-                      {sign.pricing_basis === 'standin' ? 'custom quote' : 'priced by Signage.com'}
+                      {variantName(sign)} · {sign.placement} · price from {PRICE_MODE_LABEL[sign.price_mode]}
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
                       Proposed by {sign.submitted_by ?? 'the brand'}
@@ -145,7 +164,7 @@ export default async function CatalogPage({
       </section>
 
       {/* ------------------------------------------------------- brand signs */}
-      <section className="mt-10">
+      <section id="brand-signs" className="mt-10 scroll-mt-6">
         <div className="flex flex-wrap items-center gap-3">
           <h2 className="text-sm font-semibold text-gray-900">Brand signs</h2>
           <nav className="flex flex-wrap gap-1.5">
@@ -166,11 +185,12 @@ export default async function CatalogPage({
           A price change applies to new requests; ones already made keep the price they were given.
         </p>
         <div className="mt-3 overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full min-w-[640px] text-sm">
+          <table className="w-full min-w-[720px] text-sm">
             <thead className="border-b border-gray-200 bg-gray-50 text-left text-xs text-gray-500">
               <tr>
                 <th className="px-3 py-2 font-medium">Sign</th>
                 <th className="px-3 py-2 font-medium">Status</th>
+                <th className="px-3 py-2 font-medium">Price from</th>
                 <th className="px-3 py-2 font-medium">Price</th>
                 <th className="px-3 py-2 font-medium">Installed</th>
                 <th className="px-3 py-2" />
@@ -201,7 +221,15 @@ export default async function CatalogPage({
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${status.tone}`}>{status.label}</span>
                     </td>
                     <td className="px-3 py-2">
-                      {sign.review_status === 'approved' ? (
+                      <ModeBadge mode={sign.price_mode} />
+                    </td>
+                    <td className="px-3 py-2">
+                      {sign.price_mode === 'studio' && sign.price_source === 'engine' ? (
+                        <span className="text-sm text-gray-900" title="Priced by the Design Studio when the brand saved its design">
+                          {sign.est_price ? `$${Number(sign.est_price).toLocaleString('en-US')}` : '—'}
+                          <span className="ml-1 text-[11px] text-gray-500">engine</span>
+                        </span>
+                      ) : sign.review_status === 'approved' ? (
                         <PriceEditor
                           itemId={sign.id}
                           price={sign.est_price}
@@ -222,7 +250,7 @@ export default async function CatalogPage({
               })}
               {signs.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-center text-sm text-gray-500">
+                  <td colSpan={6} className="px-3 py-4 text-center text-sm text-gray-500">
                     This brand has no signs yet.
                   </td>
                 </tr>
@@ -233,81 +261,23 @@ export default async function CatalogPage({
       </section>
 
       {/* ---------------------------------------------------- master catalog */}
-      <section className="mt-10">
-        <h2 className="text-sm font-semibold text-gray-900">Signage.com catalog</h2>
-        <p className="mt-1 text-xs text-gray-500">
-          {master.filter((row) => row.active).length} of {master.length} variants on. Switching one off hides it
-          from brands proposing new signs; signs already built on it are unaffected.
-        </p>
+      <section id="catalog" className="mt-10 scroll-mt-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Signage.com catalog</h2>
+            <p className="mt-1 max-w-2xl text-xs text-gray-500">
+              Every sign type and variant brands can build from. Switching one off hides it from brands
+              proposing new signs; signs already built on it are unaffected. &ldquo;Price from&rdquo; decides
+              whether the Design Studio, a fixed price or a custom quote sets the price.
+            </p>
+          </div>
+        </div>
 
         <div className="mt-3">
           <AddVariantForm categories={categories} />
         </div>
 
-        <div className="mt-4 space-y-6">
-          {[...grouped.entries()].map(([placement, byCategory]) => (
-            <div key={placement}>
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{placement}</h3>
-              <div className="mt-2 space-y-4">
-                {[...byCategory.entries()].map(([category, byType]) => (
-                  <div key={category} className="rounded-xl border border-gray-200 bg-white">
-                    <p className="border-b border-gray-100 px-4 py-2 text-sm font-semibold text-gray-900">{category}</p>
-                    <div className="divide-y divide-gray-100">
-                      {[...byType.entries()].map(([signType, variants]) => (
-                        <div key={signType} className="flex flex-wrap gap-4 px-4 py-3">
-                          <span data-type-icon={signType}>
-                            <ImageUpload
-                              label="icon"
-                              hasImage={variants.some((v) => v.icon_path)}
-                              save={setSignTypeIconAction.bind(null, variants[0].id)}
-                            >
-                              <SignThumbnail
-                                renderKey={variants.find((v) => v.render_key)?.render_key ?? null}
-                                imagePath={variants.find((v) => v.icon_path)?.icon_path ?? null}
-                                label={signType}
-                                className="block h-10 w-14 rounded-md"
-                              />
-                            </ImageUpload>
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900">{signType}</p>
-                            <ul className="mt-1 space-y-1">
-                              {variants.map((row) => (
-                                <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-                                  <span className={row.active ? 'text-gray-800' : 'text-gray-400 line-through'}>
-                                    {row.variant ?? 'Standard'}
-                                  </span>
-                                  <PriceModeSelect
-                                    masterId={row.id}
-                                    name={variantName(row)}
-                                    mode={row.price_mode}
-                                    brandSigns={row.brand_items}
-                                  />
-                                  <span className="text-gray-500">
-                                    {row.brand_items > 0 && `${row.brand_items} brand sign${row.brand_items === 1 ? '' : 's'}`}
-                                    {Object.keys(row.options).length > 0 &&
-                                      `${row.brand_items > 0 ? ' · ' : ''}${Object.keys(row.options).length} options`}
-                                  </span>
-                                  <MasterToggle masterId={row.id} active={row.active} />
-                                  <OptionsEditor
-                                    masterId={row.id}
-                                    name={variantName(row)}
-                                    options={row.options}
-                                    renderKey={row.render_key}
-                                  />
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+        <MasterCatalog rows={master} />
       </section>
 
       {history.length > 0 && (

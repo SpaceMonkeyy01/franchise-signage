@@ -81,6 +81,7 @@ export interface ManagedSign {
   sign_type: string;
   variant: string | null;
   pricing_basis: 'direct' | 'standin';
+  price_mode: PriceMode;
   render_key: string | null;
   /** What shows: the sign's own picture, else its type's icon (#157). */
   image_path: string | null;
@@ -151,7 +152,7 @@ const SIGN_SQL = `
          bi.submission_note, bi.review_note, bi.submitted_at, bi.reviewed_at, bi.sort_order,
          coalesce(sp.name, sp.email) as submitted_by,
          mc.id as master_id, mc.placement, mc.category, mc.sign_type, mc.variant,
-         mc.pricing_basis, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.thumbnail_url, bi.price_source,
+         mc.pricing_basis, mc.price_mode, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.thumbnail_url, bi.price_source,
          bi.design is not null as designed,
          (select count(*)::int from installed_signs s
            where s.brand_item_id = bi.id and s.status = 'active') as installed

@@ -2248,7 +2248,7 @@ await removeSmokeCatalog();
   );
   try {
     await team.reload({ waitUntil: 'networkidle' });
-    await team.locator('div.flex-wrap:has(p:text-is("A-Frame Sign"))').getByRole('button', { name: 'Edit options' }).click();
+    await team.locator('[data-type-icon="A-Frame Sign"]').getByRole('button', { name: 'Edit options' }).first().click();
     const editor = team.locator('[data-options-editor="A-Frame Sign"]');
     await editor.getByRole('button', { name: 'Add an attribute' }).click();
     await editor.getByLabel('Attribute', { exact: true }).last().fill('insert_size');

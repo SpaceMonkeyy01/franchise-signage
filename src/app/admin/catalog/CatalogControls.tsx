@@ -192,23 +192,33 @@ const PRICE_MODES: { value: PriceMode; label: string; hint: string }[] = [
   { value: 'custom', label: 'Custom quote', hint: 'Priced by the team on every order.' },
 ];
 
+/** The same colours as the "Price from" badges on the brand signs table. */
+const SELECT_TONE: Record<PriceMode, string> = {
+  studio: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  fixed: 'border-sky-200 bg-sky-50 text-sky-800',
+  custom: 'border-amber-200 bg-amber-50 text-amber-800',
+};
+
 /** Where a sign type's price comes from (DECISIONS #179). */
 export function PriceModeSelect({
   masterId,
   name,
   mode,
   brandSigns,
+  compact = false,
 }: {
   masterId: string;
   name: string;
   mode: PriceMode;
   brandSigns: number;
+  /** Without the visible "Price from" label, where a column or badge says it. */
+  compact?: boolean;
 }) {
   const { pending, error, go } = useAction();
   return (
     <span className="inline-flex flex-col">
       <label className="inline-flex items-center gap-1.5 text-gray-500">
-        Price from
+        {!compact && 'Price from'}
         <select
           value={mode}
           disabled={pending}
@@ -227,7 +237,9 @@ export function PriceModeSelect({
             }
             go(() => setMasterPriceModeAction(masterId, next));
           }}
-          className="rounded border border-gray-300 bg-white px-1.5 py-0.5 text-xs text-gray-800"
+          className={`rounded-md border px-1.5 py-0.5 text-xs font-medium ${
+            compact ? SELECT_TONE[mode] : 'border-gray-300 bg-white text-gray-800'
+          }`}
         >
           {PRICE_MODES.map((option) => (
             <option key={option.value} value={option.value}>
@@ -386,13 +398,18 @@ export function OptionsEditor({
   name,
   options,
   renderKey,
+  onClose,
 }: {
   masterId: string;
   name: string;
   options: Record<string, string[]>;
   renderKey: string | null;
+  /** Opened and closed by the parent row; without it, the editor has its own button. */
+  onClose?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = onClose ? true : ownOpen;
+  const setOpen = (next: boolean) => (onClose ? !next && onClose() : setOwnOpen(next));
   const [rows, setRows] = useState<{ attribute: string; values: string }[]>(
     Object.entries(options).map(([attribute, values]) => ({ attribute, values: values.join('\n') })),
   );
