@@ -2,6 +2,17 @@
 
 ## Pick up here (end of 2 Oct 2026)
 
+- **End of 7 Oct:** Freshbites screens refined (#195–#198: true dashboard
+  status, short store and sign names, sign type and variant everywhere incl.
+  the Studio, add-ons that suit the store type, wizard aligned); console
+  refined (#199: nav marks the page, "Opens" column, lender chip, shorter
+  history); People → **Brands** shows brand → corporate team → franchisee
+  companies, which can be renamed and switched off as a whole (#200, live
+  migration applied 7 Oct); Studio links on Catalog → Brand signs (#201);
+  the grid breathes around a resting pointer (#202). Smoke 337/337.
+  **Open:** deploy latest main on Render; verify a Resend domain and set
+  `RESEND_FROM_EMAIL`; rotate the Resend key; Usman's links expire 20 Oct.
+
 - **End of 6 Oct:** console audited (#191), Signage blue theme and the glow
   on every page (#192–#193), sign-out lands on the brand's front page (#194),
   live email through Resend. Usman (epiccraftings.com) has three live
