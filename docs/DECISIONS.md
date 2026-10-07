@@ -2193,6 +2193,12 @@ item 7's "CRUD UI only when onboarding brand #2".
      brand admin sees "Deactivated by Signage.com" on the company. The spec
      (§10) has brand admins managing their franchisees; this is the team's
      white-glove counterpart. Smoke covers off, locked out, on, back in.
+     - **Shown as the hierarchy it is** (owner, same day: "the main corporate
+       company is Freshbites … then they have franchisees who own stores").
+       The tab is **Brands** (`?view=brands`; the first name, `companies`,
+       still lands there): each brand, its corporate team (admins and
+       reviewers), then its franchisee companies, each with its owner and
+       stores.
 
 201. **The team reaches the Studio from the console** (owner, 7 Oct). Each row
      on Catalog → Brand signs says where its design stands ("Designed ·

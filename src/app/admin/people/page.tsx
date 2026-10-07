@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { requireTeamMember } from '@/lib/auth/team';
 import { query } from '@/lib/db/pool';
 import { getRegistrations } from '@/lib/db/queries';
+import { storeName } from '@/lib/format';
 
 import { AccountActions, ResendWelcomeButton, WithdrawButton } from './AccountControls';
 import { CompanyControls } from './CompanyControls';
@@ -25,7 +26,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const VIEWS = [
   { key: 'accounts', label: 'Accounts' },
-  { key: 'companies', label: 'Companies' },
+  { key: 'brands', label: 'Brands' },
   { key: 'invitations', label: 'Invitations' },
   { key: 'welcome', label: 'Welcome emails' },
 ] as const;
@@ -53,6 +54,7 @@ interface AccountRow {
 
 interface CompanyRow {
   id: string;
+  brand_id: string;
   name: string;
   active: boolean;
   deactivated_at: string | null;
@@ -71,10 +73,12 @@ export default async function PeoplePage({
 }) {
   const me = await requireTeamMember();
   const params = await searchParams;
-  const view = VIEWS.find((v) => v.key === params.view)?.key ?? 'accounts';
+  // "companies" was this tab's first name (#200); old links still land on it.
+  const requested = params.view === 'companies' ? 'brands' : params.view;
+  const view = VIEWS.find((v) => v.key === requested)?.key ?? 'accounts';
   const group = GROUPS.find((g) => g.key === params.type) ?? GROUPS[0];
 
-  const [brands, companies, stores, accounts, invitations, registrations, companyRows] = await Promise.all([
+  const [brands, companies, stores, accounts, invitations, registrations, companyRows, brandTeams] = await Promise.all([
     query<{ id: string; name: string }>(`select id, name from brands order by name`),
     query<{ id: string; brand_id: string; name: string }>(`select id, brand_id, name from franchisees order by name`),
     query<{ id: string; franchisee_id: string; name: string }>(
@@ -111,7 +115,7 @@ export default async function PeoplePage({
     ),
     getRegistrations(),
     query<CompanyRow>(
-      `select f.id, f.name, f.active, f.deactivated_at, b.name as brand,
+      `select f.id, f.brand_id, f.name, f.active, f.deactivated_at, b.name as brand,
               coalesce((select json_agg(json_build_object('name', p.name, 'email', p.email, 'active', m.active) order by p.email)
                           from memberships m join profiles p on p.id = m.profile_id
                          where m.franchisee_id = f.id and m.role = 'franchisee_owner'), '[]') as owners,
@@ -124,6 +128,13 @@ export default async function PeoplePage({
                           from locations l where l.franchisee_id = f.id), '[]') as stores
          from franchisees f join brands b on b.id = f.brand_id
         order by f.active desc, b.name, f.name`,
+    ),
+    // Each brand's corporate team: its admins and reviewers.
+    query<{ brand_id: string; name: string | null; email: string; role: string; active: boolean }>(
+      `select m.brand_id, p.name, p.email, m.role::text as role, m.active
+         from memberships m join profiles p on p.id = m.profile_id
+        where m.role in ('brand_admin', 'brand_reviewer')
+        order by m.active desc, m.role, lower(p.email)`,
     ),
   ]);
 
@@ -144,7 +155,7 @@ export default async function PeoplePage({
   ).length;
   const counts: Record<string, number> = {
     accounts: accounts.filter((a) => a.active).length,
-    companies: companyRows.filter((c) => c.active).length,
+    brands: brands.length,
     invitations: waiting,
     welcome: registrations.length,
   };
@@ -248,88 +259,128 @@ export default async function PeoplePage({
             </>
           )}
 
-          {view === 'companies' && (
+          {view === 'brands' && (
             <>
               <p className="mt-3 text-xs text-gray-500">
-                Franchisee companies and their stores. Deactivating a company cuts every owner&rsquo;s and store
-                manager&rsquo;s access at once; its stores and their sign records stay. Reactivating restores exactly
-                who had access.
+                Each brand, its corporate team, and the franchisee companies that own its stores. Deactivating a
+                franchisee cuts every owner&rsquo;s and store manager&rsquo;s access at once; its stores and their sign
+                records stay, and reactivating restores exactly who had access.
               </p>
-              <div className="mt-3 space-y-3">
-                {companyRows.map((company) => {
-                  const activeOwners = company.owners.filter((owner) => owner.active).length;
+              <div className="mt-3 space-y-5">
+                {brands.map((brand) => {
+                  const team = brandTeams.filter((member) => member.brand_id === brand.id);
+                  const franchisees = companyRows.filter((company) => company.brand_id === brand.id);
                   return (
-                    <div
-                      key={company.id}
-                      data-company={company.name}
-                      className={`rounded-xl border bg-white p-4 ${company.active ? 'border-gray-200' : 'border-dashed border-gray-300 bg-gray-50'}`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
-                            {company.name}
-                            {!company.active && (
-                              <span className={`${pill} bg-gray-200 text-gray-600`}>
-                                Deactivated
-                                {company.deactivated_at &&
-                                  ` ${new Date(company.deactivated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {company.brand} · {company.owners.length} owner{company.owners.length === 1 ? '' : 's'} ·{' '}
-                            {company.staff} store manager{company.staff === 1 ? '' : 's'} · {company.stores.length} store
-                            {company.stores.length === 1 ? '' : 's'}
-                          </p>
-                        </div>
-                        <CompanyControls
-                          franchiseeId={company.id}
-                          name={company.name}
-                          active={company.active}
-                          people={activeOwners + company.staff}
-                        />
+                    <section key={brand.id} data-brand={brand.name} className="rounded-xl border border-gray-200 bg-white">
+                      <div className="border-b border-gray-100 px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Brand</p>
+                        <h3 className="text-base font-semibold text-gray-900">{brand.name}</h3>
+                        <p className="text-xs text-gray-500">
+                          {team.filter((member) => member.active).length} on the corporate team ·{' '}
+                          {franchisees.length} franchisee{franchisees.length === 1 ? '' : 's'} ·{' '}
+                          {franchisees.reduce((sum, company) => sum + company.stores.length, 0)} stores
+                        </p>
                       </div>
 
-                      <div className="mt-3 grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 text-xs sm:grid-cols-2">
-                        <div>
-                          <p className="font-medium text-gray-700">Owners</p>
-                          <ul className="mt-1 space-y-0.5 text-gray-600">
-                            {company.owners.map((owner) => (
-                              <li key={owner.email}>
-                                {owner.name ?? owner.email}
-                                {owner.name && <span className="text-gray-400"> · {owner.email}</span>}
-                                {!owner.active && <span className="text-gray-400"> · deactivated</span>}
-                              </li>
-                            ))}
-                            {company.owners.length === 0 && <li className="text-gray-400">None yet</li>}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-700">Stores</p>
-                          <ul className="mt-1 space-y-0.5 text-gray-600">
-                            {company.stores.map((store) => (
-                              <li key={store.name}>
-                                {store.name}
-                                <span className="text-gray-400">
-                                  {' · '}
-                                  {store.installed > 0
-                                    ? `${store.installed} sign${store.installed === 1 ? '' : 's'} installed`
-                                    : 'no signs installed'}
-                                </span>
-                              </li>
-                            ))}
-                            {company.stores.length === 0 && <li className="text-gray-400">No stores yet</li>}
-                          </ul>
+                      <div className="px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-700">Corporate team</p>
+                        <ul className="mt-1 space-y-0.5 text-xs text-gray-600">
+                          {team.map((member) => (
+                            <li key={`${member.email}-${member.role}`}>
+                              {member.name ?? member.email}
+                              {member.name && <span className="text-gray-400"> · {member.email}</span>}
+                              <span className="text-gray-400"> · {ROLE_LABEL[member.role] ?? member.role}</span>
+                              {!member.active && <span className="text-gray-400"> · deactivated</span>}
+                            </li>
+                          ))}
+                          {team.length === 0 && <li className="text-gray-400">No brand admin yet. Invite one on the left.</li>}
+                        </ul>
+                      </div>
+
+                      <div className="border-t border-gray-100 px-4 py-3">
+                        <p className="text-xs font-semibold text-gray-700">
+                          Franchisees <span className="font-normal text-gray-400">· companies that own {brand.name} stores</span>
+                        </p>
+                        <div className="mt-2 space-y-2">
+                          {franchisees.map((company) => {
+                            const activeOwners = company.owners.filter((owner) => owner.active).length;
+                            return (
+                              <div
+                                key={company.id}
+                                data-company={company.name}
+                                className={`rounded-lg border p-3 ${company.active ? 'border-gray-200' : 'border-dashed border-gray-300 bg-gray-50'}`}
+                              >
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
+                                      {company.name}
+                                      {!company.active && (
+                                        <span className={`${pill} bg-gray-200 text-gray-600`}>
+                                          Deactivated
+                                          {company.deactivated_at &&
+                                            ` ${new Date(company.deactivated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {company.owners.length} owner{company.owners.length === 1 ? '' : 's'} · {company.staff} store
+                                      manager{company.staff === 1 ? '' : 's'} · {company.stores.length} store
+                                      {company.stores.length === 1 ? '' : 's'}
+                                    </p>
+                                  </div>
+                                  <CompanyControls
+                                    franchiseeId={company.id}
+                                    name={company.name}
+                                    active={company.active}
+                                    people={activeOwners + company.staff}
+                                  />
+                                </div>
+
+                                <div className="mt-2 grid grid-cols-1 gap-3 border-t border-gray-100 pt-2 text-xs sm:grid-cols-2">
+                                  <div>
+                                    <p className="font-medium text-gray-700">Owner</p>
+                                    <ul className="mt-1 space-y-0.5 text-gray-600">
+                                      {company.owners.map((owner) => (
+                                        <li key={owner.email}>
+                                          {owner.name ?? owner.email}
+                                          {owner.name && <span className="text-gray-400"> · {owner.email}</span>}
+                                          {!owner.active && <span className="text-gray-400"> · deactivated</span>}
+                                        </li>
+                                      ))}
+                                      {company.owners.length === 0 && <li className="text-gray-400">None yet</li>}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-700">Stores</p>
+                                    <ul className="mt-1 space-y-0.5 text-gray-600">
+                                      {company.stores.map((store) => (
+                                        <li key={store.name}>
+                                          {storeName(store.name, brand.name)}
+                                          <span className="text-gray-400">
+                                            {' · '}
+                                            {store.installed > 0
+                                              ? `${store.installed} sign${store.installed === 1 ? '' : 's'} installed`
+                                              : 'no signs installed'}
+                                          </span>
+                                        </li>
+                                      ))}
+                                      {company.stores.length === 0 && <li className="text-gray-400">No stores yet</li>}
+                                    </ul>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {franchisees.length === 0 && (
+                            <p className="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-center text-xs text-gray-500">
+                              No franchisees yet. One appears when an invited franchisee owner accepts.
+                            </p>
+                          )}
                         </div>
                       </div>
-                    </div>
+                    </section>
                   );
                 })}
-                {companyRows.length === 0 && (
-                  <p className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No franchisee companies yet. One appears when an invited owner accepts.
-                  </p>
-                )}
               </div>
             </>
           )}

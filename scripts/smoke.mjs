@@ -2862,7 +2862,7 @@ console.log('\nFranchisee companies: off and on as a whole');
   await signInWithPassword(ownerTab, DEV_FRANCHISEE, '/freshbites');
   await ownerTab.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
 
-  await page.goto(`${BASE}/admin/people?view=companies`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE}/admin/people?view=brands`, { waitUntil: 'networkidle' });
   const company = page.locator('[data-company="Freshbites Austin"]');
   await expectVisible(page, '[data-company="Freshbites Austin"]', 'People lists each franchisee company');
   page.once('dialog', (dialog) => dialog.accept());
