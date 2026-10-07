@@ -13,6 +13,7 @@ import {
 } from '@/lib/db/queries';
 
 import { AddForm } from './AddForm';
+import { storeName } from '@/lib/format';
 
 export default async function AddSignsPage({
   params,
@@ -49,7 +50,7 @@ export default async function AddSignsPage({
 
       <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
-          Add signs to {location.name.split('—').pop()?.trim() || location.name}
+          Add signs to {storeName(location.name, brand.name)}
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           From the approved {brand.name} catalog — every item carries a locked brand spec. New

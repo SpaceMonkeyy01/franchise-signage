@@ -5,9 +5,10 @@
 // depends on WHAT you are asking for, and a like-for-like replacement of an
 // already-approved sign never goes to corporate at all.
 //
-// modify / remove / rebrand are v1.1 (SPEC §11). They are shown disabled rather
-// than hidden, exactly as the demo shows them — a franchisee who needs one
-// should see that it is coming, not conclude the portal cannot do it.
+// modify / remove / rebrand are v1.1 (SPEC §11). Still stubbed, not hidden — a
+// franchisee who needs one should see that it is coming — but as one line under
+// the two that work, not three greyed-out rows that made the page look
+// unfinished (owner, 7 Oct; DECISIONS #195).
 
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -16,6 +17,7 @@ import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { requireStoreOrdering } from '@/lib/auth/stores';
 import { getBrandBySlug, getInstalledSignsForLocation, getLocationById } from '@/lib/db/queries';
+import { storeName } from '@/lib/format';
 
 interface Intent {
   id: string;
@@ -70,24 +72,6 @@ export default async function IntentPicker({
       href: canReplace ? `${base}/replace` : undefined,
       fastLane: true,
     },
-    {
-      id: 'modify',
-      label: 'Modify an existing sign',
-      description: 'Different size, spec, or position',
-      rule: 'Corporate reviews the change',
-    },
-    {
-      id: 'remove',
-      label: 'Remove a sign',
-      description: 'Take down an installed sign',
-      rule: 'Logged; review per brand policy',
-    },
-    {
-      id: 'rebrand',
-      label: 'Remodel / rebrand',
-      description: 'Update to new brand standards',
-      rule: 'Diffed against current package',
-    },
   ];
 
   return (
@@ -101,7 +85,7 @@ export default async function IntentPicker({
 
       <main className="mx-auto w-full page-narrow flex-1 px-4 py-8 sm:px-6">
         <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">
-          What does {shortName(location.name)} need?
+          What does {storeName(location.name, brand.name)} need?
         </h1>
         <p className="mt-1 text-sm text-gray-500">
           The approval path depends on what you&rsquo;re requesting — replacements of approved signs
@@ -113,6 +97,12 @@ export default async function IntentPicker({
             <IntentRow key={intent.id} intent={intent} />
           ))}
         </div>
+
+        <p className="mt-4 rounded-xl border border-dashed border-gray-300 px-4 py-3 text-xs text-gray-500" data-testid="coming-soon">
+          <span className="font-medium text-gray-700">Coming soon:</span> changing a sign&rsquo;s size or
+          position, removing a sign, and remodels. Until then, contact Signage.com and we&rsquo;ll set it up
+          with you.
+        </p>
       </main>
     </>
   );
@@ -131,9 +121,6 @@ function IntentRow({ intent }: { intent: Intent }) {
         <span className="min-w-0">
           <span className="block text-sm font-medium text-gray-900">
             {intent.label}
-            {!intent.href && !intent.fastLane && (
-              <span className="ml-1 text-[10px] font-normal text-gray-500">· coming in v1.1</span>
-            )}
           </span>
           <span className="block text-xs text-gray-500">{intent.description}</span>
         </span>
@@ -173,10 +160,6 @@ function IntentRow({ intent }: { intent: Intent }) {
 }
 
 /** "Freshbites — Oak Plaza" reads as "Oak Plaza" once you are already inside it. */
-function shortName(name: string): string {
-  return name.split('—').pop()?.trim() || name;
-}
-
 function IntentIcon({ id }: { id: string }) {
   const common = {
     className: 'h-4 w-4',

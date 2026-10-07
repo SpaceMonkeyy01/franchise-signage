@@ -15,7 +15,7 @@ import type { RegistrationWithBrand } from '@/lib/db/queries';
 import type { FranchiseeOwner, FranchiseePeople } from '@/lib/staff';
 
 import { StaffManager } from '../staff/StaffManager';
-import { plural } from '@/lib/format';
+import { plural, storeName } from '@/lib/format';
 import { setFranchiseeOwnerActiveAction } from './actions';
 import { Registrations } from './Registrations';
 
@@ -53,14 +53,22 @@ export function Franchisees({
           </p>
         )}
         {franchisees.map((company) => (
-          <Company key={company.id} brandSlug={brandSlug} company={company} />
+          <Company key={company.id} brandSlug={brandSlug} brandName={brandName} company={company} />
         ))}
       </div>
     </section>
   );
 }
 
-function Company({ brandSlug, company }: { brandSlug: string; company: FranchiseeRow }) {
+function Company({
+  brandSlug,
+  brandName,
+  company,
+}: {
+  brandSlug: string;
+  brandName: string;
+  company: FranchiseeRow;
+}) {
   const [open, setOpen] = useState(false);
   const activeStaff = company.staff.filter((member) => member.active).length;
 
@@ -105,7 +113,7 @@ function Company({ brandSlug, company }: { brandSlug: string; company: Franchise
             <StaffManager
               brandSlug={brandSlug}
               franchiseeId={company.id}
-              stores={company.stores}
+              stores={company.stores.map((store) => ({ ...store, name: storeName(store.name, brandName) }))}
               members={company.staff}
               invitations={company.invitations}
               compact

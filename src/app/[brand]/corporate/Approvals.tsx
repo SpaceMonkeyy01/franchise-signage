@@ -16,6 +16,7 @@ import type { RequestDetail } from '@/lib/db/queries';
 
 import { decideItemAction, requestChangesAction } from './actions';
 import { ResendApproval } from './ResendApproval';
+import { storeName } from '@/lib/format';
 
 export function Approvals({
   brandSlug,
@@ -61,7 +62,7 @@ function RequestBlock({ brandSlug, request }: { brandSlug: string; request: Requ
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{request.location.name}</p>
+          <p className="text-sm font-semibold text-gray-900">{storeName(request.location.name, request.brand.name)}</p>
           <p className="text-xs text-gray-500">
             {request.code}
             {request.submitted_at && (

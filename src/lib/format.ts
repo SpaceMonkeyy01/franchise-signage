@@ -26,3 +26,15 @@ export function brandAndLocation(brandName: string, locationName: string): strin
     ? locationName
     : `${brandName} · ${locationName}`;
 }
+
+/**
+ * A store's name inside its brand's own portal: "Oak Plaza", not
+ * "Freshbites — Oak Plaza" (DECISIONS #195). The brand is in the header of
+ * every page there, so repeating it on each store is noise. Emails, PDFs and
+ * the Signage.com console keep the full name, where several brands meet.
+ */
+export function storeName(locationName: string, brandName: string): string {
+  const escaped = brandName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const short = locationName.replace(new RegExp(`^${escaped}\\s*[—–\\-·:|]\\s*`, 'i'), '').trim();
+  return short || locationName;
+}

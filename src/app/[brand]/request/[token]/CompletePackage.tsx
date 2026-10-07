@@ -5,6 +5,10 @@
 // uploaded; a size or the landlord details save with their own button. The
 // page refreshes after each, so the readiness card and this list shrink as
 // the franchisee works down it.
+//
+// Each group folds to one line ("Site photos · 11 to add"), so a long package
+// does not make this panel longer than the page beside it (DECISIONS #195).
+// A group with two rows or fewer starts open; there is nothing to fold.
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -57,9 +61,9 @@ export function CompletePackage({
         Add what you have now; Signage.com sees it straight away. Anything you leave, the team follows up.
       </p>
 
-      <div className="mt-3 space-y-4">
+      <div className="mt-3 space-y-2">
         {photos.length > 0 && (
-          <Group title={`${photoLabel}s`}>
+          <Group title={`${photoLabel}s`} count={photos.length}>
             {photos.map((item) => (
               <PhotoRow key={item.id} token={token} brandSlug={brandSlug} item={item} photoLabel={photoLabel} />
             ))}
@@ -67,7 +71,7 @@ export function CompletePackage({
         )}
 
         {sizes.length > 0 && (
-          <Group title="Sizes">
+          <Group title="Sizes" count={sizes.length}>
             {sizes.map((item) => (
               <SizeRow key={item.id} token={token} item={item} />
             ))}
@@ -75,13 +79,13 @@ export function CompletePackage({
         )}
 
         {needsLease && (
-          <Group title="Landlord sign criteria">
+          <Group title="Landlord sign criteria" count={1} status="Not added" startOpen={false}>
             <LeaseForm token={token} brandSlug={brandSlug} />
           </Group>
         )}
 
         {location && (
-          <Group title="Location details">
+          <Group title="Location details" count={1}>
             <p className="flex flex-wrap items-center justify-between gap-2 text-sm text-gray-700">
               <span>{location.missing}</span>
               <Link href={location.editHref} className="text-xs font-semibold underline underline-offset-2" style={{ color: 'var(--color-brand-dark)' }}>
@@ -95,12 +99,33 @@ export function CompletePackage({
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+function Group({
+  title,
+  count,
+  status,
+  startOpen,
+  children,
+}: {
+  title: string;
+  count: number;
+  /** The line shown while folded; "N to add" when not given. */
+  status?: string;
+  startOpen?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{title}</h3>
-      <ul className="mt-1.5 divide-y divide-gray-100 rounded-lg border border-gray-100">{children}</ul>
-    </div>
+    <details open={startOpen ?? count <= 2} className="group rounded-lg border border-gray-200">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
+        <span className="text-sm font-medium text-gray-900">{title}</span>
+        <span className="flex items-center gap-2 text-xs text-amber-800">
+          {status ?? `${count} to add`}
+          <svg viewBox="0 0 20 20" className="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180" aria-hidden="true">
+            <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+      </summary>
+      <ul className="divide-y divide-gray-100 border-t border-gray-100">{children}</ul>
+    </details>
   );
 }
 

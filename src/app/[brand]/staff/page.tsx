@@ -12,6 +12,7 @@ import { notFound } from 'next/navigation';
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 import { requireOwner } from '@/lib/auth/stores';
+import { storeName } from '@/lib/format';
 import { getBrandBySlug } from '@/lib/db/queries';
 import { companyStaff, companyStaffInvitations, companyStores } from '@/lib/staff';
 
@@ -58,7 +59,7 @@ export default async function StaffPage({ params }: { params: Promise<{ brand: s
         ) : (
           <StaffManager
             brandSlug={slug}
-            stores={stores}
+            stores={stores.map((store) => ({ ...store, name: storeName(store.name, brand.name) }))}
             members={members}
             invitations={invitations}
           />

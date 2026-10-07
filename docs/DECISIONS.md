@@ -2106,6 +2106,27 @@ item 7's "CRUD UI only when onboarding brand #2".
      explicitly; from the console or anywhere else to the Signage.com sign-in
      with "You have signed out."
 
+195. **Freshbites screens refined** (owner, 7 Oct review).
+     - **Dashboard status reads true.** The location chip is "In progress"
+       while a request is open; with none open, "Package complete" when the
+       installed signs cover the standard package, "Signs installed" when
+       some are up (Riverside, signed before its package grew, read "Setup in
+       progress"), else "Signs not chosen". The opening date uses the
+       franchisee's own words ("Opened Sep 15", not "opens Sep 15 · overdue"),
+       with "no signs up yet" in amber when it has passed with nothing up.
+     - **Store names drop the brand inside its portal** (`storeName()`): "Oak
+       Plaza", not "Freshbites — Oak Plaza". Emails, PDFs and the Signage.com
+       console keep the full name.
+     - **Request page, per sign:** a larger thumbnail that opens the mockup;
+       files as short links ("Mockup ↗", "Quote sheet ↗") with the filename on
+       hover; the sizing tag hidden when it repeats the spec line; the vendor
+       tag only when the sign goes to an outside vendor.
+     - **Complete your package** folds each group to one line ("Site photos ·
+       11 to add"); a group of two rows or fewer starts open.
+     - **The intent picker** shows the two working options; modify, remove
+       and remodel are one "Coming soon" line instead of three greyed rows.
+     - **Vendor policy** on the dashboard is one line with "Details".
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

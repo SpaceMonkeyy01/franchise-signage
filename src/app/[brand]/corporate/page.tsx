@@ -35,7 +35,7 @@ import {
 import type { LocationFormat } from '@/lib/status/types';
 
 import { listBrandPackages, listBrandSigns, listMasterCatalog, listStoreTypes } from '@/lib/catalog/manage';
-import { SETUP_STAGES, setupProgress } from '@/lib/setup-progress';
+import { openingLine, SETUP_STAGES, setupProgress } from '@/lib/setup-progress';
 import { brandFranchiseePeople } from '@/lib/staff';
 
 import { Approvals } from './Approvals';
@@ -43,7 +43,7 @@ import { Franchisees } from './Franchisees';
 import { Packages } from './Packages';
 import { People, type InvitedRow, type PersonRow } from './People';
 import { Signs } from './Signs';
-import { plural } from '@/lib/format';
+import { plural, storeName } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,6 +148,7 @@ export default async function CorporateDashboard({
                   <LocationCard
                     key={location.id}
                     location={location}
+                    brandName={access.brand.name}
                     approvalsHref={`${base}?tab=approvals`}
                   />
                 ))}
@@ -367,63 +368,77 @@ const POLICY_LABEL: Record<string, string> = {
  */
 function VendorPolicyNote({ brand }: { brand: BrandPublic }) {
   const external = brand.vendor_policy !== 'signage_com';
+  // One line, with the detail one click away (DECISIONS #195).
   return (
-    <p className="mt-5 text-xs leading-relaxed text-gray-500">
-      <span className="font-medium text-gray-700">
-        Vendor policy: {POLICY_LABEL[brand.vendor_policy] ?? brand.vendor_policy}
-      </span>
-      {` — quote packages route to ${brand.vendor_name ?? 'Signage.com'} by default; per-sign overrides apply${
-        brand.corporate_cc ? '. Corporate is copied on every package.' : '.'
-      } `}
-      {external
-        ? 'Your vendor quotes and fulfils directly; the portal keeps your approval control and the location records.'
-        : 'Signage.com quotes and fulfils; production is tracked in the portal.'}{' '}
-      Set during white-glove setup — contact your Signage.com manager to change it.
-    </p>
+    <details className="group mt-5 text-xs text-gray-500">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <span className="font-medium text-gray-700">
+          Vendor policy: {POLICY_LABEL[brand.vendor_policy] ?? brand.vendor_policy}
+        </span>
+        <span className="ml-2 underline underline-offset-2 group-open:hidden">Details</span>
+      </summary>
+      <p className="mt-1.5 max-w-3xl leading-relaxed">
+        {`Quote packages go to ${brand.vendor_name ?? 'Signage.com'} by default; a sign can have its own vendor${
+          brand.corporate_cc ? ', and corporate is copied on every package.' : '.'
+        } `}
+        {external
+          ? 'Your vendor quotes and fulfils directly; the portal keeps your approval control and the location records.'
+          : 'Signage.com quotes and fulfils, and production is tracked in the portal.'}{' '}
+        Set during setup; to change it, contact your Signage.com manager.
+      </p>
+    </details>
   );
 }
 
 /**
  * One card per location, and the only judgment on the page.
  *
- * "Package complete" compares installed signs against the length of the brand's
- * standard package for that format — duplicates included, because an endcap's
- * two elevations are two sets of letters. It is a completeness check, not a
- * compliance ruling: the portal never promises an approval or permit outcome
- * (CLAUDE.md), and a location can be fully signed and still waiting on a city.
+ * The chip says where the store stands (DECISIONS #195): an open request is
+ * "In progress"; with none open, installed signs covering the standard package
+ * (duplicates included — an endcap's two elevations are two sets of letters)
+ * is "Package complete", some installed signs is "Signs installed" (a store
+ * whose package grew after it was signed is not "in progress"), and nothing
+ * yet is "Signs not chosen". A completeness check, not a compliance ruling:
+ * the portal never promises an approval or permit outcome (CLAUDE.md).
  */
 function LocationCard({
   location,
+  brandName,
   approvalsHref,
 }: {
   location: PortfolioLocation;
+  brandName: string;
   approvalsHref: string;
 }) {
   const complete = location.package_size > 0 && location.installed_count >= location.package_size;
-  const opening = location.opening_date ? new Date(location.opening_date) : null;
+  const signed = complete || location.installed_count > 0;
+  const chip =
+    location.open_requests.length > 0
+      ? { text: 'In progress', tone: 'bg-blue-100 text-blue-800' }
+      : complete
+        ? { text: 'Package complete', tone: 'bg-green-100 text-green-800' }
+        : signed
+          ? { text: 'Signs installed', tone: 'bg-green-100 text-green-800' }
+          : { text: 'Signs not chosen', tone: 'bg-gray-100 text-gray-700' };
+  // The same words the franchisee sees on their store ("Opened Sep 15").
+  const opening = openingLine(location.opening_date);
   const daysOut = location.days_to_opening;
-  // Urgency, not decoration: a location opening inside a month with signs still
-  // missing is the one thing on this page worth a phone call today.
-  const urgent = !complete && daysOut !== null && daysOut <= 30;
+  // Urgency, not decoration: a store opening inside a month, or already open,
+  // with no signs up is the one thing on this page worth a phone call today.
+  const urgent = !signed && daysOut !== null && daysOut <= 30;
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-gray-900">{location.name}</p>
+          <p className="text-sm font-semibold text-gray-900">{storeName(location.name, brandName)}</p>
           <p className="truncate text-xs text-gray-500">
             {[location.address.line1, location.address.city, location.address.state]
               .filter(Boolean)
               .join(', ') || 'Address on file with the franchisee'}
           </p>
         </div>
-        <span
-          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-            complete ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-          }`}
-        >
-          {complete ? 'Package complete' : 'Setup in progress'}
-        </span>
+        <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${chip.tone}`}>{chip.text}</span>
       </div>
 
       <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -432,8 +447,8 @@ function LocationCard({
         <span className="text-gray-500">{location.format_label}</span>
         {opening && (
           <span className={urgent ? 'font-medium text-amber-700' : ''}>
-            opens {opening.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            {urgent && daysOut !== null && (daysOut >= 0 ? ` · ${daysOut} days` : ' · overdue')}
+            {opening}
+            {urgent && daysOut !== null && daysOut < 0 && ' · no signs up yet'}
           </span>
         )}
         {location.oldest_install && (

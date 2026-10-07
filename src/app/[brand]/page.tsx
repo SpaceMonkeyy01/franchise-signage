@@ -41,6 +41,7 @@ import type { Readiness, ReadinessState } from '@/lib/readiness';
 import { openingLine, SETUP_STAGES, storeProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
+import { storeName } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,6 +142,7 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
             <LocationCard
               key={location.id}
               brandSlug={slug}
+              brandName={brand.name}
               location={location}
               canOrder={scope.canOrder}
               canEdit={scope.canCreateStore}
@@ -919,11 +921,13 @@ async function BeforeASite({ brand, canCreate }: { brand: BrandPublic; canCreate
 
 function LocationCard({
   brandSlug,
+  brandName,
   location,
   canOrder,
   canEdit,
 }: {
   brandSlug: string;
+  brandName: string;
   location: LocationRow;
   canOrder: boolean;
   /** The owner and Signage.com may change the store's details (DECISIONS #177). */
@@ -964,7 +968,7 @@ function LocationCard({
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm" data-testid="setup-tracker">
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:items-center">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-gray-900">{location.name}</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{storeName(location.name, brandName)}</h2>
           <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-xs text-gray-500">
             <PinIcon /> {address}
             {canEdit && (

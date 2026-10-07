@@ -19,7 +19,7 @@ import {
   VendorChip,
 } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
-import { originLabel, plural } from '@/lib/format';
+import { originLabel, plural, storeName } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { COMPLETABLE } from '@/lib/requests/complete';
@@ -39,6 +39,26 @@ const FILE_KIND_LABEL: Record<string, string> = {
   quote_sheet: 'Quote sheet (PDF)',
   package_pdf: 'Package',
 };
+
+/** On a sign's line, a file is a short link, not its filename (DECISIONS #195). */
+const ITEM_FILE_LABEL: Record<string, string> = {
+  placement_photo: 'Site photo',
+  condition_photo: 'Condition photo',
+  mockup: 'Mockup',
+  site_file: 'Site file',
+  quote_sheet: 'Quote sheet',
+};
+
+/**
+ * Whether the sizing note only repeats the spec line ("24\" height" under
+ * "24\" high · …"). Same number, same unit: say it once.
+ */
+function repeatsSpec(sizing: string, spec: string | null): boolean {
+  if (!spec) return false;
+  const number = sizing.match(/\d+(?:\.\d+)?/)?.[0];
+  if (!number) return false;
+  return new RegExp(`(^|[^\\d.])${number.replace('.', '\\.')}\\s*(["″”]|in\\b|inch)`).test(spec);
+}
 
 // The order items are grouped in on the status page: what needs the
 // franchisee first, then what is waiting, then what is settled. The
@@ -113,7 +133,7 @@ export default async function RequestStatusPage({
           <div>
             <h1 className="text-xl font-bold text-gray-900 sm:text-2xl">{request.code}</h1>
             <p className="mt-0.5 text-sm text-gray-500">
-              {request.location.name}
+              {storeName(request.location.name, request.brand.name)}
               {request.package_version > 1 && ` · package v${request.package_version}`}
             </p>
           </div>
@@ -313,16 +333,30 @@ function ItemCard({
   flagged: boolean;
 }) {
   const policy = item.vendor_policy_override ?? brand.vendor_policy;
+  const mockup = item.files.find((file) => file.kind === 'mockup') ?? null;
+  const showSizing = item.sizing && !repeatsSpec(item.sizing, item.spec_summary);
 
   return (
     <article className={`p-4 ${flagged ? 'border-l-4 border-l-rose-400 bg-rose-50/60' : ''}`}>
       <div className="flex gap-3">
-        <SignThumbnail
-          renderKey={item.render_key}
-          imagePath={item.image_path}
-          label={item.brand_item_name}
-          className="h-12 w-16 shrink-0 rounded"
-        />
+        {/* The picture is the mockup's door when there is one. */}
+        {mockup ? (
+          <a href={fileUrl(mockup.storage_path)} target="_blank" rel="noreferrer" title="Open the mockup" className="shrink-0">
+            <SignThumbnail
+              renderKey={item.render_key}
+              imagePath={item.image_path}
+              label={item.brand_item_name}
+              className="h-16 w-24 rounded-lg ring-1 ring-gray-200 transition hover:ring-gray-400"
+            />
+          </a>
+        ) : (
+          <SignThumbnail
+            renderKey={item.render_key}
+            imagePath={item.image_path}
+            label={item.brand_item_name}
+            className="h-16 w-24 shrink-0 rounded-lg ring-1 ring-gray-200"
+          />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
             <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
@@ -339,12 +373,16 @@ function ItemCard({
             <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
               {originLabel(item.origin)}
             </span>
-            {item.sizing && <span>{item.sizing}</span>}
-            <VendorChip
-              policy={policy}
-              vendorName={brand.vendor_name}
-              brandPolicy={brand.vendor_policy}
-            />
+            {showSizing && <span>{item.sizing}</span>}
+            {/* Who makes it matters to the franchisee only when it is not
+                Signage.com: that sign is ordered with the vendor directly. */}
+            {policy !== 'signage_com' && (
+              <VendorChip
+                policy={policy}
+                vendorName={brand.vendor_name}
+                brandPolicy={brand.vendor_policy}
+              />
+            )}
           </div>
 
           {item.site_notes && (
@@ -371,18 +409,24 @@ function ItemCard({
           )}
 
           {item.files.length > 0 && (
-            <p className="mt-2 flex flex-wrap gap-2">
-              {item.files.map((file) => (
-                <a
-                  key={file.id}
-                  href={fileUrl(file.storage_path)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded bg-gray-100 px-2 py-1 text-[11px] text-gray-600 underline-offset-2 hover:underline"
-                >
-                  {FILE_KIND_LABEL[file.kind] ?? 'File'}: {file.file_name ?? 'view'}
-                </a>
-              ))}
+            <p className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              {item.files.map((file, index) => {
+                const label = ITEM_FILE_LABEL[file.kind] ?? FILE_KIND_LABEL[file.kind] ?? 'File';
+                const nth = item.files.slice(0, index).filter((other) => other.kind === file.kind).length;
+                return (
+                  <a
+                    key={file.id}
+                    href={fileUrl(file.storage_path)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={file.file_name ?? undefined}
+                    className="font-medium text-gray-600 underline decoration-gray-300 underline-offset-2 hover:text-gray-900"
+                  >
+                    {label}
+                    {nth > 0 ? ` ${nth + 1}` : ''} ↗
+                  </a>
+                );
+              })}
             </p>
           )}
         </div>

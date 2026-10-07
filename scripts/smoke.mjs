@@ -524,7 +524,7 @@ await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
 await page.getByRole('link', { name: /Request signage/i }).first().click();
 await page.waitForURL('**/request', { timeout: TIMEOUT });
 await expectVisible(page, 'h1:has-text("What does Oak Plaza need?")', 'the intent picker names the site');
-await expectCount(page, 'text=coming in v1.1', 3, 'modify / remove / rebrand are stubbed, not hidden');
+await expectVisible(page, '[data-testid="coming-soon"]:has-text("removing a sign")', 'modify / remove / rebrand are stubbed in one line, not hidden');
 await expectVisible(page, 'text=Pre-approved — straight to quote', 'the fast lane states its rule up front');
 
 // -------------------------------------------------- like-for-like submission
@@ -2009,8 +2009,8 @@ const staffPage = await staffContext.newPage();
 staffPage.on('pageerror', (error) => pageErrors.push(error.message));
 await signInWithPassword(staffPage, DEV_STAFF, null);
 await staffPage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
-await expectVisible(staffPage, 'h2:text-is("Freshbites — Oak Plaza")', 'a store manager sees the store they are assigned');
-await expectCount(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'and not the other store of the two');
+await expectVisible(staffPage, 'h2:text-is("Oak Plaza")', 'a store manager sees the store they are assigned');
+await expectCount(staffPage, 'h2:text-is("Cedar Park")', 0, 'and not the other store of the two');
 await expectCount(staffPage, 'text=Set up a new store', 0, 'staff cannot set up a store');
 await expectCount(staffPage, 'text=Store staff', 0, 'or manage staff');
 const staffOther = await staffPage.goto(`${BASE}/freshbites/location/${cedarPark}/request`, {
@@ -2036,25 +2036,25 @@ await expectVisible(ownerPage, `[data-staff="${DEV_STAFF.email}"]`, 'the owner s
 
 // Give Riley both stores; the next click shows both.
 await ownerPage
-  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`)
+  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Cedar Park") input`)
   .check();
 await ownerPage.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
 await expectGone(ownerPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'the owner changes a manager’s stores');
 await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 'and the manager sees the new store on their next click');
+await expectVisible(staffPage, 'h2:text-is("Cedar Park")', 'and the manager sees the new store on their next click');
 
 // And back.
 await ownerPage
-  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`)
+  .locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Cedar Park") input`)
   .uncheck();
 await ownerPage.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
 await expectGone(ownerPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'taking a store away saves too');
 await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectCount(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'and it is gone on their next click');
+await expectCount(staffPage, 'h2:text-is("Cedar Park")', 0, 'and it is gone on their next click');
 
 // Invite a second manager, to Cedar Park only.
 await ownerPage.locator('#staff-email').fill(SMOKE_STAFF);
-await ownerPage.locator('form label:has-text("Freshbites — Cedar Park") input').check();
+await ownerPage.locator('form label:has-text("Cedar Park") input').check();
 await ownerPage.getByRole('button', { name: 'Send invitation' }).click();
 await expectVisible(ownerPage, `text=Invitation sent to ${SMOKE_STAFF}`, 'the owner invites a manager to one store');
 const staffInvite = await withDb(async (client) =>
@@ -2087,8 +2087,8 @@ await newStaffPage.getByLabel('Choose a password').fill('smoke-staff-password-1'
 await newStaffPage.getByLabel('Confirm password').fill('smoke-staff-password-1');
 await newStaffPage.getByRole('button', { name: 'Create my account' }).click();
 await newStaffPage.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
-await expectVisible(newStaffPage, 'h2:text-is("Freshbites — Cedar Park")', 'the new manager lands on their one store');
-await expectCount(newStaffPage, 'h2:text-is("Freshbites — Oak Plaza")', 0, 'and only that one');
+await expectVisible(newStaffPage, 'h2:text-is("Cedar Park")', 'the new manager lands on their one store');
+await expectCount(newStaffPage, 'h2:text-is("Oak Plaza")', 0, 'and only that one');
 
 // Deactivated: nothing on the next click.
 await ownerPage.reload({ waitUntil: 'networkidle' });
@@ -2096,7 +2096,7 @@ ownerPage.once('dialog', (dialog) => dialog.accept());
 await ownerPage.locator(`[data-staff="${SMOKE_STAFF}"]`).getByRole('button', { name: 'Deactivate' }).click();
 await expectVisible(ownerPage, `[data-staff="${SMOKE_STAFF}"] >> text=deactivated`, 'the owner deactivates a manager');
 await newStaffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectCount(newStaffPage, 'h2:text-is("Freshbites — Cedar Park")', 0, 'who sees no store on their next click');
+await expectCount(newStaffPage, 'h2:text-is("Cedar Park")', 0, 'who sees no store on their next click');
 
 await newStaff.close();
 
@@ -2144,12 +2144,12 @@ record(
 );
 
 // Staff stores, from corporate.
-await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`).check();
+await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Cedar Park") input`).check();
 await austin.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
 await expectGone(corpPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'the brand admin changes a manager’s stores');
 await staffPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(staffPage, 'h2:text-is("Freshbites — Cedar Park")', 'and the manager sees it on their next click');
-await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Freshbites — Cedar Park") input`).uncheck();
+await expectVisible(staffPage, 'h2:text-is("Cedar Park")', 'and the manager sees it on their next click');
+await austin.locator(`[data-staff="${DEV_STAFF.email}"] label:has-text("Cedar Park") input`).uncheck();
 await austin.locator(`[data-staff="${DEV_STAFF.email}"]`).getByRole('button', { name: 'Save stores' }).click();
 await expectGone(corpPage, `[data-staff="${DEV_STAFF.email}"] button:has-text("Save stores")`, 'and puts it back');
 
@@ -2158,11 +2158,11 @@ corpPage.once('dialog', (dialog) => dialog.accept());
 await austin.locator(`[data-owner="${DEV_FRANCHISEE.email}"]`).getByRole('button', { name: 'Deactivate' }).click();
 await expectVisible(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"] >> text=deactivated`, 'the brand admin deactivates a franchisee owner');
 await ownerPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectCount(ownerPage, 'h2:text-is("Freshbites — Oak Plaza")', 0, 'who sees no store on their next click');
+await expectCount(ownerPage, 'h2:text-is("Oak Plaza")', 0, 'who sees no store on their next click');
 await austin.locator(`[data-owner="${DEV_FRANCHISEE.email}"]`).getByRole('button', { name: 'Reactivate' }).click();
 await expectGone(corpPage, `[data-owner="${DEV_FRANCHISEE.email}"] >> text=deactivated`, 'and reactivates them');
 await ownerPage.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(ownerPage, 'h2:text-is("Freshbites — Oak Plaza")', 'who is back on the next click');
+await expectVisible(ownerPage, 'h2:text-is("Oak Plaza")', 'who is back on the next click');
 await corpPeople.close();
 
 // ------------------------------------------------ the catalog (SPEC v2.4 §2.3)
