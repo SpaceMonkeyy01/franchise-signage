@@ -10,6 +10,7 @@ import { query } from '@/lib/db/pool';
 import { getRegistrations } from '@/lib/db/queries';
 
 import { AccountActions, ResendWelcomeButton, WithdrawButton } from './AccountControls';
+import { CompanyControls } from './CompanyControls';
 import { InviteForm, type Company } from './InviteForm';
 
 export const metadata = { title: 'People · Signage.com' };
@@ -24,6 +25,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const VIEWS = [
   { key: 'accounts', label: 'Accounts' },
+  { key: 'companies', label: 'Companies' },
   { key: 'invitations', label: 'Invitations' },
   { key: 'welcome', label: 'Welcome emails' },
 ] as const;
@@ -45,7 +47,19 @@ interface AccountRow {
   locked: boolean;
   brand: string | null;
   company: string | null;
+  company_active: boolean | null;
   stores: string | null;
+}
+
+interface CompanyRow {
+  id: string;
+  name: string;
+  active: boolean;
+  deactivated_at: string | null;
+  brand: string;
+  owners: { name: string | null; email: string; active: boolean }[];
+  staff: number;
+  stores: { name: string; installed: number; opening_date: string | null }[];
 }
 
 const pill = 'rounded-full px-2 py-0.5 text-xs font-medium';
@@ -60,7 +74,7 @@ export default async function PeoplePage({
   const view = VIEWS.find((v) => v.key === params.view)?.key ?? 'accounts';
   const group = GROUPS.find((g) => g.key === params.type) ?? GROUPS[0];
 
-  const [brands, companies, stores, accounts, invitations, registrations] = await Promise.all([
+  const [brands, companies, stores, accounts, invitations, registrations, companyRows] = await Promise.all([
     query<{ id: string; name: string }>(`select id, name from brands order by name`),
     query<{ id: string; brand_id: string; name: string }>(`select id, brand_id, name from franchisees order by name`),
     query<{ id: string; franchisee_id: string; name: string }>(
@@ -69,7 +83,7 @@ export default async function PeoplePage({
     query<AccountRow>(
       `select m.id as membership_id, p.id as profile_id, p.email, p.name, m.role::text as role, m.active,
               coalesce(p.locked_until > now(), false) as locked,
-              b.name as brand, f.name as company,
+              b.name as brand, f.name as company, f.active as company_active,
               (select string_agg(l.name, ', ' order by l.name)
                  from membership_locations ml join locations l on l.id = ml.location_id
                 where ml.membership_id = m.id) as stores
@@ -96,6 +110,21 @@ export default async function PeoplePage({
         order by i.created_at desc limit 40`,
     ),
     getRegistrations(),
+    query<CompanyRow>(
+      `select f.id, f.name, f.active, f.deactivated_at, b.name as brand,
+              coalesce((select json_agg(json_build_object('name', p.name, 'email', p.email, 'active', m.active) order by p.email)
+                          from memberships m join profiles p on p.id = m.profile_id
+                         where m.franchisee_id = f.id and m.role = 'franchisee_owner'), '[]') as owners,
+              (select count(*) from memberships m
+                where m.franchisee_id = f.id and m.role = 'franchisee_staff' and m.active)::int as staff,
+              coalesce((select json_agg(json_build_object(
+                          'name', l.name,
+                          'installed', (select count(*) from installed_signs s where s.location_id = l.id and s.status = 'active'),
+                          'opening_date', to_char(l.opening_date, 'YYYY-MM-DD')) order by l.name)
+                          from locations l where l.franchisee_id = f.id), '[]') as stores
+         from franchisees f join brands b on b.id = f.brand_id
+        order by f.active desc, b.name, f.name`,
+    ),
   ]);
 
   const byBrand: Record<string, Company[]> = {};
@@ -115,6 +144,7 @@ export default async function PeoplePage({
   ).length;
   const counts: Record<string, number> = {
     accounts: accounts.filter((a) => a.active).length,
+    companies: companyRows.filter((c) => c.active).length,
     invitations: waiting,
     welcome: registrations.length,
   };
@@ -181,6 +211,9 @@ export default async function PeoplePage({
                             {a.name ? a.email : null}
                             {!a.active && <span className={`${pill} ml-1 bg-gray-200 text-gray-600`}>deactivated</span>}
                             {a.locked && <span className={`${pill} ml-1 bg-amber-50 text-amber-800`}>locked</span>}
+                            {a.company_active === false && (
+                              <span className={`${pill} ml-1 bg-gray-200 text-gray-600`}>company deactivated</span>
+                            )}
                           </p>
                         </td>
                         <td className="px-3 py-2.5 text-gray-700">{ROLE_LABEL[a.role] ?? a.role}</td>
@@ -211,6 +244,92 @@ export default async function PeoplePage({
                     )}
                   </tbody>
                 </table>
+              </div>
+            </>
+          )}
+
+          {view === 'companies' && (
+            <>
+              <p className="mt-3 text-xs text-gray-500">
+                Franchisee companies and their stores. Deactivating a company cuts every owner&rsquo;s and store
+                manager&rsquo;s access at once; its stores and their sign records stay. Reactivating restores exactly
+                who had access.
+              </p>
+              <div className="mt-3 space-y-3">
+                {companyRows.map((company) => {
+                  const activeOwners = company.owners.filter((owner) => owner.active).length;
+                  return (
+                    <div
+                      key={company.id}
+                      data-company={company.name}
+                      className={`rounded-xl border bg-white p-4 ${company.active ? 'border-gray-200' : 'border-dashed border-gray-300 bg-gray-50'}`}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-gray-900">
+                            {company.name}
+                            {!company.active && (
+                              <span className={`${pill} bg-gray-200 text-gray-600`}>
+                                Deactivated
+                                {company.deactivated_at &&
+                                  ` ${new Date(company.deactivated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                              </span>
+                            )}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {company.brand} · {company.owners.length} owner{company.owners.length === 1 ? '' : 's'} ·{' '}
+                            {company.staff} store manager{company.staff === 1 ? '' : 's'} · {company.stores.length} store
+                            {company.stores.length === 1 ? '' : 's'}
+                          </p>
+                        </div>
+                        <CompanyControls
+                          franchiseeId={company.id}
+                          name={company.name}
+                          active={company.active}
+                          people={activeOwners + company.staff}
+                        />
+                      </div>
+
+                      <div className="mt-3 grid grid-cols-1 gap-3 border-t border-gray-100 pt-3 text-xs sm:grid-cols-2">
+                        <div>
+                          <p className="font-medium text-gray-700">Owners</p>
+                          <ul className="mt-1 space-y-0.5 text-gray-600">
+                            {company.owners.map((owner) => (
+                              <li key={owner.email}>
+                                {owner.name ?? owner.email}
+                                {owner.name && <span className="text-gray-400"> · {owner.email}</span>}
+                                {!owner.active && <span className="text-gray-400"> · deactivated</span>}
+                              </li>
+                            ))}
+                            {company.owners.length === 0 && <li className="text-gray-400">None yet</li>}
+                          </ul>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-700">Stores</p>
+                          <ul className="mt-1 space-y-0.5 text-gray-600">
+                            {company.stores.map((store) => (
+                              <li key={store.name}>
+                                {store.name}
+                                <span className="text-gray-400">
+                                  {' · '}
+                                  {store.installed > 0
+                                    ? `${store.installed} sign${store.installed === 1 ? '' : 's'} installed`
+                                    : 'no signs installed'}
+                                </span>
+                              </li>
+                            ))}
+                            {company.stores.length === 0 && <li className="text-gray-400">No stores yet</li>}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {companyRows.length === 0 && (
+                  <p className="rounded-xl border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    No franchisee companies yet. One appears when an invited owner accepts.
+                  </p>
+                )}
               </div>
             </>
           )}

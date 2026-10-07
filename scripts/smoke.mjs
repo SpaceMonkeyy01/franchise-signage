@@ -1423,15 +1423,15 @@ record(
 
 // On the catalog's brand tab since DECISIONS #191, beside the packages it prices.
 await page.goto(`${BASE}/admin/catalog?tab=brand&brand=freshbites`, { waitUntil: 'networkidle' });
-const documents = page.locator('section:has(h2:text-is("Brand documents"))');
+const documents = page.locator('section:has(> h2:text-is("Brand documents"))');
 await documents.waitFor({ timeout: TIMEOUT }).catch(() => {});
 // One link per format that actually HAS a package — a brand with no
 // freestanding package has no freestanding number, and the panel must not
 // offer a link that can only 404.
 await expectCount(
   page,
-  'section:has(h2:text-is("Brand documents")) a',
-  4,
+  'section:has(> h2:text-is("Brand documents")) a',
+  3,
   'the catalog offers a budget sheet per format with a package',
 );
 
@@ -2850,6 +2850,37 @@ await expectVisible(inviteePage, 'h1:has-text("Request queue")', 'the new one wo
 
 await invitee.close();
 await removeSmokeAdmin();
+
+// ------------------------------------------------ companies (DECISIONS #200)
+// A company is switched off as a whole: its owner loses access on the next
+// click, and switching it back on restores it, without touching anyone's own
+// active state.
+console.log('\nFranchisee companies: off and on as a whole');
+{
+  const owner = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
+  const ownerTab = await owner.newPage();
+  await signInWithPassword(ownerTab, DEV_FRANCHISEE, '/freshbites');
+  await ownerTab.waitForURL(/\/freshbites$/, { timeout: TIMEOUT });
+
+  await page.goto(`${BASE}/admin/people?view=companies`, { waitUntil: 'networkidle' });
+  const company = page.locator('[data-company="Freshbites Austin"]');
+  await expectVisible(page, '[data-company="Freshbites Austin"]', 'People lists each franchisee company');
+  page.once('dialog', (dialog) => dialog.accept());
+  await company.getByRole('button', { name: 'Deactivate' }).click();
+  await expectVisible(page, '[data-company="Freshbites Austin"] >> text=Deactivated', 'the team deactivates a company');
+  await ownerTab.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+  record(
+    "and its owner's access ends on their next click",
+    !(await ownerTab.content()).includes('your Freshbites stores'),
+    ownerTab.url().replace(BASE, ''),
+  );
+
+  await company.getByRole('button', { name: 'Reactivate' }).click();
+  await expectVisible(page, '[data-company="Freshbites Austin"] >> button:has-text("Deactivate")', 'and reactivates it');
+  await ownerTab.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
+  await expectVisible(ownerTab, 'h1:has-text("your Freshbites stores")', 'which gives the owner their stores back');
+  await owner.close();
+}
 
 record('no page errors', pageErrors.length === 0, pageErrors.slice(0, 3).join(' | '));
 

@@ -91,6 +91,8 @@ export interface ManagedSign {
   price_source: 'team' | 'engine';
   /** Has a Studio design: engine-priced, or a custom-quote sign the Studio draws. */
   designed: boolean;
+  /** How many of the design's settings a franchisee may change (#201). */
+  adjustable: number;
   /** Installed at stores: a reason to think twice before retiring. */
   installed: number;
 }
@@ -154,6 +156,8 @@ const SIGN_SQL = `
          mc.id as master_id, mc.placement, mc.category, mc.sign_type, mc.variant,
          mc.pricing_basis, mc.price_mode, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.thumbnail_url, bi.price_source,
          bi.design is not null as designed,
+         -- Settings a franchisee may change: a rule exists only for those (#201).
+         (select count(*)::int from jsonb_object_keys(coalesce(bi.design_rules, '{}'::jsonb))) as adjustable,
          (select count(*)::int from installed_signs s
            where s.brand_item_id = bi.id and s.status = 'active') as installed
     from brand_items bi

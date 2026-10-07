@@ -48,6 +48,37 @@ function Pins({ pinned }: { pinned: Record<string, unknown> }) {
   );
 }
 
+/**
+ * The sign's Studio design and the way into it (DECISIONS #201). Signage.com
+ * holds a brand admin's rights in the Studio, so the team designs or fixes a
+ * sign from here rather than from the brand's own dashboard.
+ */
+function StudioLine({
+  sign,
+}: {
+  sign: { id: string; brand_slug: string; designed: boolean; adjustable: number; render_key: string | null; review_status: string };
+}) {
+  if (sign.review_status === 'declined') return null;
+  const href = `/${sign.brand_slug}/corporate/design/${sign.id}?from=admin`;
+  if (!sign.designed && !sign.render_key) {
+    return <p className="mt-0.5 text-[11px] text-gray-400">No Studio drawing style for this type</p>;
+  }
+  return (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px]">
+      <span className={sign.designed ? 'text-emerald-700' : 'text-amber-700'}>
+        {sign.designed
+          ? sign.adjustable > 0
+            ? `Designed · franchisees may adjust ${sign.adjustable} setting${sign.adjustable === 1 ? '' : 's'}`
+            : 'Designed · fully locked'
+          : 'Not designed yet'}
+      </span>
+      <Link href={href} className="font-medium text-gray-700 underline underline-offset-2 hover:text-gray-900">
+        {sign.designed ? 'Open in Studio' : 'Design in Studio'}
+      </Link>
+    </p>
+  );
+}
+
 function variantName(row: { sign_type: string; variant: string | null }) {
   return row.variant ? `${row.sign_type} — ${row.variant}` : row.sign_type;
 }
@@ -225,6 +256,7 @@ export default async function CatalogPage({
                           <div className="min-w-0">
                             <p className="font-medium text-gray-900">{sign.name}</p>
                             <p className="truncate text-xs text-gray-500">{variantName(sign)}</p>
+                            <StudioLine sign={sign} />
                             <SignExtras details={details.get(sign.id)} />
                           </div>
                         </div>

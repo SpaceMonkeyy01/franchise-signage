@@ -87,6 +87,8 @@ export interface FranchiseeOwner {
 export interface FranchiseePeople {
   id: string;
   name: string;
+  /** False when Signage.com has deactivated the company (#200). */
+  active: boolean;
   owners: FranchiseeOwner[];
   stores: StaffStore[];
   staff: StaffMember[];
@@ -96,8 +98,8 @@ export interface FranchiseePeople {
 /** Every franchisee company in a brand with its people — the corporate People tab. */
 export async function brandFranchiseePeople(brandId: string): Promise<FranchiseePeople[]> {
   const [companies, owners, stores, staff, invitations] = await Promise.all([
-    query<{ id: string; name: string }>(
-      `select id, name from franchisees where brand_id = $1 order by name`,
+    query<{ id: string; name: string; active: boolean }>(
+      `select id, name, active from franchisees where brand_id = $1 order by name`,
       [brandId],
     ),
     query<FranchiseeOwner & { franchiseeId: string }>(

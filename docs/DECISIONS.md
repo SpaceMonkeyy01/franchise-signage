@@ -2179,6 +2179,33 @@ item 7's "CRUD UI only when onboarding brand #2".
      - **"Deactivate" on Brand signs is grey**, red on hover, instead of a
        red link on every row.
 
+200. **A franchisee company can be switched off as a whole** (owner, 7 Oct).
+     Migration `20261007090000_franchisee_active` (additive): `franchisees`
+     gains `active` and `deactivated_at`, and `app.brand_role`,
+     `app.can_see_location` and `app.owns_franchisee` require a franchisee
+     role's company to be active (`app.franchisee_active()`); the app's
+     `membershipsFor()` applies the same rule. People → **Companies** lists
+     each company with its brand, owners, store managers and stores (installed
+     signs per store), and offers Rename and Deactivate/Reactivate. Switching
+     a company off leaves each person's own active state alone, so switching
+     it on restores exactly who had access; stores and their sign records
+     stay. Accounts of an inactive company carry "company deactivated", and a
+     brand admin sees "Deactivated by Signage.com" on the company. The spec
+     (§10) has brand admins managing their franchisees; this is the team's
+     white-glove counterpart. Smoke covers off, locked out, on, back in.
+
+201. **The team reaches the Studio from the console** (owner, 7 Oct). Each row
+     on Catalog → Brand signs says where its design stands ("Designed ·
+     franchisees may adjust 2 settings", "Not designed yet", or "No Studio
+     drawing style for this type") and links to "Open in Studio" /
+     "Design in Studio". Signage.com already holds a brand admin's rights
+     there; arriving with `?from=admin` makes the Studio's back link return
+     to the catalog. No separate Studio settings page: the engine token and
+     margins are on Settings, each type's price source and options on the
+     Signage.com catalog.
+     - Smoke's budget-sheet count is 3 again with a selector scoped to the
+       documents box: the old one also counted the brand chip (#197's "4").
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

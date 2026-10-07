@@ -79,7 +79,10 @@ export async function membershipsFor(profileId: string): Promise<Membership[]> {
     `select m.id, m.role, m.brand_id, b.slug as brand_slug, b.name as brand_name,
             m.franchisee_id, b.require_two_factor
        from memberships m left join brands b on b.id = m.brand_id
+       left join franchisees f on f.id = m.franchisee_id
       where m.profile_id = $1 and m.active
+        -- A deactivated company takes its people's access with it (#200).
+        and (m.franchisee_id is null or f.active)
       order by m.role, b.name`,
     [profileId],
   );

@@ -18,16 +18,21 @@ export const metadata = { title: 'Design Studio' };
 
 export default async function DesignPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ brand: string; itemId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { brand: slug, itemId } = await params;
+  const { from } = await searchParams;
   const access = await requireCorporate(slug, `/${slug}/corporate/design/${itemId}`);
   if (!access.canManage) notFound();
   const sign = await getDesignableSign(itemId, access.brand.id);
   if (!sign) notFound();
 
-  const back = `/${slug}/corporate?tab=signs`;
+  // The team arrives from the console's catalog and goes back there (#201).
+  const fromConsole = from === 'admin' && access.role === 'platform_admin';
+  const back = fromConsole ? `/admin/catalog?tab=brand&brand=${slug}` : `/${slug}/corporate?tab=signs`;
   const priceable = studioPrices(sign);
 
   return (
@@ -39,7 +44,7 @@ export default async function DesignPage({
       />
       <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
         <Link href={back} className="text-sm text-gray-500 underline-offset-2 hover:underline">
-          ← Signs
+          {fromConsole ? '← Catalog' : '← Signs'}
         </Link>
         <h1 className="mt-2 text-lg font-semibold text-gray-900">Design {signName(sign.name, access.brand.name)}</h1>
         <p className="text-sm text-gray-500">

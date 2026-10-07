@@ -81,6 +81,11 @@ function Company({
         className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 text-left"
       >
         <span className="text-sm font-semibold text-gray-900">{company.name}</span>
+        {company.active === false && (
+          <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-600">
+            Deactivated by Signage.com · no one here can sign in
+          </span>
+        )}
         <span className="text-xs text-gray-500">
           {plural(company.stores.length, 'store')} · {plural(company.owners.length, 'owner')} ·{' '}
           {plural(activeStaff, 'staff member', 'staff members')}

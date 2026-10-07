@@ -165,3 +165,33 @@ export async function resendWelcomeAction(registrationId: string): Promise<Done>
     if (outcome.reason === 'not_found') return 'That registration no longer exists.';
   });
 }
+
+// ----------------------------------------------------------------- companies
+// A franchisee company as a whole (DECISIONS #200): rename it, or switch it off
+// and on. Switching off cuts every owner's and staff member's access at once
+// (the access check reads the company's flag) without touching anyone's own
+// active state, so switching back on restores exactly who had access.
+
+export async function renameCompanyAction(franchiseeId: string, name: string): Promise<Done> {
+  return people(async () => {
+    const trimmed = name.trim();
+    if (!trimmed) return 'A company needs a name.';
+    const changed = await query<{ id: string }>(
+      `update franchisees set name = $2 where id = $1 returning id`,
+      [franchiseeId, trimmed],
+    );
+    if (changed.length === 0) return 'That company no longer exists.';
+  });
+}
+
+export async function setCompanyActiveAction(franchiseeId: string, active: boolean): Promise<Done> {
+  return people(async () => {
+    const changed = await query<{ id: string }>(
+      `update franchisees
+          set active = $2, deactivated_at = case when $2 then null else now() end
+        where id = $1 returning id`,
+      [franchiseeId, active],
+    );
+    if (changed.length === 0) return 'That company no longer exists.';
+  });
+}
