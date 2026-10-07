@@ -21,6 +21,7 @@ const item = (
   id,
   brand_item_id: `bi_${id}`,
   brand_item_name: name,
+  sign_type: 'Sign',
   spec_summary: null,
   site_variables: [],
   pinned_attributes: {},

@@ -2134,6 +2134,23 @@ item 7's "CRUD UI only when onboarding brand #2".
      first card instead of with its title. Store names in the wizard are
      short ("Cedar Park"), as elsewhere in the portal (#195).
 
+197. **Choosing signs, refined** (owner, 7 Oct).
+     - **Add-ons suit the store** (`suitsStore()`): a sign whose catalog sign
+       type is drive-thru is offered only to a drive-thru store type
+       (recognised by its key or label), in the wizard and on "Add a new
+       sign". The sign type, not the category: drive-thru signs sit in the
+       broader "Freestanding Signs" category.
+     - **Every sign says what it is.** The catalog sign type leads the spec
+       line ("Illuminated Channel Letters · 24″ high · …") in the wizard, the
+       add-on cards, "Add a new sign", the request page and the store's
+       installed signs.
+     - **Sign names drop the brand inside its portal** (`signName()`):
+       "Storefront Letters". Emails, PDFs and the console keep the full name.
+     - **Add-on cards** three across, with one way to choose: the card is the
+       switch, and it says "+ Add to my order" or "✓ Added".
+     - **Package step:** every sign starts closed; the counts bar shows only
+       on phones, where the "Your store" card is not beside it.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

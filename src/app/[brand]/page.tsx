@@ -41,7 +41,7 @@ import type { Readiness, ReadinessState } from '@/lib/readiness';
 import { openingLine, SETUP_STAGES, storeProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
-import { storeName } from '@/lib/format';
+import { storeName, signName } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -733,11 +733,6 @@ const ROW_TONE: Record<ReadinessState, { tile: string; pill: string; badge: stri
 };
 
 /** "Freshbites Storefront Letters" reads as "Storefront Letters" on the brand's own page. */
-function signName(name: string, brandName: string): string {
-  const trimmed = name.startsWith(`${brandName} `) ? name.slice(brandName.length + 1) : name;
-  return trimmed || name;
-}
-
 const ICON = {
   className: 'h-5 w-5',
   fill: 'none',
@@ -1028,9 +1023,9 @@ function LocationCard({
                 className="h-10 w-14 shrink-0 rounded"
               />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-gray-900">{sign.brand_item_name}</p>
+                <p className="truncate text-sm font-medium text-gray-900">{signName(sign.brand_item_name, brandName)}</p>
                 <p className="truncate text-xs text-gray-500">
-                  {sign.sizing ?? 'Sizing on file'} · installed{' '}
+                  {sign.sign_type} · {sign.sizing ?? 'Sizing on file'} · installed{' '}
                   {new Date(sign.installed_at).toLocaleDateString('en-US', {
                     month: 'short',
                     year: 'numeric',

@@ -38,3 +38,20 @@ export function storeName(locationName: string, brandName: string): string {
   const short = locationName.replace(new RegExp(`^${escaped}\\s*[—–\\-·:|]\\s*`, 'i'), '').trim();
   return short || locationName;
 }
+
+/**
+ * A sign's name inside its brand's portal: "Storefront Letters", not
+ * "Freshbites Storefront Letters" (DECISIONS #197) — the same rule as
+ * storeName(). Emails, PDFs and the console keep the full name.
+ */
+export function signName(name: string, brandName: string): string {
+  const trimmed = name.toLowerCase().startsWith(`${brandName.toLowerCase()} `)
+    ? name.slice(brandName.length + 1).trim()
+    : name;
+  return trimmed || name;
+}
+
+/** "Illuminated Channel Letters · 24" high · trimless", the type first (#197). */
+export function typeAndSpec(signType: string | null | undefined, spec: string | null | undefined): string {
+  return [signType, spec].filter((part) => part && part.trim()).join(' · ');
+}

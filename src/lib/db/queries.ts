@@ -98,6 +98,8 @@ export interface InstalledSignRow {
   id: string;
   brand_item_id: string;
   brand_item_name: string;
+  /** The catalog sign type ("Illuminated Channel Letters"): what it is (#197). */
+  sign_type: string;
   spec_summary: string | null;
   render_key: string | null;
   /** Uploaded picture: the sign's own, else its catalog type's icon (#157). */
@@ -201,7 +203,7 @@ export async function getLocationsForBrand(
   const ids = locations.map((l) => l.id);
 
   const signs = await rows<InstalledSignRow & { location_id: string }>(
-    `select s.id, s.location_id, s.brand_item_id, bi.name as brand_item_name,
+    `select s.id, s.location_id, s.brand_item_id, bi.name as brand_item_name, mc.sign_type,
             bi.spec_summary, bi.est_price, bi.vendor_policy_override,
             mc.render_key,
             -- The sign as it was ordered: its own Studio mockup first.
@@ -242,6 +244,8 @@ export interface LineItemRow {
   id: string;
   brand_item_id: string;
   brand_item_name: string;
+  /** The catalog sign type ("Illuminated Channel Letters"): what it is (#197). */
+  sign_type: string;
   /** The line's own Studio design when it has one, else the brand item's spec line. */
   spec_summary: string | null;
   /** The design this line was ordered with (SPEC v2.6 §8), or null. */
@@ -404,7 +408,7 @@ export async function getRequestByToken(token: string): Promise<RequestDetail | 
   );
 
   const items = await rows<Omit<LineItemRow, 'files'>>(
-    `select li.id, li.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
+    `select li.id, li.brand_item_id, bi.name as brand_item_name, mc.sign_type, bi.spec_summary,
             bi.site_variables, bi.pinned_attributes, bi.vendor_policy_override, li.design,
             bi.design as brand_design, bi.design_rules,
             mc.render_key,
@@ -569,13 +573,15 @@ export interface BrandItemRow {
   design: SignDesign | null;
   /** What a franchisee may change in it; an unlisted setting is locked. */
   design_rules: DesignRules;
+  /** The catalog sign type ("Illuminated Channel Letters"): what it is (#197). */
+  sign_type: string;
 }
 
 export function getBrandCatalog(brandId: string): Promise<BrandItemRow[]> {
   return rows<BrandItemRow>(
     `select bi.id, bi.name, bi.spec_summary, bi.site_variables, bi.est_price,
             bi.vendor_policy_override, mc.render_key, coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path, bi.sort_order,
-            bi.design, bi.design_rules
+            bi.design, bi.design_rules, mc.sign_type
        from brand_items bi
        join master_catalog mc on mc.id = bi.master_catalog_id
       where bi.brand_id = $1 and bi.active
@@ -665,7 +671,7 @@ export async function getPackagesForBrand(brandId: string): Promise<PackageRow[]
 
 export function getInstalledSignsForLocation(locationId: string): Promise<InstalledSignRow[]> {
   return rows<InstalledSignRow>(
-    `select s.id, s.brand_item_id, bi.name as brand_item_name, bi.spec_summary,
+    `select s.id, s.brand_item_id, bi.name as brand_item_name, mc.sign_type, bi.spec_summary,
             bi.est_price, bi.vendor_policy_override, mc.render_key,
             coalesce(li.design->>'mockupPath', bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,
             s.sizing, s.installed_at,

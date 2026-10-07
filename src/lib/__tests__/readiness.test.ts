@@ -19,6 +19,7 @@ function item(id: string, overrides: Partial<LineItemRow> = {}): LineItemRow {
     id,
     brand_item_id: `bi-${id}`,
     brand_item_name: `Sign ${id}`,
+    sign_type: 'Sign',
     spec_summary: null,
     site_variables: [],
     pinned_attributes: {},

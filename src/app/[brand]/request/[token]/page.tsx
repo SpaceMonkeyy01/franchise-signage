@@ -19,7 +19,7 @@ import {
   VendorChip,
 } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
-import { originLabel, plural, storeName } from '@/lib/format';
+import { originLabel, plural, storeName, signName, typeAndSpec } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { COMPLETABLE } from '@/lib/requests/complete';
@@ -116,7 +116,7 @@ export default async function RequestStatusPage({
     .filter((item) => item.item_status !== 'declined')
     .map((item) => ({
       id: item.id,
-      name: item.brand_item_name,
+      name: signName(item.brand_item_name, request.brand.name),
       needsPhoto: !item.files.some((file) => file.kind === photoKind),
       needsSize: request.intent !== 'replace_like' && (item.tbd_fields.length > 0 || !item.sizing?.trim()),
       sizing: item.sizing,
@@ -359,14 +359,14 @@ function ItemCard({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-3">
-            <h3 className="text-sm font-semibold text-gray-900">{item.brand_item_name}</h3>
+            <h3 className="text-sm font-semibold text-gray-900">{signName(item.brand_item_name, brand.name)}</h3>
             <span className="shrink-0 text-sm font-medium text-gray-900">
               {formatPrice(item.est_price_snapshot)}
             </span>
           </div>
 
-          {item.spec_summary && (
-            <p className="mt-1 text-xs leading-relaxed text-gray-500">{item.spec_summary}</p>
+          {(item.sign_type || item.spec_summary) && (
+            <p className="mt-1 text-xs leading-relaxed text-gray-500">{typeAndSpec(item.sign_type, item.spec_summary)}</p>
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">

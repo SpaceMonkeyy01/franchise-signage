@@ -16,7 +16,8 @@ import { formatPrice, VendorChip } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic, PackageRow } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 import type { StoredObject } from '@/lib/storage';
-import { storeName } from '@/lib/format';
+import { signName, storeName, typeAndSpec } from '@/lib/format';
+import { suitsStore } from '@/lib/catalog/fit';
 
 import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import type { SignDesign } from '@/lib/designs/design';
@@ -287,7 +288,10 @@ export function SetupWizard({
             <StepAddons
               brand={brand}
               catalog={catalog.filter(
-                (item) => !packageItems.some((packaged) => packaged.brandItemId === item.id),
+                (item) =>
+                  !packageItems.some((packaged) => packaged.brandItemId === item.id) &&
+                  // No drive-thru signs for a store without a lane (DECISIONS #197).
+                  suitsStore(item.sign_type, format, chosenFormat?.label),
               )}
               addons={addons}
               toggleAddon={toggleAddon}
@@ -732,7 +736,8 @@ function StepPackage({
   onBack: () => void;
   onNext: () => void;
 }) {
-  const [open, setOpen] = useState<string | null>(items[0]?.key ?? null);
+  // All closed: the list reads as the package at a glance; open one to add to it.
+  const [open, setOpen] = useState<string | null>(null);
   const [flagging, setFlagging] = useState<string | null>(null);
   const [flagNote, setFlagNote] = useState('');
 
@@ -742,7 +747,8 @@ function StepPackage({
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-xs text-gray-600">
+      {/* The "Your store" card says the same beside it; a phone has no card. */}
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-xs text-gray-600 lg:hidden">
         <span>
           <strong className="text-gray-900">{items.length}</strong> signs
         </span>
@@ -756,7 +762,7 @@ function StepPackage({
         <span className="text-emerald-800">Approved automatically</span>
       </div>
 
-      <div className="mt-4 space-y-3">
+      <div className="space-y-3">
         {items.map((item) => {
           const brandItem = byId.get(item.brandItemId);
           if (!brandItem) return null;
@@ -785,13 +791,16 @@ function StepPackage({
                   />
                   <span className="min-w-0">
                     <span className="flex flex-wrap items-center gap-x-2 text-sm font-medium text-gray-900">
-                      {brandItem.name}
+                      {signName(brandItem.name, brand.name)}
                       <span className="text-xs font-normal text-gray-500">{formatPrice(itemPrice(item, brandItem))}</span>
                     </span>
                     <span className="block truncate text-[11px] text-gray-500">
-                      {item.design
-                        ? `Customized: ${item.design.dimension.inches}" ${item.design.dimension.axis}`
-                        : brandItem.spec_summary}
+                      {typeAndSpec(
+                        brandItem.sign_type,
+                        item.design
+                          ? `Customized: ${item.design.dimension.inches}" ${item.design.dimension.axis}`
+                          : brandItem.spec_summary,
+                      )}
                       {item.exceptionIssue && <span className="text-rose-600"> · issue flagged</span>}
                     </span>
                   </span>
@@ -973,7 +982,7 @@ function StepAddons({
           Every {brand.name} sign is already in your package.
         </p>
       ) : (
-        <div className="mt-4 grid grid-cols-1 items-start gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid grid-cols-1 items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {catalog.map((item) => {
             const chosen = addons.find((addon) => addon.brandItemId === item.id);
             const policy = item.vendor_policy_override ?? brand.vendor_policy;
@@ -990,33 +999,32 @@ function StepAddons({
                   aria-label={`${chosen ? 'Remove' : 'Add'} ${item.name}`}
                   className="block w-full text-left"
                 >
-                  <span className="relative block">
-                    <SignThumbnail
-                      renderKey={item.render_key}
-                      imagePath={item.image_path}
-                      label={item.name}
-                      className="block aspect-[16/9] w-full object-cover"
-                    />
-                    <span
-                      className={`absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full border text-xs ${
-                        chosen ? 'border-transparent text-white' : 'border-gray-300 bg-white/90 text-transparent'
-                      }`}
-                      style={chosen ? { background: 'var(--color-brand)' } : undefined}
-                      aria-hidden
-                    >
-                      ✓
-                    </span>
-                  </span>
+                  <SignThumbnail
+                    renderKey={item.render_key}
+                    imagePath={item.image_path}
+                    label={item.name}
+                    className="block aspect-[16/9] w-full object-cover"
+                  />
                   <span className="block p-3">
                     <span className="flex items-start justify-between gap-2">
-                      <span className="text-sm font-semibold text-gray-900">{item.name}</span>
+                      <span className="text-sm font-semibold text-gray-900">{signName(item.name, brand.name)}</span>
                       <span className="shrink-0 text-sm text-gray-700">{formatPrice(item.est_price)}</span>
                     </span>
-                    {item.spec_summary && <span className="mt-0.5 block text-xs text-gray-500">{item.spec_summary}</span>}
+                    <span className="mt-0.5 block text-xs text-gray-500">{typeAndSpec(item.sign_type, item.spec_summary)}</span>
                     <span className="mt-2 flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold" style={{ color: chosen ? '#6B7280' : 'var(--color-brand-dark)' }}>
-                        {chosen ? 'Added · click to remove' : '+ Add to my order'}
-                      </span>
+                      {/* The whole card is the switch; this says which way it is. */}
+                      {chosen ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
+                          <span className="flex h-4 w-4 items-center justify-center rounded-full text-[10px] text-white" style={{ background: 'var(--color-brand)' }} aria-hidden>
+                            ✓
+                          </span>
+                          Added <span className="font-normal text-gray-500">· click to remove</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs font-semibold" style={{ color: 'var(--color-brand-dark)' }}>
+                          + Add to my order
+                        </span>
+                      )}
                       {policy !== 'signage_com' && (
                         <VendorChip policy={policy} vendorName={brand.vendor_name} brandPolicy={brand.vendor_policy} />
                       )}
@@ -1136,7 +1144,7 @@ function StepReview({
         </ReviewCard>
 
         <ReviewCard title={`Approved automatically (${immediate.length})`} onEdit={() => onEdit(2)}>
-          <SignList items={immediate} byId={byId} />
+          <SignList brandName={brand.name} items={immediate} byId={byId} />
         </ReviewCard>
 
         {pendingItems.length > 0 && (
@@ -1146,7 +1154,7 @@ function StepReview({
             tone="amber"
             onEdit={() => onEdit(3)}
           >
-            <SignList items={pendingItems} byId={byId} />
+            <SignList brandName={brand.name} items={pendingItems} byId={byId} />
           </ReviewCard>
         )}
 
@@ -1233,7 +1241,15 @@ function Detail({ label, value }: { label: string; value: string }) {
   );
 }
 
-function SignList({ items, byId }: { items: ItemState[]; byId: Map<string, BrandItemRow> }) {
+function SignList({
+  brandName,
+  items,
+  byId,
+}: {
+  brandName: string;
+  items: ItemState[];
+  byId: Map<string, BrandItemRow>;
+}) {
   return (
     <ul className="divide-y divide-gray-100">
       {items.map((item) => {
@@ -1256,7 +1272,7 @@ function SignList({ items, byId }: { items: ItemState[]; byId: Map<string, Brand
             />
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-x-2 text-sm text-gray-900">
-                {brandItem.name}
+                {signName(brandItem.name, brandName)}
                 <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
                   {item.fromPackage ? (item.exceptionIssue ? 'Exception' : 'Standard') : 'Add-on'}
                 </span>

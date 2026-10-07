@@ -583,6 +583,8 @@ await page.getByRole('button', { name: /Freestanding/ }).click();
 await page.getByRole('button', { name: /Yes — a lender is involved/ }).click();
 await page.getByRole('button', { name: /Load my sign package/ }).click();
 await expectVisible(page, 'h1:has-text("requires these 5 signs")', 'the freestanding package loads five signs');
+// Every sign starts closed (DECISIONS #197): open the first one to fill it in.
+await page.locator('button[aria-expanded="false"]').first().click();
 await page.locator('input[placeholder="Sizing / site notes"]').first().fill("24' frontage");
 await page.getByRole('button', { name: /This standard sign won/ }).click();
 await page.locator('textarea').first().fill('Landlord prohibits illuminated signage');
@@ -695,7 +697,7 @@ await page.getByRole('link', { name: /Add a new sign/i }).click();
 await page.waitForURL('**/add', { timeout: TIMEOUT });
 // The pylon overrides to an approved vendor and is standin-priced, so one
 // request exercises the package split AND manual pricing.
-for (const name of ['Freshbites Road Sign', 'Freshbites Neon Leaf']) {
+for (const name of ['Road Sign', 'Neon Leaf']) {
   await page.locator(`div:has(> p:text-is("${name}")) >> button:has-text("Add · needs approval")`).first().click();
 }
 await page.getByRole('button', { name: /Submit .*for approval/ }).click();
@@ -1043,11 +1045,11 @@ record(
 // The writeback is scoped to the package: our sign is on the record, theirs is
 // not, because theirs is not on the building.
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'text=Freshbites Neon Leaf', 'our installed sign is on the location record');
+await expectVisible(page, 'text=Neon Leaf', 'our installed sign is on the location record');
 await expectCount(
   page,
   // On the record, not in a request's folded sign list.
-  'text=Freshbites Road Sign >> visible=true',
+  'text=Road Sign >> visible=true',
   0,
   'and the vendor’s is not — it has not been installed yet',
 );
@@ -1072,7 +1074,7 @@ record(
 
 // The point of the whole system: the location record grew.
 await page.goto(`${BASE}/freshbites`, { waitUntil: 'networkidle' });
-await expectVisible(page, 'text=Freshbites Road Sign', 'the new sign is on the location record');
+await expectVisible(page, 'text=Road Sign', 'the new sign is on the location record');
 
 // ------------------------------------ the internal tail, and the notification set
 console.log('\nThe internal tail (Signage.com fulfills) and the franchisee notifications');
@@ -1096,7 +1098,7 @@ await page.getByRole('link', { name: /Request signage/i }).first().click();
 await page.getByRole('link', { name: /Add a new sign/i }).click();
 await page.waitForURL('**/add', { timeout: TIMEOUT });
 await page
-  .locator('div:has(> p:text-is("Freshbites Neon Leaf")) >> button:has-text("Add · needs approval")')
+  .locator('div:has(> p:text-is("Neon Leaf")) >> button:has-text("Add · needs approval")')
   .first()
   .click();
 await page.getByRole('button', { name: /Submit .*for approval/ }).click();
@@ -1152,7 +1154,7 @@ await page.getByRole('link', { name: /Request signage/i }).first().click();
 await page.getByRole('link', { name: /Add a new sign/i }).click();
 await page.waitForURL('**/add', { timeout: TIMEOUT });
 await page
-  .locator('div:has(> p:text-is("Freshbites Neon Leaf")) >> button:has-text("Add · needs approval")')
+  .locator('div:has(> p:text-is("Neon Leaf")) >> button:has-text("Add · needs approval")')
   .first()
   .click();
 await page.getByRole('button', { name: /Submit .*for approval/ }).click();

@@ -8,6 +8,7 @@
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, VendorChip } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic } from '@/lib/db/queries';
+import { signName, typeAndSpec } from '@/lib/format';
 
 export function CatalogCard({
   item,
@@ -43,9 +44,9 @@ export function CatalogCard({
         className="mb-2 h-20 w-full rounded-lg border border-gray-100"
       />
 
-      <p className="text-sm font-medium text-gray-900">{item.name}</p>
-      {item.spec_summary && (
-        <p className="mt-0.5 text-[11px] leading-snug text-gray-500">{item.spec_summary}</p>
+      <p className="text-sm font-medium text-gray-900">{signName(item.name, brand.name)}</p>
+      {(item.sign_type || item.spec_summary) && (
+        <p className="mt-0.5 text-[11px] leading-snug text-gray-500">{typeAndSpec(item.sign_type, item.spec_summary)}</p>
       )}
       <p className="mt-1 text-xs font-medium text-gray-900">{formatPrice(item.est_price)}</p>
 

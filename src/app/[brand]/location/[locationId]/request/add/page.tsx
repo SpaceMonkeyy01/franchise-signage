@@ -13,6 +13,7 @@ import {
 } from '@/lib/db/queries';
 
 import { AddForm } from './AddForm';
+import { suitsStore } from '@/lib/catalog/fit';
 import { storeName } from '@/lib/format';
 
 export default async function AddSignsPage({
@@ -60,7 +61,8 @@ export default async function AddSignsPage({
         <AddForm
           brand={brand}
           locationId={locationId}
-          catalog={catalog}
+          // No drive-thru signs for a store without a lane (DECISIONS #197).
+          catalog={catalog.filter((item) => suitsStore(item.sign_type, location.format))}
           installedItemIds={installedItemIds}
         />
       </main>

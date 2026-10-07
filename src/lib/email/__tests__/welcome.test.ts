@@ -30,7 +30,7 @@ const item = (id: string, name: string, est_price: string | null, sort_order = 0
   vendor_policy_override: null,
   sort_order,
   design: null,
-  design_rules: {},
+  design_rules: {}, sign_type: 'Sign',
 });
 
 // The Freshbites seed's prices, so these fail if the seed moves under them.
