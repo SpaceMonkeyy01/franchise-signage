@@ -2200,6 +2200,18 @@ item 7's "CRUD UI only when onboarding brand #2".
        reviewers), then its franchisee companies, each with its owner and
        stores.
 
+202. **The grid breathes around a resting pointer** (owner, 7 Oct). In
+     `CursorGlow`: after 1.5s still, a random square within 4 cells of the
+     pointer fills with a darker shade of the page colour
+     (`color-mix(… 70%, black)`, peak opacity 0.22) and fades over 1.5s; a
+     new one every 250ms, at most 7 lit, never the same square twice in a
+     row. Squares sit inside the grid's cells (lines at x = 24k − 1) and fade
+     toward the page edges with the grid's own mask. Only on bare grid: not
+     when the pointer rests on content (a card, a form, a heading — anything
+     with a background or a content element). Stops on move, scroll, key,
+     click, leaving the window or hiding the tab. Same limits as the glow: a
+     real mouse only, never with reduced motion.
+
 201. **The team reaches the Studio from the console** (owner, 7 Oct). Each row
      on Catalog → Brand signs says where its design stands ("Designed ·
      franchisees may adjust 2 settings", "Not designed yet", or "No Studio
