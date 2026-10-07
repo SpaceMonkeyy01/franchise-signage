@@ -2127,6 +2127,13 @@ item 7's "CRUD UI only when onboarding brand #2".
        and remodel are one "Coming soon" line instead of three greyed rows.
      - **Vendor policy** on the dashboard is one line with "Details".
 
+196. **The setup wizard lines up with the page** (owner, 7 Oct). It sat in the
+     narrower `page` frame, so its left edge stood in from the brand logo; it
+     now uses `page-wide`, the header's width. Each step's title moved above
+     both columns, so the "Your store" summary starts level with the step's
+     first card instead of with its title. Store names in the wizard are
+     short ("Cedar Park"), as elsewhere in the portal (#195).
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

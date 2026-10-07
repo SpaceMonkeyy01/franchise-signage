@@ -16,6 +16,7 @@ import { formatPrice, VendorChip } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic, PackageRow } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 import type { StoredObject } from '@/lib/storage';
+import { storeName } from '@/lib/format';
 
 import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
 import type { SignDesign } from '@/lib/designs/design';
@@ -208,15 +209,48 @@ export function SetupWizard({
   }
 
   const ready = Boolean(format && basics.name.trim());
+  const shortName = existing ? storeName(existing.name, brand.name) : '';
+  const heading =
+    step === 1
+      ? existing
+        ? {
+            title: `Choose signs for ${shortName}`,
+            intro: 'The standard package for this store type loads next. Confirm your contact details first.',
+          }
+        : {
+            title: 'Tell us about your store',
+            intro: 'Your store type decides which standard sign package loads. Anything you don’t know yet can wait.',
+          }
+      : step === 2
+        ? {
+            title: `Your location requires these ${packageItems.length} signs`,
+            intro: `The ${(chosenFormat?.label ?? '').toLowerCase()} standard package. Brand details are set; add a photo of where each sign goes and any site notes.`,
+          }
+        : step === 3
+          ? {
+              title: 'Anything beyond the standard package?',
+              intro: `Optional signs from the ${brand.name} catalog. Pick any you need.`,
+            }
+          : {
+              title: 'Review and submit',
+              intro: `${basics.name.trim() || 'Your store'} · ${items.length} signs. Check everything, then submit.`,
+            };
 
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--color-brand)' }}>
-        {existing ? `First order · ${existing.name}` : 'New store'}
+        {existing ? `First order · ${shortName}` : 'New store'}
       </p>
       <Stepper step={step} reached={ready ? reached : 1} onGo={go} />
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      {/* Above both columns, so the summary card starts level with the step's
+          first card rather than with its title (DECISIONS #196). */}
+      <div className="mt-6">
+        <h1 className="text-xl font-semibold text-gray-900">{heading.title}</h1>
+        <p className="mt-1 text-sm text-gray-500">{heading.intro}</p>
+      </div>
+
+      <div className="mt-5 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <div className="min-w-0">
           {step === 1 && (
             <StepBasics
@@ -241,7 +275,6 @@ export function SetupWizard({
           {step === 2 && (
             <StepPackage
               brand={brand}
-              formatLabel={chosenFormat?.label ?? ''}
               items={packageItems}
               byId={byId}
               patch={patch}
@@ -372,7 +405,7 @@ function Summary({
     <aside className={`lg:sticky lg:top-6 lg:block lg:self-start ${hideOnPhone ? 'hidden' : ''}`}>
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Your store</p>
-        <p className="mt-1 text-sm font-semibold text-gray-900">{name.trim() || 'New store'}</p>
+        <p className="mt-1 text-sm font-semibold text-gray-900">{name.trim() ? storeName(name.trim(), brand.name) : 'New store'}</p>
         {address && <p className="text-xs text-gray-500">{address}</p>}
         <p className="mt-1 text-xs text-gray-500">
           {formatLabel ?? 'Store type not chosen'}
@@ -495,19 +528,10 @@ function StepBasics({
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-gray-900">
-        {existing ? `Choose signs for ${existing.name}` : 'Tell us about your store'}
-      </h1>
-      <p className="mt-1 text-sm text-gray-500">
-        {existing
-          ? 'The standard package for this store type loads next. Confirm your contact details first.'
-          : 'Your store type decides which standard sign package loads. Anything you don’t know yet can wait.'}
-      </p>
-
-      <div className="mt-5 space-y-4">
+      <div className="space-y-4">
         {existing ? (
           <Card title="Store">
-            <p className="text-sm font-medium text-gray-900">{existing.name}</p>
+            <p className="text-sm font-medium text-gray-900">{storeName(existing.name, brand.name)}</p>
             <p className="mt-0.5 text-xs text-gray-500">
               {[existing.address.line1, existing.address.city, existing.address.state].filter(Boolean).join(', ')}
               {existing.formatLabel && ` · ${existing.formatLabel}`}
@@ -695,7 +719,6 @@ function StepBasics({
 
 function StepPackage({
   brand,
-  formatLabel,
   items,
   byId,
   patch,
@@ -703,7 +726,6 @@ function StepPackage({
   onNext,
 }: {
   brand: BrandPublic;
-  formatLabel: string;
   items: ItemState[];
   byId: Map<string, BrandItemRow>;
   patch: (key: string, change: Partial<ItemState>) => void;
@@ -720,12 +742,7 @@ function StepPackage({
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-gray-900">Your location requires these {items.length} signs</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        The {formatLabel.toLowerCase()} standard package. Brand details are set; add a photo of where each sign
-        goes and any site notes.
-      </p>
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-xs text-gray-600">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg bg-gray-50 px-4 py-2.5 text-xs text-gray-600">
         <span>
           <strong className="text-gray-900">{items.length}</strong> signs
         </span>
@@ -947,9 +964,7 @@ function StepAddons({
 }) {
   return (
     <>
-      <h1 className="text-xl font-semibold text-gray-900">Anything beyond the standard package?</h1>
-      <p className="mt-1 text-sm text-gray-500">Optional signs from the {brand.name} catalog. Pick any you need.</p>
-      <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
+      <p className="rounded-lg bg-amber-50 px-4 py-2.5 text-xs text-amber-900">
         {brand.name} approves add-ons before they are quoted. Your standard package isn&rsquo;t held up while they do.
       </p>
 
@@ -1101,15 +1116,10 @@ function StepReview({
 
   return (
     <>
-      <h1 className="text-xl font-semibold text-gray-900">Review and submit</h1>
-      <p className="mt-1 text-sm text-gray-500">
-        {basics.name || 'Your store'} · {items.length} signs. Check everything, then submit.
-      </p>
-
-      <div className="mt-5 space-y-4">
+      <div className="space-y-4">
         <ReviewCard title="Store" onEdit={() => onEdit(1)}>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-            <Detail label="Store" value={basics.name || '—'} />
+            <Detail label="Store" value={basics.name.trim() ? storeName(basics.name.trim(), brand.name) : '—'} />
             <Detail label="Store type" value={formatLabel || '—'} />
             {!existing && <Detail label="Address" value={address || 'To confirm'} />}
             {!existing && <Detail label="Opening" value={basics.openingDate ? formatDate(basics.openingDate) : 'To confirm'} />}
