@@ -19,7 +19,7 @@ import {
   VendorChip,
 } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
-import { originLabel, plural, storeName, signName, typeAndSpec } from '@/lib/format';
+import { originLabel, plural, storeName, signName, typeAndSpec, signKind } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { COMPLETABLE } from '@/lib/requests/complete';
@@ -200,6 +200,7 @@ export default async function RequestStatusPage({
               <ResubmitPanel
                 token={token}
                 brandSlug={slug}
+                brandName={request.brand.name}
                 items={reopened}
                 comment={request.change_request.comment}
               />
@@ -366,7 +367,7 @@ function ItemCard({
           </div>
 
           {(item.sign_type || item.spec_summary) && (
-            <p className="mt-1 text-xs leading-relaxed text-gray-500">{typeAndSpec(item.sign_type, item.spec_summary)}</p>
+            <p className="mt-1 text-xs leading-relaxed text-gray-500">{typeAndSpec(signKind(item.sign_type, item.variant), item.spec_summary)}</p>
           )}
 
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600">

@@ -12,6 +12,7 @@ import type { SignDesign } from '@/lib/designs/design';
 import type { StoredObject } from '@/lib/storage';
 
 import { submitAddSigns } from './actions';
+import { signName, signKind } from '@/lib/format';
 
 interface Selection {
   sizing: string;
@@ -113,7 +114,8 @@ export function AddForm({
                 brandSlug={brand.slug}
                 locationId={locationId}
                 brandItemId={item.id}
-                signName={item.name}
+                signName={signName(item.name, brand.name)}
+                signType={signKind(item.sign_type, item.variant)}
                 base={item.design}
                 rules={item.design_rules}
                 value={selected[item.id].design}

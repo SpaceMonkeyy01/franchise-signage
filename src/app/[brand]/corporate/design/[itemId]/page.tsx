@@ -12,6 +12,7 @@ import { getDesignableSign, offeredOptions, studioDesigns, studioPrices } from '
 import { engineConfigured } from '@/lib/signize/client';
 
 import { StudioEditor } from './StudioEditor';
+import { signName, signKind } from '@/lib/format';
 
 export const metadata = { title: 'Design Studio' };
 
@@ -40,15 +41,15 @@ export default async function DesignPage({
         <Link href={back} className="text-sm text-gray-500 underline-offset-2 hover:underline">
           ← Signs
         </Link>
-        <h1 className="mt-2 text-lg font-semibold text-gray-900">Design {sign.name}</h1>
+        <h1 className="mt-2 text-lg font-semibold text-gray-900">Design {signName(sign.name, access.brand.name)}</h1>
         <p className="text-sm text-gray-500">
           {!studioDesigns(sign)
             ? sign.sign_type
             : sign.price_mode === 'fixed'
-            ? `${sign.sign_type} · Signage.com sets this sign's price. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`
+            ? `${signKind(sign.sign_type, sign.variant)} · Signage.com sets this sign's price. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`
             : priceable
-            ? `${sign.sign_type} · Set the logo, options and size; Signage.com prices it as you go. Then choose what a franchisee may adjust for their store — anything else stays exactly as you set it.`
-            : `${sign.sign_type} · Signage.com quotes this sign per order, so it stays a custom quote. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`}
+            ? `${signKind(sign.sign_type, sign.variant)} · Set the logo, options and size; Signage.com prices it as you go. Then choose what a franchisee may adjust for their store — anything else stays exactly as you set it.`
+            : `${signKind(sign.sign_type, sign.variant)} · Signage.com quotes this sign per order, so it stays a custom quote. Set the logo and size and the Studio draws it, so every store sees the sign it is ordering.`}
         </p>
 
         {!studioDesigns(sign) ? (

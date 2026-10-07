@@ -17,6 +17,7 @@ import type { SignDesign } from '@/lib/designs/design';
 import type { StoredObject } from '@/lib/storage';
 
 import { resubmitChanges } from './actions';
+import { signName, signKind } from '@/lib/format';
 
 interface EditState {
   sizing: string;
@@ -42,11 +43,13 @@ function customized(item: LineItemRow): SignDesign | null {
 export function ResubmitPanel({
   token,
   brandSlug,
+  brandName,
   items,
   comment,
 }: {
   token: string;
   brandSlug: string;
+  brandName: string;
   /** The flagged items, in request order. */
   items: LineItemRow[];
   comment: string;
@@ -115,7 +118,8 @@ export function ResubmitPanel({
                 brandSlug={brandSlug}
                 locationId={null}
                 brandItemId={item.brand_item_id}
-                signName={item.brand_item_name}
+                signName={signName(item.brand_item_name, brandName)}
+                signType={signKind(item.sign_type, item.variant)}
                 base={studioBase(item)!}
                 rules={item.design_rules ?? {}}
                 value={edits[item.id].design === undefined ? customized(item) : (edits[item.id].design ?? null)}

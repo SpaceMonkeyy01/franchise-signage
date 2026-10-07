@@ -55,3 +55,23 @@ export function signName(name: string, brandName: string): string {
 export function typeAndSpec(signType: string | null | undefined, spec: string | null | undefined): string {
   return [signType, spec].filter((part) => part && part.trim()).join(' · ');
 }
+
+/**
+ * What a sign is, type and variant: "Illuminated Channel Letters · Face Lit
+ * (Premium)" (DECISIONS #198). Words of the type repeated inside the variant's
+ * brackets go ("(Premium Channel Letters)" → "(Premium)"); brackets left empty
+ * go too.
+ */
+export function signKind(signType: string, variant?: string | null): string {
+  if (!variant?.trim()) return signType;
+  const stem = (word: string) => word.toLowerCase().replace(/s$/, '');
+  const typeWords = new Set(signType.split(/\s+/).map(stem));
+  const trimmed = variant
+    .replace(/\(([^)]*)\)/g, (_, inner: string) => {
+      const kept = inner.split(/\s+/).filter((word) => word && !typeWords.has(stem(word)));
+      return kept.length ? `(${kept.join(' ')})` : '';
+    })
+    .replace(/\s+/g, ' ')
+    .trim();
+  return trimmed && stem(trimmed) !== stem(signType) ? `${signType} · ${trimmed}` : signType;
+}

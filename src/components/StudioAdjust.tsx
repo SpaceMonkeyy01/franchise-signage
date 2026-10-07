@@ -27,6 +27,7 @@ export function StudioAdjust({
   locationId,
   brandItemId,
   signName,
+  signType,
   base,
   rules,
   value,
@@ -38,6 +39,8 @@ export function StudioAdjust({
   brandItemId: string;
   /** The sign, as the Studio window's title names it. */
   signName?: string;
+  /** What it is ("Illuminated Channel Letters"), under the title (#198). */
+  signType?: string;
   /** Answering a change request from the request's link, not an account. */
   resubmit?: { token: string; lineItemId: string };
   base: SignDesign;
@@ -81,6 +84,7 @@ export function StudioAdjust({
           locationId={locationId}
           brandItemId={brandItemId}
           signName={signName}
+          signType={signType}
           base={base}
           rules={rules}
           value={value}
@@ -101,6 +105,7 @@ function StudioWindow({
   locationId,
   brandItemId,
   signName,
+  signType,
   base,
   rules,
   value,
@@ -112,6 +117,7 @@ function StudioWindow({
   locationId: string | null;
   brandItemId: string;
   signName?: string;
+  signType?: string;
   base: SignDesign;
   rules: DesignRules;
   value: SignDesign | null;
@@ -190,6 +196,7 @@ function StudioWindow({
               Design Studio
             </p>
             <h2 className="truncate text-base font-semibold text-gray-900">{signName ?? 'Customize this sign'}</h2>
+            {signType && <p className="truncate text-xs text-gray-500">{signType}</p>}
           </div>
           <button type="button" onClick={onClose} aria-label="Close the Studio" className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-900">
             <svg viewBox="0 0 20 20" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>

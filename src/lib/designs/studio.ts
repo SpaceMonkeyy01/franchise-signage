@@ -31,6 +31,8 @@ export interface DesignableSign {
   name: string;
   review_status: string;
   sign_type: string;
+  /** Its catalog variant ("Face Lit (Premium Channel Letters)"), shown with the type (#198). */
+  variant: string | null;
   placement: 'indoor' | 'outdoor';
   /** The mockup engine's style for this type (master_catalog.render_key). */
   render_key: string | null;
@@ -49,7 +51,7 @@ export interface DesignableSign {
 export async function getDesignableSign(itemId: string, brandId: string): Promise<DesignableSign | null> {
   return queryOne<DesignableSign>(
     `select bi.id, bi.brand_id, b.slug as brand_slug, bi.name, bi.review_status,
-            mc.sign_type, mc.placement, mc.render_key, mc.fabricated_finish,
+            mc.sign_type, mc.variant, mc.placement, mc.render_key, mc.fabricated_finish,
             mc.pricing_type, mc.pricing_basis, mc.price_mode, mc.attribute_options,
             bi.design, bi.design_rules, bi.pinned_attributes, bi.est_price
        from brand_items bi

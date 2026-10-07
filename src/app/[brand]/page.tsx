@@ -41,7 +41,7 @@ import type { Readiness, ReadinessState } from '@/lib/readiness';
 import { openingLine, SETUP_STAGES, storeProgress, type SetupProgress } from '@/lib/setup-progress';
 
 import { SignOutButton } from '../sign-in/SignOutButton';
-import { storeName, signName } from '@/lib/format';
+import { storeName, signName, signKind } from '@/lib/format';
 
 export const dynamic = 'force-dynamic';
 
@@ -1025,7 +1025,7 @@ function LocationCard({
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-gray-900">{signName(sign.brand_item_name, brandName)}</p>
                 <p className="truncate text-xs text-gray-500">
-                  {sign.sign_type} · {sign.sizing ?? 'Sizing on file'} · installed{' '}
+                  {signKind(sign.sign_type, sign.variant)} · {sign.sizing ?? 'Sizing on file'} · installed{' '}
                   {new Date(sign.installed_at).toLocaleDateString('en-US', {
                     month: 'short',
                     year: 'numeric',

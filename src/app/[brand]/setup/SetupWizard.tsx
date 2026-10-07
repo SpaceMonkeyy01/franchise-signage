@@ -16,7 +16,7 @@ import { formatPrice, VendorChip } from '@/components/StatusChip';
 import type { BrandItemRow, BrandPublic, PackageRow } from '@/lib/db/queries';
 import type { LocationFormat } from '@/lib/status/types';
 import type { StoredObject } from '@/lib/storage';
-import { signName, storeName, typeAndSpec } from '@/lib/format';
+import { signName, storeName, typeAndSpec, signKind } from '@/lib/format';
 import { suitsStore } from '@/lib/catalog/fit';
 
 import { StudioAdjust, hasAdjustableDesign } from '@/components/StudioAdjust';
@@ -796,7 +796,7 @@ function StepPackage({
                     </span>
                     <span className="block truncate text-[11px] text-gray-500">
                       {typeAndSpec(
-                        brandItem.sign_type,
+                        signKind(brandItem.sign_type, brandItem.variant),
                         item.design
                           ? `Customized: ${item.design.dimension.inches}" ${item.design.dimension.axis}`
                           : brandItem.spec_summary,
@@ -849,7 +849,8 @@ function StepPackage({
                         brandSlug={brand.slug}
                         locationId={null}
                         brandItemId={brandItem.id}
-                        signName={brandItem.name}
+                        signName={signName(brandItem.name, brand.name)}
+                        signType={signKind(brandItem.sign_type, brandItem.variant)}
                         base={brandItem.design}
                         rules={brandItem.design_rules}
                         value={item.design}
@@ -1010,7 +1011,7 @@ function StepAddons({
                       <span className="text-sm font-semibold text-gray-900">{signName(item.name, brand.name)}</span>
                       <span className="shrink-0 text-sm text-gray-700">{formatPrice(item.est_price)}</span>
                     </span>
-                    <span className="mt-0.5 block text-xs text-gray-500">{typeAndSpec(item.sign_type, item.spec_summary)}</span>
+                    <span className="mt-0.5 block text-xs text-gray-500">{typeAndSpec(signKind(item.sign_type, item.variant), item.spec_summary)}</span>
                     <span className="mt-2 flex items-center justify-between gap-2">
                       {/* The whole card is the switch; this says which way it is. */}
                       {chosen ? (
@@ -1052,7 +1053,8 @@ function StepAddons({
                         brandSlug={brand.slug}
                         locationId={null}
                         brandItemId={item.id}
-                        signName={item.name}
+                        signName={signName(item.name, brand.name)}
+                        signType={signKind(item.sign_type, item.variant)}
                         base={item.design}
                         rules={item.design_rules}
                         value={chosen.design}

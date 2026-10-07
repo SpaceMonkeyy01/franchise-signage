@@ -2151,6 +2151,15 @@ item 7's "CRUD UI only when onboarding brand #2".
      - **Package step:** every sign starts closed; the counts bar shows only
        on phones, where the "Your store" card is not beside it.
 
+198. **The sign's variant shows with its type, and the Studio says both**
+     (owner, 7 Oct: "it could be Face Lit, Halo Lit"). `signKind()` joins the
+     catalog sign type and variant — "Illuminated Channel Letters · Face Lit
+     (Premium)" — dropping words of the type the variant's brackets repeat.
+     The variant is the master catalog row's; no Studio option changes it.
+     Shown wherever the type is (#197), under the title of the franchisee's
+     "Customize in Studio" window, and in the brand admin's Studio subtitle;
+     both Studio titles use the short sign name.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**
