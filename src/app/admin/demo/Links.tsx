@@ -27,7 +27,7 @@ export async function Links() {
   ]);
 
   return (
-    <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
       <Link href="/admin/demo" className="text-xs text-gray-500 underline-offset-2 hover:underline">
         ← Walkthrough
       </Link>

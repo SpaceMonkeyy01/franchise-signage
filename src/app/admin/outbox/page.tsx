@@ -54,7 +54,7 @@ export default async function Outbox({
   };
 
   return (
-    <main className="mx-auto w-full page flex-1 px-4 py-8 sm:px-6">
+    <main className="mx-auto w-full page-wide flex-1 px-4 py-8 sm:px-6">
       <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
         <p className="text-sm font-semibold text-amber-900">Outbox</p>
         <p className="mt-1 text-xs leading-relaxed text-amber-900/80">

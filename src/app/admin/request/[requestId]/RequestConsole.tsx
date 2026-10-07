@@ -14,7 +14,7 @@ import { ReadinessCard } from '@/components/ReadinessCard';
 import { SignThumbnail } from '@/components/SignThumbnail';
 import { formatPrice, ItemStatusChip, RequestStatusChip, VendorChip } from '@/components/StatusChip';
 import type { LineItemRow, RequestDetail } from '@/lib/db/queries';
-import { originLabel, plural } from '@/lib/format';
+import { originLabel, plural, repeatsSpec, signKind, typeAndSpec } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, packageName, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { fileUrl } from '@/lib/storage/url';
@@ -62,11 +62,7 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
     <div className={pending ? 'pointer-events-none opacity-60' : undefined}>
       <div className="mt-4 flex items-center gap-2">
         <RequestStatusChip status={request.status} />
-        {request.financing_involved && (
-          <span className="rounded bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-900">
-            Lender documents needed
-          </span>
-        )}
+        {request.financing_involved && <LenderChip request={request} />}
         {pending && <span className="text-xs text-gray-500">working…</span>}
       </div>
 
@@ -101,6 +97,22 @@ export function RequestConsole({ request }: { request: RequestDetail }) {
       </div>
     </div>
   );
+}
+
+/**
+ * Where the lender's paperwork stands (DECISIONS #199). It used to say
+ * "needed" for good, even on a paid order with its receipt issued.
+ */
+function LenderChip({ request }: { request: RequestDetail }) {
+  const ours = request.quotes.filter((quote) => !quote.external);
+  const paid = ours.length > 0 && ours.every((quote) => quote.paid_at);
+  const invoiced = ours.some((quote) => quote.invoice_number);
+  const [text, tone] = paid
+    ? ['Lender: invoice and receipt issued', 'bg-emerald-50 text-emerald-800']
+    : invoiced
+      ? ['Lender: invoice issued, receipt to come', 'bg-indigo-100 text-indigo-900']
+      : ['Lender documents needed', 'bg-indigo-100 text-indigo-900'];
+  return <span className={`rounded px-2 py-0.5 text-[11px] font-medium ${tone}`}>{text}</span>;
 }
 
 // -------------------------------------------------------------- action chain
@@ -534,9 +546,11 @@ function ItemRow({ request, item, act }: { request: RequestDetail; item: LineIte
             <ItemStatusChip status={item.item_status} />
           </div>
 
+          {/* What it is first, then its spec; a sizing note that only repeats
+              the spec is said once (DECISIONS #199). */}
           <p className="mt-1 text-xs text-gray-500">
-            {item.spec_summary}
-            {item.sizing && ` · ${item.sizing}`}
+            {typeAndSpec(signKind(item.sign_type, item.variant), item.spec_summary)}
+            {item.sizing && !repeatsSpec(item.sizing, item.spec_summary) && ` · ${item.sizing}`}
           </p>
           {item.tbd_fields.length > 0 && (
             <p className="mt-1 text-xs text-amber-700">
@@ -675,13 +689,27 @@ function LandlordPanel({ request, act }: { request: RequestDetail; act: Act }) {
 
 // ------------------------------------------------------------------ timeline
 
+/** History shows its latest entries; the rest are one click away (DECISIONS #199). */
+const HISTORY_SHOWN = 8;
+
 function TimelinePanel({ request, act }: { request: RequestDetail; act: Act }) {
   const [note, setNote] = useState('');
+  const [all, setAll] = useState(false);
+  const hidden = all ? 0 : Math.max(0, request.events.length - HISTORY_SHOWN);
 
   return (
     <Section title={`History (${request.events.length})`}>
+      {hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="mb-2 text-xs font-medium text-gray-600 underline underline-offset-2 hover:text-gray-900"
+        >
+          Show {hidden} earlier
+        </button>
+      )}
       <ol className="space-y-2">
-        {request.events.map((event) => (
+        {request.events.slice(hidden).map((event) => (
           <li key={event.id} className="text-xs">
             <span className="text-gray-800">{event.summary}</span>
             <span className="ml-1.5 text-gray-500">

@@ -75,3 +75,14 @@ export function signKind(signType: string, variant?: string | null): string {
     .trim();
   return trimmed && stem(trimmed) !== stem(signType) ? `${signType} · ${trimmed}` : signType;
 }
+
+/**
+ * Whether the sizing note only repeats the spec line ("24\" height" under
+ * "24\" high · …"). Same number, same unit: say it once.
+ */
+export function repeatsSpec(sizing: string, spec: string | null): boolean {
+  if (!spec) return false;
+  const number = sizing.match(/\d+(?:\.\d+)?/)?.[0];
+  if (!number) return false;
+  return new RegExp(`(^|[^\\d.])${number.replace('.', '\\.')}\\s*(["″”]|in\\b|inch)`).test(spec);
+}

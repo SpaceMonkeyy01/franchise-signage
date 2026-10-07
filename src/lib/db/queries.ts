@@ -521,6 +521,8 @@ export interface QueueRow {
   waiting_seconds: number;
   /** True when nothing needed corporate — the fast lane (SPEC §7). */
   fast_lane: boolean;
+  /** The store's target opening day, `YYYY-MM-DD`, or null (DECISIONS #199). */
+  opening_date: string | null;
 }
 
 /**
@@ -535,6 +537,7 @@ export function getRequestQueue(statuses?: readonly RequestStatus[]): Promise<Qu
   return rows<QueueRow>(
     `select r.id, r.code, r.intent, r.status, r.package_version, r.access_token, r.submitted_at,
             b.slug as brand_slug, b.name as brand_name, l.name as location_name,
+            to_char(l.opening_date, 'YYYY-MM-DD') as opening_date,
             count(li.id)::int as item_count,
             count(*) filter (where li.item_status = 'pending_review')::int as pending_count,
             count(*) filter (where li.item_status = 'changes_requested')::int as changes_count,
@@ -554,7 +557,7 @@ export function getRequestQueue(statuses?: readonly RequestStatus[]): Promise<Qu
        left join line_items li on li.request_id = r.id
       where r.status <> 'draft'
         and ($1::request_status[] is null or r.status = any($1))
-      group by r.id, b.slug, b.name, l.name
+      group by r.id, b.slug, b.name, l.name, l.opening_date
       order by r.created_at desc`,
     [statuses && statuses.length > 0 ? statuses : null],
   );

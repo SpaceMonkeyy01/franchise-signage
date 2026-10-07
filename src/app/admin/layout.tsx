@@ -12,6 +12,8 @@ import { getTeamMember } from '@/lib/auth/team';
 
 import { signOut } from '../sign-in/actions';
 
+import { AdminNav } from './AdminNav';
+
 /**
  * Never prerendered, at any point, for any reason.
  *
@@ -27,15 +29,6 @@ import { signOut } from '../sign-in/actions';
  */
 export const dynamic = 'force-dynamic';
 
-// The console's five sections (DECISIONS #191).
-const NAV = [
-  { href: '/admin', label: 'Requests' },
-  { href: '/admin/catalog', label: 'Catalog' },
-  { href: '/admin/people', label: 'People' },
-  { href: '/admin/outbox', label: 'Outbox' },
-  { href: '/admin/settings', label: 'Settings' },
-];
-
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const member = await getTeamMember();
 
@@ -48,21 +41,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <span>operator console</span>
           </Link>
           {member && (
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-gray-400">
-              {NAV.map((item) => (
-                <Link key={item.href} href={item.href} className="text-gray-200 underline-offset-2 hover:underline">
-                  {item.label}
-                </Link>
-              ))}
-              {/* A support tool, not a daily one: findable, but set apart. */}
-              <Link
-                href="/admin/demo"
-                className="border-l border-gray-700 pl-3 text-gray-400 underline-offset-2 hover:underline"
-              >
-                Walkthrough
-              </Link>
-              <span className="hidden border-l border-gray-700 pl-3 sm:inline">{member.name ?? member.email}</span>
-              <form action={signOut}>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-x-1.5 gap-y-1 text-xs text-gray-400">
+              {/* The five sections (DECISIONS #191), the current one marked (#199). */}
+              <AdminNav />
+              <span className="ml-1.5 hidden border-l border-gray-700 pl-3 sm:inline">{member.name ?? member.email}</span>
+              <form action={signOut} className="ml-2">
                 <button type="submit" className="text-gray-300 underline-offset-2 hover:underline">
                   Sign out
                 </button>

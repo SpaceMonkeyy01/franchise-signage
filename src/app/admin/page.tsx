@@ -59,6 +59,21 @@ function waited(seconds: number): { label: string; long: boolean } {
   return { label, long: days >= LONG_WAIT_DAYS };
 }
 
+/**
+ * When the store opens, against today: what decides which request matters most
+ * (DECISIONS #199). Amber inside a month, or once open, while signs are still
+ * to go up.
+ */
+function opens(date: string | null, closed: boolean): { label: string; urgent: boolean } | null {
+  if (!date) return null;
+  const [y, m, d] = date.split('-').map(Number);
+  const now = new Date();
+  const days = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000);
+  const day = new Date(Date.UTC(y, m - 1, d)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+  const label = days < 0 ? `opened ${day}` : days === 0 ? `${day} · today` : `${day} · ${days}d`;
+  return { label, urgent: !closed && days <= 30 };
+}
+
 const NEXT_STEP: Record<string, string> = {
   submitted: 'Prepare the package',
   needs_review: 'Waiting on corporate',
@@ -154,11 +169,12 @@ export default async function AdminQueue({
       </ul>
 
       <div className="mt-4 hidden overflow-x-auto rounded-xl border border-gray-200 bg-white sm:block">
-        <table className="w-full min-w-[56rem] text-sm">
+        <table className="w-full min-w-[62rem] text-sm">
           <thead className="border-b border-gray-100 text-left text-xs text-gray-500">
             <tr>
               <th className="px-4 py-2.5 font-medium">Request</th>
               <th className="px-4 py-2.5 font-medium">Brand · location</th>
+              <th className="px-4 py-2.5 font-medium" title="The store's target opening day">Opens</th>
               <th className="px-4 py-2.5 font-medium">Items</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium" title="Time in its current status">
@@ -173,7 +189,7 @@ export default async function AdminQueue({
             ))}
             {shown.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
                   Nothing in {bucket.label.toLowerCase()}.
                 </td>
               </tr>
@@ -187,6 +203,7 @@ export default async function AdminQueue({
 
 function QueueLine({ row }: { row: QueueRow }) {
   const wait = CLOSED.includes(row.status) ? null : waited(row.waiting_seconds);
+  const opening = opens(row.opening_date, CLOSED.includes(row.status));
   return (
     <tr className="border-b border-gray-50 last:border-0 hover:bg-gray-50">
       <td className="px-4 py-2.5">
@@ -207,6 +224,9 @@ function QueueLine({ row }: { row: QueueRow }) {
       </td>
       <td className="px-4 py-2.5 text-gray-600">
         {brandAndLocation(row.brand_name, row.location_name)}
+      </td>
+      <td className={`whitespace-nowrap px-4 py-2.5 text-xs tabular-nums ${opening?.urgent ? 'font-semibold text-amber-700' : 'text-gray-500'}`}>
+        {opening?.label ?? '—'}
       </td>
       <td className="px-4 py-2.5 text-xs text-gray-600">
         {row.item_count}
@@ -232,6 +252,7 @@ function QueueLine({ row }: { row: QueueRow }) {
 /** The queue row as a card, for a phone. Same facts, stacked. */
 function QueueCard({ row }: { row: QueueRow }) {
   const wait = CLOSED.includes(row.status) ? null : waited(row.waiting_seconds);
+  const opening = opens(row.opening_date, CLOSED.includes(row.status));
   return (
     <li className="rounded-xl border border-gray-200 bg-white p-3">
       <div className="flex items-start justify-between gap-2">
@@ -245,6 +266,12 @@ function QueueCard({ row }: { row: QueueRow }) {
           <span className="ml-2 text-xs text-gray-500">{INTENT_LABEL[row.intent] ?? row.intent}</span>
           <p className="truncate text-xs text-gray-500">
             {brandAndLocation(row.brand_name, row.location_name)}
+            {opening && (
+              <span className={opening.urgent ? 'font-semibold text-amber-700' : ''}>
+                {' · '}
+                {opening.label.startsWith('opened') ? opening.label : `opens ${opening.label}`}
+              </span>
+            )}
           </p>
         </div>
         <RequestStatusChip status={row.status} />

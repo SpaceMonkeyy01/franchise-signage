@@ -2160,6 +2160,25 @@ item 7's "CRUD UI only when onboarding brand #2".
      "Customize in Studio" window, and in the brand admin's Studio subtitle;
      both Studio titles use the short sign name.
 
+199. **The operator console, refined** (owner, 7 Oct, after #191's audit).
+     - **The nav marks where you are** (`AdminNav`, a client component for
+       the path); a request counts as Requests.
+     - **Every console page lines up with the header** (`page-wide`):
+       Settings, Outbox and Links stood in from the logo. Settings keeps a
+       form's width inside it.
+     - **The queue shows when each store opens**, amber within 30 days or
+       once open while the request is not finished: what decides which
+       request matters most.
+     - **The lender chip follows the paperwork**: "Lender documents needed",
+       then "invoice issued, receipt to come", then "invoice and receipt
+       issued" — it said "needed" on a paid order.
+     - **History shows its latest 8 entries**, with "Show N earlier".
+     - **Line items say what each sign is** (`signKind()`, #198), and a
+       sizing note that repeats the spec is said once (`repeatsSpec()`, now
+       shared with the franchisee's page).
+     - **"Deactivate" on Brand signs is grey**, red on hover, instead of a
+       red link on every row.
+
 154. **The master catalog is switched off, never deleted** (brand items point
      at it). A new variant of an existing sign type inherits that type's
      options and pricing model. **The team edits a row's options on screen**

@@ -19,7 +19,7 @@ import {
   VendorChip,
 } from '@/components/StatusChip';
 import { getRequestByToken, type LineItemRow, type RequestDetail } from '@/lib/db/queries';
-import { originLabel, plural, storeName, signName, typeAndSpec, signKind } from '@/lib/format';
+import { originLabel, plural, storeName, signName, typeAndSpec, signKind, repeatsSpec } from '@/lib/format';
 import { PACKAGE_STAGE_LABEL, quoteStage } from '@/lib/packages';
 import { packageReadiness } from '@/lib/readiness';
 import { COMPLETABLE } from '@/lib/requests/complete';
@@ -49,16 +49,6 @@ const ITEM_FILE_LABEL: Record<string, string> = {
   quote_sheet: 'Quote sheet',
 };
 
-/**
- * Whether the sizing note only repeats the spec line ("24\" height" under
- * "24\" high · …"). Same number, same unit: say it once.
- */
-function repeatsSpec(sizing: string, spec: string | null): boolean {
-  if (!spec) return false;
-  const number = sizing.match(/\d+(?:\.\d+)?/)?.[0];
-  if (!number) return false;
-  return new RegExp(`(^|[^\\d.])${number.replace('.', '\\.')}\\s*(["″”]|in\\b|inch)`).test(spec);
-}
 
 // The order items are grouped in on the status page: what needs the
 // franchisee first, then what is waiting, then what is settled. The

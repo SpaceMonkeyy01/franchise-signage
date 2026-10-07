@@ -235,7 +235,7 @@ export function SignActiveToggle({ itemId, name, active }: { itemId: string; nam
           }
           go(() => setSignActiveAction(itemId, !active));
         }}
-        className={`text-xs underline-offset-2 hover:underline disabled:opacity-40 ${active ? 'text-rose-700' : 'text-gray-700'}`}
+        className={`text-xs underline-offset-2 hover:underline disabled:opacity-40 ${active ? 'text-gray-500 hover:text-rose-700' : 'text-gray-700'}`}
       >
         {pending ? '…' : active ? 'Deactivate' : 'Activate'}
       </button>
