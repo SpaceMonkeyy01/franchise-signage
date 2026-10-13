@@ -24,7 +24,9 @@ import { notFound, redirect } from 'next/navigation';
 import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 
+import { SignMap, type MapSign } from '@/components/SignMap';
 import { SignThumbnail, signImageUrl } from '@/components/SignThumbnail';
+import { slotFor } from '@/lib/signmap';
 import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
 import { RequestStatusChip } from '@/components/StatusChip';
 import { getViewer, owesSecondFactor, storeScope } from '@/lib/auth/access';
@@ -33,6 +35,7 @@ import {
   getBrandBySlug,
   getLocationsForBrand,
   getShowcaseSigns,
+  getSignMapSigns,
   type BrandPublic,
   type LocationRow,
   type ShowcaseSign,
@@ -61,7 +64,19 @@ export default async function BrandHome({ params }: { params: Promise<{ brand: s
 
   const viewer = await getViewer();
   if (!viewer || owesSecondFactor(viewer)) {
-    return <SignedOut brand={brand} signs={await getShowcaseSigns(brand.id)} />;
+    const [showcase, mapped] = await Promise.all([getShowcaseSigns(brand.id), getSignMapSigns(brand.id)]);
+    // The "where each sign goes" drawing (DECISIONS #203): what each sign is
+    // and where it is standard, never a price.
+    const mapSigns: MapSign[] = mapped.map((sign) => ({
+      id: sign.id,
+      name: signName(sign.name, brand.name),
+      kind: signKind(sign.sign_type, sign.variant),
+      spec: sign.spec_summary,
+      image: sign.image_path ? signImageUrl(sign.image_path) : null,
+      standardIn: sign.standard_in,
+      slot: slotFor(sign.sign_type, sign.variant, sign.placement),
+    }));
+    return <SignedOut brand={brand} signs={showcase} mapSigns={mapSigns} />;
   }
 
   const scope = await storeScope(viewer, brand.id);
@@ -191,7 +206,15 @@ function Shell({
  * "start" button: accounts come only by invitation (SPEC v2.3 §10), so the one
  * action is signing in.
  */
-function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[] }) {
+function SignedOut({
+  brand,
+  signs,
+  mapSigns,
+}: {
+  brand: BrandPublic;
+  signs: ShowcaseSign[];
+  mapSigns: MapSign[];
+}) {
   const signIn = `/sign-in?next=${encodeURIComponent(`/${brand.slug}`)}`;
   const [featured, ...others] = signs;
   return (
@@ -261,6 +284,22 @@ function SignedOut({ brand, signs }: { brand: BrandPublic; signs: ShowcaseSign[]
             ))}
           </div>
         </section>
+
+        {mapSigns.some((sign) => sign.slot) && (
+          <section id="where-signs-go" className="mx-auto w-full page-wide scroll-mt-6 px-4 pt-14 sm:px-6">
+            <Eyebrow>On your building</Eyebrow>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              Where each sign goes
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm leading-relaxed text-gray-600">
+              Every {brand.name} sign has its place on the store. Hover or tap a number to see what the sign is and
+              which store types include it as standard.
+            </p>
+            <div className="mt-8">
+              <SignMap brandName={brand.name} signs={mapSigns} />
+            </div>
+          </section>
+        )}
 
         {signs.length > 0 && (
           <section id="signs" className="mx-auto w-full page-wide scroll-mt-6 px-4 py-14 sm:px-6">

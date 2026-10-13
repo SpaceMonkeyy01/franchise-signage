@@ -1025,6 +1025,41 @@ export async function getShowcaseSigns(brandId: string): Promise<ShowcaseSign[]>
   );
 }
 
+export interface SignMapSign {
+  id: string;
+  name: string;
+  sign_type: string;
+  variant: string | null;
+  placement: 'indoor' | 'outdoor';
+  spec_summary: string | null;
+  /** The sign's picture, Studio mockup, or its catalog type's icon. */
+  image_path: string | null;
+  /** The store types whose standard package includes it, by label. */
+  standard_in: string[];
+}
+
+/**
+ * Every live sign, for the "where each sign goes" drawing on the signed-out
+ * landing page (DECISIONS #203). What it is and where it is standard; no
+ * price, which is for signed-in franchisees.
+ */
+export function getSignMapSigns(brandId: string): Promise<SignMapSign[]> {
+  return query<SignMapSign>(
+    `select bi.id, bi.name, mc.sign_type, mc.variant, mc.placement, bi.spec_summary,
+            coalesce(bi.thumbnail_url, bi.design->>'mockupPath', mc.icon_path) as image_path,
+            coalesce((select array_agg(distinct coalesce(st.label, bp.format) order by coalesce(st.label, bp.format))
+                        from brand_packages bp
+                        left join brand_store_types st on st.brand_id = bp.brand_id and st.key = bp.format
+                       where bp.brand_id = bi.brand_id
+                         and bp.items @> jsonb_build_array(bi.id::text)), '{}') as standard_in
+       from brand_items bi
+       join master_catalog mc on mc.id = bi.master_catalog_id
+      where bi.brand_id = $1 and bi.active and bi.review_status = 'approved'
+      order by bi.sort_order, bi.name`,
+    [brandId],
+  );
+}
+
 /**
  * A store for its first order: what it is, and whether it has started — an
  * initial setup that was not declined, or signs already installed. A started

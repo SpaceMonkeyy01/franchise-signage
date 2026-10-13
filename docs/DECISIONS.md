@@ -2212,6 +2212,21 @@ item 7's "CRUD UI only when onboarding brand #2".
      click, leaving the window or hiding the tab. Same limits as the glow: a
      real mouse only, never with reduced motion.
 
+203. **"Where each sign goes" on the brand landing page** (owner, 13 Oct:
+     a drawn building with numbered points, hover or click for the sign).
+     Option A of three (illustrated 2.5D; a photo with pins, or a true 3D
+     model, were the others). `SignMap` draws a store in three views —
+     Storefront, Drive-thru, Inside — as SVG in the portal's drafting style,
+     coloured by the brand. Every live, approved sign is pinned to its spot
+     by `slotFor()` from its catalog sign type and variant, so a new brand's
+     signs place themselves; a sign that fits no spot is not pinned, and a
+     drawing element appears only when the brand has a sign for it. Hover or
+     tap a pin or its line in the list: both light up, and the open line
+     shows the picture, type and variant, spec, and the store types whose
+     standard package includes it ("An add-on" otherwise). No price: the
+     signed-out page never shows one (smoke). Data: `getSignMapSigns()`.
+     Unit tests cover the placement and numbering.
+
 201. **The team reaches the Studio from the console** (owner, 7 Oct). Each row
      on Catalog → Brand signs says where its design stands ("Designed ·
      franchisees may adjust 2 settings", "Not designed yet", or "No Studio
