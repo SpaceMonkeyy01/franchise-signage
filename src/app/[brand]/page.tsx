@@ -25,6 +25,7 @@ import { AccountBadge } from '@/components/AccountBadge';
 import { BrandHeader, BrandTheme } from '@/components/BrandChrome';
 
 import { SignMap, type MapSign } from '@/components/SignMap';
+import { SignModelSection } from '@/components/SignModelSection';
 import { SignThumbnail, signImageUrl } from '@/components/SignThumbnail';
 import { slotFor } from '@/lib/signmap';
 import { ExpandChevron, RequestSignList, SignStrip } from '@/components/RequestSigns';
@@ -297,6 +298,22 @@ function SignedOut({
             </p>
             <div className="mt-8">
               <SignMap brandName={brand.name} signs={mapSigns} />
+            </div>
+          </section>
+        )}
+
+        {mapSigns.some((sign) => sign.slot) && (
+          <section id="where-signs-go-3d" className="mx-auto w-full page-wide scroll-mt-6 px-4 pt-14 sm:px-6">
+            <Eyebrow>In 3D</Eyebrow>
+            <h2 className="mt-2 text-center text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+              Walk around the store
+            </h2>
+            <p className="mx-auto mt-2 max-w-2xl text-center text-sm leading-relaxed text-gray-600">
+              The same signs on a 3D model of a {brand.name} drive-thru. Drag to turn it, and click a number to fly to
+              the sign.
+            </p>
+            <div className="mt-8">
+              <SignModelSection brandName={brand.name} signs={mapSigns} />
             </div>
           </section>
         )}

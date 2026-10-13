@@ -2227,6 +2227,24 @@ item 7's "CRUD UI only when onboarding brand #2".
      signed-out page never shows one (smoke). Data: `getSignMapSigns()`.
      Unit tests cover the placement and numbering.
 
+204. **The same, in 3D, below the drawing** (owner, 13 Oct: "more interactive
+     … towards a true 3D CAD model; don't replace the current one, add the
+     new version below it; we will choose later"). `SignModel3D`
+     (three.js through @react-three/fiber and drei, loaded only by
+     `SignModelSection`'s dynamic import) models one freestanding drive-thru
+     restaurant carrying all fourteen spots, in a CAD style: light materials,
+     outlined edges, a drafting grid. Drag to turn; zoom on buttons (the
+     wheel is left to the page); Front / Drive-thru / Inside camera views,
+     the roof and front lifting away for Inside; clicking a pin or list line
+     flies the camera to that sign, lights it, opens its details and fades
+     the other pins; a slow idle turn unless reduced motion. Text on signs is
+     drawn to canvas textures, so no font files are fetched. Pins are page
+     elements placed each frame from the scene (`PinTracker`), not drei's
+     `Html`: its per-pin React roots raised unmount warnings that smoke's
+     "no page errors" caught. Signs are placed by #203's `slotFor()`; a
+     browser without WebGL sees a note pointing to the drawing above. The
+     production build passes.
+
 201. **The team reaches the Studio from the console** (owner, 7 Oct). Each row
      on Catalog → Brand signs says where its design stands ("Designed ·
      franchisees may adjust 2 settings", "Not designed yet", or "No Studio
